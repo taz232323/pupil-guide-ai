@@ -1,6 +1,7 @@
 import { DashboardShell } from "@/components/DashboardShell";
 import { TeacherClasses } from "./TeacherClasses";
 import { TeacherAssignments } from "./TeacherAssignments";
+import { TeacherPrivilegeRequests } from "./TeacherPrivilegeRequests";
 
 export default function TeacherDashboard() {
   return (
@@ -8,6 +9,7 @@ export default function TeacherDashboard() {
       <div className="space-y-4">
         <TeacherClasses />
         <TeacherAssignments />
+        <TeacherPrivilegeRequests />
       </div>
     </DashboardShell>
   );
