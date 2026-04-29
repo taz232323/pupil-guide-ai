@@ -8,7 +8,7 @@ export const ProtectedRoute = ({
   requiredRole,
 }: {
   children: React.ReactNode;
-  requiredRole: Role;
+  requiredRole?: Role;
 }) => {
   const { user, role, loading } = useAuth();
 
@@ -21,7 +21,7 @@ export const ProtectedRoute = ({
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (role && role !== requiredRole) {
+  if (requiredRole && role && role !== requiredRole) {
     return <Navigate to={role === "teacher" ? "/teacher" : "/student"} replace />;
   }
   return <>{children}</>;

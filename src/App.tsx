@@ -11,6 +11,13 @@ import Auth from "./pages/Auth.tsx";
 import StudentDashboard from "./pages/StudentDashboard.tsx";
 import TeacherDashboard from "./pages/TeacherDashboard.tsx";
 import Profile from "./pages/Profile.tsx";
+import StudentClassesPage from "./pages/StudentClassesPage.tsx";
+import StudentAssignmentsPage from "./pages/StudentAssignmentsPage.tsx";
+import TeacherClassesPage from "./pages/TeacherClassesPage.tsx";
+import TeacherAssignmentsPage from "./pages/TeacherAssignmentsPage.tsx";
+import TeacherProgressPage from "./pages/TeacherProgressPage.tsx";
+import MessagesPage from "./pages/MessagesPage.tsx";
+import ShopPage from "./pages/ShopPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -32,10 +39,13 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/student/classes" element={<ProtectedRoute requiredRole="student"><StudentClassesPage /></ProtectedRoute>} />
+            <Route path="/student/assignments" element={<ProtectedRoute requiredRole="student"><StudentAssignmentsPage /></ProtectedRoute>} />
+            <Route path="/shop" element={<ProtectedRoute requiredRole="student"><ShopPage /></ProtectedRoute>} />
             <Route
               path="/profile"
               element={
-                <ProtectedRoute requiredRole="student">
+                <ProtectedRoute>
                   <Profile />
                 </ProtectedRoute>
               }
@@ -48,6 +58,10 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/teacher/classes" element={<ProtectedRoute requiredRole="teacher"><TeacherClassesPage /></ProtectedRoute>} />
+            <Route path="/teacher/assignments" element={<ProtectedRoute requiredRole="teacher"><TeacherAssignmentsPage /></ProtectedRoute>} />
+            <Route path="/teacher/progress" element={<ProtectedRoute requiredRole="teacher"><TeacherProgressPage /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
