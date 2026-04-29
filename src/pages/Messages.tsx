@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { StudentAvatar } from "@/components/StudentAvatar";
 
 type ClassRow = { id: string; name: string; teacher_id: string };
-type Profile = { id: string; full_name: string | null };
+type Profile = { id: string; full_name: string | null; avatar_items: string[] | null };
+type ProfileInfo = { name: string; items: string[] };
 type Message = {
   id: string;
   class_id: string;
@@ -35,7 +37,7 @@ const pairKey = (a: string, b: string) => [a, b].sort().join(":");
 export const Messages = () => {
   const { user, role } = useAuth();
   const [classes, setClasses] = useState<ClassRow[]>([]);
-  const [profiles, setProfiles] = useState<Map<string, string>>(new Map());
+  const [profiles, setProfiles] = useState<Map<string, ProfileInfo>>(new Map());
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [active, setActive] = useState<Conversation | null>(null);
   const [thread, setThread] = useState<Message[]>([]);
@@ -44,7 +46,8 @@ export const Messages = () => {
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const nameOf = (id: string) => (id === user?.id ? "You" : profiles.get(id) ?? "User");
+  const nameOf = (id: string) => (id === user?.id ? "You" : profiles.get(id)?.name ?? "User");
+  const itemsOf = (id: string) => profiles.get(id)?.items ?? [];
 
   // Load classes + members + initial conversation list
   useEffect(() => {
@@ -78,10 +81,13 @@ export const Messages = () => {
       myClasses.forEach((c) => ids.add(c.teacher_id));
       (members ?? []).forEach((m: any) => ids.add(m.student_id));
       const { data: profs } = ids.size
-        ? await supabase.from("profiles").select("id, full_name").in("id", Array.from(ids))
+        ? await supabase.from("profiles").select("id, full_name, avatar_items").in("id", Array.from(ids))
         : { data: [] as Profile[] };
-      const pmap = new Map<string, string>();
-      (profs ?? []).forEach((p: any) => pmap.set(p.id, p.full_name || "User"));
+      const pmap = new Map<string, ProfileInfo>();
+      (profs ?? []).forEach((p: any) => pmap.set(p.id, {
+        name: p.full_name || "User",
+        items: (p.avatar_items ?? []) as string[],
+      }));
       setProfiles(pmap);
 
       const convs: Conversation[] = [];
@@ -95,7 +101,7 @@ export const Messages = () => {
               classId: c.id,
               className: c.name,
               participantIds: [c.teacher_id],
-              label: `${pmap.get(c.teacher_id) ?? "Teacher"} (Teacher)`,
+              label: `${pmap.get(c.teacher_id)?.name ?? "Teacher"} (Teacher)`,
             });
           }
           // classmates
@@ -107,7 +113,7 @@ export const Messages = () => {
                 classId: c.id,
                 className: c.name,
                 participantIds: [sid],
-                label: pmap.get(sid) ?? "Student",
+                label: pmap.get(sid)?.name ?? "Student",
               });
             });
         });
@@ -121,7 +127,7 @@ export const Messages = () => {
               classId: c.id,
               className: c.name,
               participantIds: [sid],
-              label: pmap.get(sid) ?? "Student",
+              label: pmap.get(sid)?.name ?? "Student",
             });
           });
           // student-student pairs
@@ -133,7 +139,7 @@ export const Messages = () => {
                 classId: c.id,
                 className: c.name,
                 participantIds: [a, b],
-                label: `${pmap.get(a) ?? "Student"} ↔ ${pmap.get(b) ?? "Student"}`,
+                label: `${pmap.get(a)?.name ?? "Student"} ↔ ${pmap.get(b)?.name ?? "Student"}`,
                 observed: true,
               });
             }
@@ -277,13 +283,25 @@ export const Messages = () => {
                           onClick={() => setActive(c)}
                           className={`w-full text-left px-3 py-2 hover:bg-accent transition-colors ${active?.key === c.key ? "bg-accent" : ""}`}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-medium truncate">{c.label}</span>
-                            {c.observed && <Eye className="h-3 w-3 text-muted-foreground shrink-0" />}
+                          <div className="flex items-center gap-2">
+                            {c.observed ? (
+                              <div className="flex -space-x-2 shrink-0">
+                                <StudentAvatar size="xs" name={nameOf(c.participantIds[0])} items={itemsOf(c.participantIds[0])} />
+                                <StudentAvatar size="xs" name={nameOf(c.participantIds[1])} items={itemsOf(c.participantIds[1])} />
+                              </div>
+                            ) : (
+                              <StudentAvatar size="xs" name={nameOf(c.participantIds[0])} items={itemsOf(c.participantIds[0])} />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium truncate">{c.label}</span>
+                                {c.observed && <Eye className="h-3 w-3 text-muted-foreground shrink-0" />}
+                              </div>
+                              {c.lastPreview && (
+                                <p className="text-xs text-muted-foreground truncate">{c.lastPreview}</p>
+                              )}
+                            </div>
                           </div>
-                          {c.lastPreview && (
-                            <p className="text-xs text-muted-foreground truncate">{c.lastPreview}</p>
-                          )}
                         </button>
                       ))}
                     </div>
@@ -300,9 +318,19 @@ export const Messages = () => {
               ) : (
                 <>
                   <div className="px-4 py-2 border-b border-border flex items-center justify-between">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{active.label}</p>
-                      <p className="text-xs text-muted-foreground">{active.className}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {active.observed ? (
+                        <div className="flex -space-x-2 shrink-0">
+                          <StudentAvatar size="sm" name={nameOf(active.participantIds[0])} items={itemsOf(active.participantIds[0])} />
+                          <StudentAvatar size="sm" name={nameOf(active.participantIds[1])} items={itemsOf(active.participantIds[1])} />
+                        </div>
+                      ) : (
+                        <StudentAvatar size="sm" name={nameOf(active.participantIds[0])} items={itemsOf(active.participantIds[0])} />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{active.label}</p>
+                        <p className="text-xs text-muted-foreground">{active.className}</p>
+                      </div>
                     </div>
                     {active.observed && (
                       <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground inline-flex items-center gap-1">
@@ -317,7 +345,10 @@ export const Messages = () => {
                       thread.map((m) => {
                         const mine = m.sender_id === user?.id;
                         return (
-                          <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                          <div key={m.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
+                            {!mine && (
+                              <StudentAvatar size="xs" name={nameOf(m.sender_id)} items={itemsOf(m.sender_id)} />
+                            )}
                             <div className={`max-w-[75%] rounded-lg px-3 py-2 ${mine ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
                               {active.observed && (
                                 <p className="text-[10px] opacity-70 mb-0.5">{nameOf(m.sender_id)} → {nameOf(m.recipient_id)}</p>

@@ -1,9 +1,10 @@
-import { GraduationCap, Star, Crown } from "lucide-react";
+import { GraduationCap, Star, Crown, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 export const DashboardShell = ({
   title,
@@ -82,6 +83,11 @@ export const DashboardShell = ({
               </div>
             )}
             <span className="hidden sm:inline text-sm text-muted-foreground">{user?.email}</span>
+            {coins && (
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/profile"><User className="h-4 w-4 mr-1" />Profile</Link>
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={handleDelete} className="text-destructive hover:text-destructive">
               Delete account
             </Button>

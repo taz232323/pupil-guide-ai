@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import StudentDashboard from "./pages/StudentDashboard.tsx";
 import TeacherDashboard from "./pages/TeacherDashboard.tsx";
+import Profile from "./pages/Profile.tsx";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="student">
                   <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <Profile />
                 </ProtectedRoute>
               }
             />
