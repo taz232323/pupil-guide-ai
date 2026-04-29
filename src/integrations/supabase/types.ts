@@ -219,18 +219,21 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_items: string[]
           created_at: string
           full_name: string | null
           id: string
           updated_at: string
         }
         Insert: {
+          avatar_items?: string[]
           created_at?: string
           full_name?: string | null
           id: string
           updated_at?: string
         }
         Update: {
+          avatar_items?: string[]
           created_at?: string
           full_name?: string | null
           id?: string
