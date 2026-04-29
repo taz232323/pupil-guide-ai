@@ -238,6 +238,51 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_purchases: {
+        Row: {
+          class_id: string | null
+          cost: number
+          created_at: string
+          currency: Database["public"]["Enums"]["purchase_currency"]
+          id: string
+          item_key: string
+          item_name: string
+          kind: Database["public"]["Enums"]["purchase_kind"]
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["purchase_status"]
+          student_id: string
+        }
+        Insert: {
+          class_id?: string | null
+          cost: number
+          created_at?: string
+          currency: Database["public"]["Enums"]["purchase_currency"]
+          id?: string
+          item_key: string
+          item_name: string
+          kind: Database["public"]["Enums"]["purchase_kind"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["purchase_status"]
+          student_id: string
+        }
+        Update: {
+          class_id?: string | null
+          cost?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["purchase_currency"]
+          id?: string
+          item_key?: string
+          item_name?: string
+          kind?: Database["public"]["Enums"]["purchase_kind"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["purchase_status"]
+          student_id?: string
+        }
+        Relationships: []
+      }
       student_coins: {
         Row: {
           crown_coins: number
@@ -373,6 +418,9 @@ export type Database = {
     Enums: {
       app_role: "student" | "teacher"
       assignment_status: "not_started" | "in_progress" | "submitted"
+      purchase_currency: "star" | "crown"
+      purchase_kind: "cosmetic" | "privilege"
+      purchase_status: "approved" | "pending" | "denied"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -502,6 +550,9 @@ export const Constants = {
     Enums: {
       app_role: ["student", "teacher"],
       assignment_status: ["not_started", "in_progress", "submitted"],
+      purchase_currency: ["star", "crown"],
+      purchase_kind: ["cosmetic", "privilege"],
+      purchase_status: ["approved", "pending", "denied"],
     },
   },
 } as const
