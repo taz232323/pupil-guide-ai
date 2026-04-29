@@ -238,6 +238,27 @@ export type Database = {
         }
         Relationships: []
       }
+      student_coins: {
+        Row: {
+          crown_coins: number
+          star_coins: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          crown_coins?: number
+          star_coins?: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          crown_coins?: number
+          star_coins?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       submissions: {
         Row: {
           assignment_id: string
@@ -272,6 +293,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      unit_crowns: {
+        Row: {
+          awarded_at: string
+          class_id: string
+          id: string
+          student_id: string
+          unit_tag: string
+        }
+        Insert: {
+          awarded_at?: string
+          class_id: string
+          id?: string
+          student_id: string
+          unit_tag: string
+        }
+        Update: {
+          awarded_at?: string
+          class_id?: string
+          id?: string
+          student_id?: string
+          unit_tag?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

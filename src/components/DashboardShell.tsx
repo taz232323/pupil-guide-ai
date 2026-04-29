@@ -1,8 +1,9 @@
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Star, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 export const DashboardShell = ({
   title,
@@ -12,6 +13,38 @@ export const DashboardShell = ({
   children: React.ReactNode;
 }) => {
   const { user, signOut } = useAuth();
+  const [coins, setCoins] = useState<{ star: number; crown: number } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const load = async () => {
+      const { data } = await supabase
+        .from("student_coins")
+        .select("star_coins, crown_coins")
+        .eq("student_id", user.id)
+        .maybeSingle();
+      if (!active) return;
+      if (data) setCoins({ star: data.star_coins, crown: data.crown_coins });
+      else setCoins(null);
+    };
+    load();
+    const channel = supabase
+      .channel("coins:" + user.id)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "student_coins", filter: `student_id=eq.${user.id}` },
+        (payload) => {
+          const row = payload.new as { star_coins: number; crown_coins: number } | null;
+          if (row) setCoins({ star: row.star_coins, crown: row.crown_coins });
+        }
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const handleDelete = async () => {
     if (!confirm("Permanently delete your account? This cannot be undone.")) return;
@@ -36,6 +69,18 @@ export const DashboardShell = ({
             <span className="font-semibold">EduFlow</span>
           </div>
           <div className="flex items-center gap-3">
+            {coins && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium">
+                  <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                  {coins.star}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium">
+                  <Crown className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                  {coins.crown}
+                </span>
+              </div>
+            )}
             <span className="hidden sm:inline text-sm text-muted-foreground">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={handleDelete} className="text-destructive hover:text-destructive">
               Delete account
