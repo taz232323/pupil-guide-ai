@@ -139,5 +139,4 @@ All colors MUST be HSL.
   .bg-gradient-soft { background-image: var(--gradient-soft); }
   .transition-base { transition: all 0.2s ease; }
   .hover-lift { @apply transition-base hover:-translate-y-0.5 hover:shadow-elevated; }
-  }
 }
