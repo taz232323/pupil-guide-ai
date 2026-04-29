@@ -1,10 +1,18 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Tag } from "lucide-react";
+import { CalendarDays, Tag, Upload, LinkIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 type Status = "not_started" | "in_progress" | "submitted";
@@ -17,6 +25,7 @@ type Row = {
   unit_tag: string | null;
   due_date: string | null;
   status: Status;
+  submission?: { file_path: string | null; link_url: string | null } | null;
 };
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -35,6 +44,10 @@ export const StudentAssignments = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [classes, setClasses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [submitFor, setSubmitFor] = useState<Row | null>(null);
+  const [link, setLink] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -50,7 +63,7 @@ export const StudentAssignments = () => {
     const ids = (asgn ?? []).map((a) => a.id);
     const classIds = Array.from(new Set((asgn ?? []).map((a) => a.class_id)));
 
-    const [{ data: statuses }, { data: cls }] = await Promise.all([
+    const [{ data: statuses }, { data: cls }, { data: subs }] = await Promise.all([
       ids.length
         ? supabase.from("assignment_status_records")
             .select("assignment_id, status")
@@ -60,17 +73,26 @@ export const StudentAssignments = () => {
       classIds.length
         ? supabase.from("classes").select("id, name").in("id", classIds)
         : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      ids.length
+        ? supabase.from("submissions")
+            .select("assignment_id, file_path, link_url")
+            .eq("student_id", user.id)
+            .in("assignment_id", ids)
+        : Promise.resolve({ data: [] as { assignment_id: string; file_path: string | null; link_url: string | null }[] }),
     ]);
 
     const statusMap = new Map<string, Status>();
     (statuses ?? []).forEach((s: any) => statusMap.set(s.assignment_id, s.status));
     const classMap: Record<string, string> = {};
     (cls ?? []).forEach((c: any) => { classMap[c.id] = c.name; });
+    const subMap = new Map<string, { file_path: string | null; link_url: string | null }>();
+    (subs ?? []).forEach((s: any) => subMap.set(s.assignment_id, { file_path: s.file_path, link_url: s.link_url }));
 
     setClasses(classMap);
     setRows((asgn ?? []).map((a) => ({
       ...a,
       status: statusMap.get(a.id) ?? "not_started",
+      submission: subMap.get(a.id) ?? null,
     })));
     setLoading(false);
   };
@@ -93,7 +115,51 @@ export const StudentAssignments = () => {
     }
   };
 
+  const openSubmit = (row: Row) => {
+    setSubmitFor(row);
+    setLink("");
+    setFile(null);
+  };
+
+  const handleSubmit = async (mode: "file" | "link") => {
+    if (!submitFor) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setBusy(true);
+    try {
+      let payload: { file_path?: string; link_url?: string } = {};
+      if (mode === "file") {
+        if (!file) { toast.error("Choose a file"); return; }
+        if (file.size > 20 * 1024 * 1024) { toast.error("Max 20MB"); return; }
+        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const path = `${submitFor.id}/${user.id}/${Date.now()}_${safe}`;
+        const { error: upErr } = await supabase.storage
+          .from("submissions")
+          .upload(path, file, { upsert: true });
+        if (upErr) { toast.error(upErr.message); return; }
+        payload.file_path = path;
+      } else {
+        try { new URL(link); } catch { toast.error("Invalid URL"); return; }
+        payload.link_url = link.trim();
+      }
+
+      const { error } = await supabase
+        .from("submissions")
+        .upsert(
+          { assignment_id: submitFor.id, student_id: user.id, ...payload },
+          { onConflict: "assignment_id,student_id" }
+        );
+      if (error) { toast.error(error.message); return; }
+      toast.success("Submitted");
+      setSubmitFor(null);
+      load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
+    <>
     <Card>
       <CardHeader><CardTitle className="text-base">Assignments</CardTitle></CardHeader>
       <CardContent>
@@ -125,21 +191,75 @@ export const StudentAssignments = () => {
                         <CalendarDays className="h-3 w-3" />Due {new Date(r.due_date).toLocaleString()}
                       </span>
                     )}
+                    {r.submission?.link_url && (
+                      <a href={r.submission.link_url} target="_blank" rel="noreferrer"
+                         className="inline-flex items-center gap-1 text-primary hover:underline">
+                        <LinkIcon className="h-3 w-3" />Submitted link
+                      </a>
+                    )}
+                    {r.submission?.file_path && (
+                      <span className="inline-flex items-center gap-1">
+                        <Upload className="h-3 w-3" />File submitted
+                      </span>
+                    )}
                   </div>
                 </div>
-                <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v as Status)}>
-                  <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not_started">Not Started</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="submitted">Submitted</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v as Status)} disabled={r.status === "submitted"}>
+                    <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="not_started">Not Started</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="submitted" disabled>Submitted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={() => openSubmit(r)}>
+                    {r.status === "submitted" ? "Resubmit" : "Submit"}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </CardContent>
     </Card>
+
+    <Dialog open={!!submitFor} onOpenChange={(o) => !o && setSubmitFor(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Submit assignment</DialogTitle>
+          <DialogDescription>{submitFor?.title}</DialogDescription>
+        </DialogHeader>
+        <Tabs defaultValue="file">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="file">Upload file</TabsTrigger>
+            <TabsTrigger value="link">Paste link</TabsTrigger>
+          </TabsList>
+          <TabsContent value="file" className="space-y-3 pt-3">
+            <div className="space-y-2">
+              <Label htmlFor="sub-file">File (max 20MB)</Label>
+              <Input id="sub-file" type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            </div>
+            <DialogFooter>
+              <Button onClick={() => handleSubmit("file")} disabled={busy || !file}>
+                {busy ? "Submitting..." : "Submit file"}
+              </Button>
+            </DialogFooter>
+          </TabsContent>
+          <TabsContent value="link" className="space-y-3 pt-3">
+            <div className="space-y-2">
+              <Label htmlFor="sub-link">Link URL</Label>
+              <Input id="sub-link" type="url" placeholder="https://..." value={link} onChange={(e) => setLink(e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button onClick={() => handleSubmit("link")} disabled={busy || !link}>
+                {busy ? "Submitting..." : "Submit link"}
+              </Button>
+            </DialogFooter>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
