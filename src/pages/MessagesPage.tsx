@@ -1,5 +1,5 @@
 import { DashboardShell } from "@/components/DashboardShell";
-import Messages from "./Messages";
+import { Messages } from "./Messages";
 
 export default function MessagesPage() {
   return (
