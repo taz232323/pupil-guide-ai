@@ -283,13 +283,25 @@ export const Messages = () => {
                           onClick={() => setActive(c)}
                           className={`w-full text-left px-3 py-2 hover:bg-accent transition-colors ${active?.key === c.key ? "bg-accent" : ""}`}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-medium truncate">{c.label}</span>
-                            {c.observed && <Eye className="h-3 w-3 text-muted-foreground shrink-0" />}
+                          <div className="flex items-center gap-2">
+                            {c.observed ? (
+                              <div className="flex -space-x-2 shrink-0">
+                                <StudentAvatar size="xs" name={nameOf(c.participantIds[0])} items={itemsOf(c.participantIds[0])} />
+                                <StudentAvatar size="xs" name={nameOf(c.participantIds[1])} items={itemsOf(c.participantIds[1])} />
+                              </div>
+                            ) : (
+                              <StudentAvatar size="xs" name={nameOf(c.participantIds[0])} items={itemsOf(c.participantIds[0])} />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium truncate">{c.label}</span>
+                                {c.observed && <Eye className="h-3 w-3 text-muted-foreground shrink-0" />}
+                              </div>
+                              {c.lastPreview && (
+                                <p className="text-xs text-muted-foreground truncate">{c.lastPreview}</p>
+                              )}
+                            </div>
                           </div>
-                          {c.lastPreview && (
-                            <p className="text-xs text-muted-foreground truncate">{c.lastPreview}</p>
-                          )}
                         </button>
                       ))}
                     </div>
@@ -306,9 +318,19 @@ export const Messages = () => {
               ) : (
                 <>
                   <div className="px-4 py-2 border-b border-border flex items-center justify-between">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{active.label}</p>
-                      <p className="text-xs text-muted-foreground">{active.className}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {active.observed ? (
+                        <div className="flex -space-x-2 shrink-0">
+                          <StudentAvatar size="sm" name={nameOf(active.participantIds[0])} items={itemsOf(active.participantIds[0])} />
+                          <StudentAvatar size="sm" name={nameOf(active.participantIds[1])} items={itemsOf(active.participantIds[1])} />
+                        </div>
+                      ) : (
+                        <StudentAvatar size="sm" name={nameOf(active.participantIds[0])} items={itemsOf(active.participantIds[0])} />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{active.label}</p>
+                        <p className="text-xs text-muted-foreground">{active.className}</p>
+                      </div>
                     </div>
                     {active.observed && (
                       <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground inline-flex items-center gap-1">
@@ -323,7 +345,10 @@ export const Messages = () => {
                       thread.map((m) => {
                         const mine = m.sender_id === user?.id;
                         return (
-                          <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                          <div key={m.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
+                            {!mine && (
+                              <StudentAvatar size="xs" name={nameOf(m.sender_id)} items={itemsOf(m.sender_id)} />
+                            )}
                             <div className={`max-w-[75%] rounded-lg px-3 py-2 ${mine ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
                               {active.observed && (
                                 <p className="text-[10px] opacity-70 mb-0.5">{nameOf(m.sender_id)} → {nameOf(m.recipient_id)}</p>
