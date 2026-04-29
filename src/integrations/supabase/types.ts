@@ -14,6 +14,82 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignment_status_records: {
+        Row: {
+          assignment_id: string
+          id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_status_records_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          class_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          teacher_id: string
+          title: string
+          unit_tag: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          teacher_id: string
+          title: string
+          unit_tag?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          teacher_id?: string
+          title?: string
+          unit_tag?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_members: {
         Row: {
           class_id: string
@@ -144,6 +220,7 @@ export type Database = {
     }
     Enums: {
       app_role: "student" | "teacher"
+      assignment_status: "not_started" | "in_progress" | "submitted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -272,6 +349,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["student", "teacher"],
+      assignment_status: ["not_started", "in_progress", "submitted"],
     },
   },
 } as const
