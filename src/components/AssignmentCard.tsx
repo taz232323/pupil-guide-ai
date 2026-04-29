@@ -35,7 +35,7 @@ export function relativeTime(iso: string | null | undefined) {
 
 export const AssignmentCard = ({
   title,
-  className: classNameProp,
+  classLabel,
   unitTag,
   dueDate,
   status = "not_started",
@@ -45,8 +45,8 @@ export const AssignmentCard = ({
   rightSlot,
 }: {
   title: string;
+  classLabel?: string;
   className?: string;
-  classNameProp?: string;
   unitTag?: string | null;
   dueDate?: string | null;
   status?: AssignmentStatus;
@@ -72,8 +72,8 @@ export const AssignmentCard = ({
             {s.label}
           </span>
         </div>
-        {classNameProp && (
-          <p className="text-xs text-muted-foreground mt-0.5">{classNameProp}</p>
+        {classLabel && (
+          <p className="text-xs text-muted-foreground mt-0.5">{classLabel}</p>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
           {unitTag && (
