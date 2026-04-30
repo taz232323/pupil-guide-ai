@@ -247,6 +247,8 @@ export type Database = {
           cost: number
           created_at: string
           currency: Database["public"]["Enums"]["purchase_currency"]
+          description: string
+          emoji: string
           item_key: string
           item_name: string
           kind: Database["public"]["Enums"]["purchase_kind"]
@@ -256,6 +258,8 @@ export type Database = {
           cost: number
           created_at?: string
           currency: Database["public"]["Enums"]["purchase_currency"]
+          description?: string
+          emoji?: string
           item_key: string
           item_name: string
           kind: Database["public"]["Enums"]["purchase_kind"]
@@ -265,6 +269,8 @@ export type Database = {
           cost?: number
           created_at?: string
           currency?: Database["public"]["Enums"]["purchase_currency"]
+          description?: string
+          emoji?: string
           item_key?: string
           item_name?: string
           kind?: Database["public"]["Enums"]["purchase_kind"]
