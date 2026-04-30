@@ -64,16 +64,7 @@ const readApiError = async (response: Response) => {
 
 export const reloadSchemaCache = async () => {
   try {
-    const { supabaseUrl, supabasePublishableKey } = getRequiredConfig();
-    await fetch(`${supabaseUrl}/rest/v1/rpc/reload_schema_cache`, {
-      method: "POST",
-      headers: {
-        apikey: supabasePublishableKey,
-        Authorization: `Bearer ${supabasePublishableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: "{}",
-    });
+    await supabase.rpc("reload_schema_cache");
   } catch (error) {
     console.warn("Schema cache refresh request failed:", error);
   }
