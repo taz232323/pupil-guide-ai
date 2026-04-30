@@ -6,9 +6,11 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { StudentAvatar } from "@/components/StudentAvatar";
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, MessagesSquare } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { StudentConversationsDialog } from "@/components/StudentConversationsDialog";
 
 type ClassRow = { id: string; name: string };
 type Assignment = { id: string; class_id: string; unit_tag: string | null; title: string; due_date: string | null };
@@ -53,6 +55,7 @@ export const TeacherProgress = () => {
   const [search, setSearch] = useState("");
   const [unitFilter, setUnitFilter] = useState<string>("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [convDialog, setConvDialog] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -352,6 +355,16 @@ export const TeacherProgress = () => {
                           ))}
                         </ul>
                       )}
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setConvDialog({ id: r.id, name: r.name })}
+                        >
+                          <MessagesSquare className="h-4 w-4" />
+                          View Conversations
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -360,6 +373,14 @@ export const TeacherProgress = () => {
           </div>
         )}
       </CardContent>
+      {convDialog && (
+        <StudentConversationsDialog
+          open={!!convDialog}
+          onOpenChange={(v) => !v && setConvDialog(null)}
+          studentId={convDialog.id}
+          studentName={convDialog.name}
+        />
+      )}
     </Card>
   );
 };
