@@ -16,6 +16,9 @@ import { StudentAvatar, COSMETIC_EMOJI } from "@/components/StudentAvatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Lock, Sparkles, Check, Star } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/hooks/useTheme";
 
 type Category = "hair" | "face" | "outfit" | "background";
 
@@ -45,6 +48,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
 
 export default function Profile() {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [name, setName] = useState("");
   const [owned, setOwned] = useState<Set<string>>(new Set());
   const [equipped, setEquipped] = useState<string[]>([]);
@@ -238,6 +242,41 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Settings */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Appearance</CardTitle>
+          <CardDescription>Choose how the app looks. Your preference is saved to your account.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-background border">
+                {theme === "dark" ? (
+                  <Moon className="h-4 w-4 text-primary" />
+                ) : (
+                  <Sun className="h-4 w-4 text-amber-500" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium">Dark mode</p>
+                <p className="text-xs text-muted-foreground">
+                  {theme === "dark" ? "Dark theme is on" : "Light theme is on"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={theme === "dark"}
+              onCheckedChange={(checked) => {
+                void setTheme(checked ? "dark" : "light");
+                toast.success(checked ? "Dark mode enabled" : "Light mode enabled");
+              }}
+              aria-label="Toggle dark mode"
+            />
+          </div>
+        </CardContent>
+      </Card>
     </DashboardShell>
   );
 }
