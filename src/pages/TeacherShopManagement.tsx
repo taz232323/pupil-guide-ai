@@ -161,7 +161,7 @@ export function TeacherShopManagement() {
     return () => { supabase.removeChannel(ch); };
   }, [user]);
 
-  const upsert = async (item: ShopItem, isEdit: boolean) => {
+  const upsert = async (item: ShopItem, isEdit: boolean): Promise<void> => {
     if (isEdit) {
       const { error } = await supabase
         .from("shop_items")
@@ -173,7 +173,7 @@ export function TeacherShopManagement() {
           cost: item.cost,
         })
         .eq("item_key", item.item_key);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       toast.success("Item updated");
     } else {
       const { error } = await supabase.from("shop_items").insert({
@@ -187,8 +187,9 @@ export function TeacherShopManagement() {
         active: true,
       });
       if (error) {
-        if (error.code === "23505") return toast.error("An item with that key already exists");
-        return toast.error(error.message);
+        if (error.code === "23505") { toast.error("An item with that key already exists"); return; }
+        toast.error(error.message);
+        return;
       }
       toast.success("Item added");
     }
@@ -197,10 +198,10 @@ export function TeacherShopManagement() {
     load();
   };
 
-  const remove = async (item: ShopItem) => {
+  const remove = async (item: ShopItem): Promise<void> => {
     if (!confirm(`Delete "${item.item_name}"? Existing student purchases are kept.`)) return;
     const { error } = await supabase.from("shop_items").delete().eq("item_key", item.item_key);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Item deleted");
     load();
   };
