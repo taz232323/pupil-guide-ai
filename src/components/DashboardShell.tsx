@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { NotificationBell } from "@/components/NotificationBell";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
 
@@ -173,17 +174,25 @@ export const DashboardShell = ({
               </span>
               <span className="font-bold">EduFlow</span>
             </Link>
-            {role === "student" && coins && (
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning">
-                  <Star className="h-3 w-3 fill-current" />{coins.star}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
-                  <Crown className="h-3 w-3 fill-current" />{coins.crown}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-1.5">
+              {role === "student" && coins && (
+                <>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning">
+                    <Star className="h-3 w-3 fill-current" />{coins.star}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
+                    <Crown className="h-3 w-3 fill-current" />{coins.crown}
+                  </span>
+                </>
+              )}
+              <NotificationBell />
+            </div>
           </div>
+        </header>
+
+        {/* Desktop top bar */}
+        <header className="hidden lg:flex sticky top-0 z-30 h-14 items-center justify-end gap-2 border-b border-border bg-card/80 backdrop-blur px-6">
+          <NotificationBell />
         </header>
 
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-10 max-w-6xl w-full mx-auto animate-fade-in">
