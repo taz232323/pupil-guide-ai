@@ -11,30 +11,31 @@ import { cn } from "@/lib/utils";
 type Msg = { role: "user" | "assistant"; content: string };
 
 export function StudyBuddy() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [open, setOpen] = useState(false);
-  const [studentName, setStudentName] = useState<string>("");
+  const [firstName, setFirstName] = useState<string>("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isTeacher = role === "teacher";
 
   // Fetch name once for the greeting
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
-      .then(({ data }) => setStudentName((data?.full_name?.split(" ")[0]) || "friend"));
+      .then(({ data }) => setFirstName((data?.full_name?.split(" ")[0]) || (isTeacher ? "Teacher" : "friend")));
   }, [user]);
 
   // Greet on first open
   useEffect(() => {
     if (open && messages.length === 0) {
-      setMessages([{
-        role: "assistant",
-        content: `Hi ${studentName || "there"}! 👋 I'm **Study Buddy**. Ask me to explain a concept, give you practice questions for a unit, or help plan your week. What's up?`,
-      }]);
+      const greeting = isTeacher
+        ? `Hi ${firstName || "Teacher"}! 👋 I'm **Study Buddy**, your AI co-teacher. I can help you:\n- Write **assignment descriptions**\n- Generate **quiz questions** for a unit\n- Draft **announcements** or parent emails\n- Brainstorm **lesson ideas**\n\nWhat are we working on?`
+        : `Hi ${firstName || "there"}! 👋 I'm **Study Buddy**. Ask me to explain a concept, give you practice questions for a unit, or help plan your week. What's up?`;
+      setMessages([{ role: "assistant", content: greeting }]);
     }
-  }, [open, studentName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, firstName, isTeacher]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Smooth scroll to latest
   useEffect(() => {
@@ -45,7 +46,7 @@ export function StudyBuddy() {
   const clearChat = () => {
     setMessages([{
       role: "assistant",
-      content: `Fresh start! What would you like to work on, ${studentName || "friend"}?`,
+      content: `Fresh start! What would you like to work on, ${firstName || (isTeacher ? "Teacher" : "friend")}?`,
     }]);
   };
 
@@ -81,7 +82,7 @@ export function StudyBuddy() {
       {/* Floating bubble */}
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open Study Buddy"
+        aria-label={isTeacher ? "Open Study Buddy (teacher)" : "Open Study Buddy"}
         title="Study Buddy — AI helper"
         className={cn(
           "fixed right-5 bottom-20 lg:bottom-6 z-[100] group inline-flex h-16 w-16 items-center justify-center rounded-full",
@@ -147,7 +148,7 @@ export function StudyBuddy() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={onKey}
-                placeholder="Ask anything about your assignments..."
+                placeholder={isTeacher ? "Ask for a quiz, lesson idea, or draft..." : "Ask anything about your assignments..."}
                 disabled={sending}
                 maxLength={2000}
               />
