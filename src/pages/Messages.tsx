@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, Eye } from "lucide-react";
+import { Send, Eye, MessageSquare, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { StudentAvatar } from "@/components/StudentAvatar";
+import { EmptyState } from "@/components/EmptyState";
 
 type ClassRow = { id: string; name: string; teacher_id: string };
 type Profile = { id: string; full_name: string | null; avatar_items: string[] | null };
@@ -266,9 +267,17 @@ export const Messages = () => {
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : classes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Join or create a class to start messaging.</p>
+          <EmptyState
+            icon={MessageSquare}
+            title="No conversations yet"
+            description="Join or create a class — messaging is shared with your classmates and teacher."
+          />
         ) : conversations.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No one to message yet.</p>
+          <EmptyState
+            icon={Users}
+            title="No one to message yet"
+            description="Once classmates and teachers join your class, they'll appear here."
+          />
         ) : (
           <div className="grid gap-0 md:grid-cols-[260px_1fr] border border-border rounded-md overflow-hidden h-[480px]">
             <div className="border-r border-border bg-muted/30">
