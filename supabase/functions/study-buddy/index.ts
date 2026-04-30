@@ -154,18 +154,7 @@ ${contextLines}
       geminiData?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("\n") ||
       "Sorry, I couldn't think of an answer. Try asking again!";
 
-    // ---------- Award coins (capped, server-side) ----------
-    const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE);
-    let awarded = 0;
-    try {
-      const { data: awardData, error: awardErr } = await adminClient.rpc("award_ai_message_coins", { _student_id: user.id });
-      if (awardErr) console.error("award error:", awardErr);
-      else awarded = (awardData as number) ?? 0;
-    } catch (e) {
-      console.error("award threw:", e);
-    }
-
-    return new Response(JSON.stringify({ reply, awarded }), {
+    return new Response(JSON.stringify({ reply, awarded: 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
