@@ -11,6 +11,7 @@ import { StudentAvatar } from "@/components/StudentAvatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -91,9 +92,9 @@ export const DashboardShell = ({
   const profile = useProfile(user?.id);
   const nav = role === "teacher" ? TEACHER_NAV : STUDENT_NAV;
   const { pathname } = useLocation();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm("Permanently delete your account? This cannot be undone.")) return;
     const { error } = await supabase.functions.invoke("delete-account");
     if (error) { toast.error(error.message); return; }
     toast.success("Account deleted");
@@ -164,7 +165,7 @@ export const DashboardShell = ({
             <Button variant="ghost" size="sm" onClick={signOut} className="flex-1 justify-start">
               <LogOut className="h-3.5 w-3.5 mr-1" />Sign out
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleDelete}
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}
               className="text-destructive hover:text-destructive hover:bg-destructive/10">
               Delete
             </Button>
@@ -226,7 +227,7 @@ export const DashboardShell = ({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={handleDelete}
+                    onClick={() => setConfirmDelete(true)}
                     className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
                     Delete account
@@ -242,7 +243,10 @@ export const DashboardShell = ({
           <NotificationBell />
         </header>
 
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-10 max-w-6xl w-full mx-auto animate-fade-in">
+        <main
+          key={pathname}
+          className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-10 max-w-6xl w-full mx-auto animate-fade-in"
+        >
           {(title || actions) && (
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -278,6 +282,16 @@ export const DashboardShell = ({
           </ul>
         </nav>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Permanently delete your account?"
+        description="This cannot be undone. All of your data will be removed."
+        confirmLabel="Delete account"
+        destructive
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
