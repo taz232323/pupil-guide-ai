@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StudyBuddy } from "@/components/StudyBuddy";
 
 type Row = {
   id: string;
@@ -180,6 +181,7 @@ export default function StudentDashboard() {
           </div>
         )}
       </div>
+      <StudyBuddy />
     </DashboardShell>
   );
 }

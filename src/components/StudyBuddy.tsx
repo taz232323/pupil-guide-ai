@@ -1,0 +1,211 @@
+import { useEffect, useRef, useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sparkles, Send, Trash2, Bot, Star, MessageCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+type Msg = { role: "user" | "assistant"; content: string };
+
+export function StudyBuddy() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [studentName, setStudentName] = useState<string>("");
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch name once for the greeting
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
+      .then(({ data }) => setStudentName((data?.full_name?.split(" ")[0]) || "friend"));
+  }, [user]);
+
+  // Greet on first open
+  useEffect(() => {
+    if (open && messages.length === 0) {
+      setMessages([{
+        role: "assistant",
+        content: `Hi ${studentName || "there"}! 👋 I'm **Study Buddy**. Ask me to explain a concept, give you practice questions for a unit, or help plan your week. What's up?`,
+      }]);
+    }
+  }, [open, studentName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Smooth scroll to latest
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages, sending]);
+
+  const clearChat = () => {
+    setMessages([{
+      role: "assistant",
+      content: `Fresh start! What would you like to work on, ${studentName || "friend"}?`,
+    }]);
+  };
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || sending) return;
+    setInput("");
+    const next = [...messages, { role: "user" as const, content: text }];
+    setMessages(next);
+    setSending(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("study-buddy", {
+        body: { messages: next.map((m) => ({ role: m.role, content: m.content })) },
+      });
+      if (error) throw error;
+      const reply = (data as any)?.reply ?? "Hmm, no response.";
+      const awarded = (data as any)?.awarded ?? 0;
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      if (awarded > 0) {
+        toast.success(`+${awarded} Star Coins ⭐`, { duration: 1800 });
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Study Buddy is unavailable right now.");
+      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I had trouble answering that. Try again in a moment." }]);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  };
+
+  return (
+    <>
+      {/* Floating bubble */}
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Open Study Buddy"
+        className={cn(
+          "fixed bottom-6 right-6 z-40 group inline-flex h-14 w-14 items-center justify-center rounded-full",
+          "bg-gradient-to-br from-primary to-teal text-primary-foreground shadow-elevated",
+          "transition-all hover:scale-105 hover:shadow-glow active:scale-95",
+          open && "opacity-0 pointer-events-none"
+        )}
+      >
+        <MessageCircle className="h-6 w-6" />
+        <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold shadow">
+          <Sparkles className="h-3 w-3" />
+        </span>
+      </button>
+
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col gap-0">
+          <SheetHeader className="border-b px-4 py-3 bg-gradient-to-br from-primary/10 via-background to-teal/10">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-teal text-primary-foreground inline-flex items-center justify-center shadow">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <SheetTitle className="text-base leading-tight flex items-center gap-1.5">
+                    Study Buddy
+                    <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  </SheetTitle>
+                  <p className="text-[11px] text-muted-foreground">AI · powered by Gemini</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={clearChat} className="text-muted-foreground gap-1.5">
+                <Trash2 className="h-3.5 w-3.5" /> Clear
+              </Button>
+            </div>
+          </SheetHeader>
+
+          {/* Messages */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-muted/20">
+            {messages.map((m, i) => (
+              <MessageBubble key={i} role={m.role} content={m.content} />
+            ))}
+            {sending && (
+              <div className="flex items-end gap-2">
+                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary to-teal text-primary-foreground inline-flex items-center justify-center shrink-0">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div className="rounded-2xl rounded-bl-sm bg-card border px-3 py-2 shadow-sm">
+                  <div className="flex gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Composer */}
+          <div className="border-t bg-background p-3">
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onKey}
+                placeholder="Ask anything about your assignments..."
+                disabled={sending}
+                maxLength={2000}
+              />
+              <Button onClick={send} disabled={sending || !input.trim()} size="icon" aria-label="Send">
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground flex items-center gap-1">
+              <Star className="h-3 w-3 text-amber-500 fill-amber-400" /> Earn star coins for chatting (up to 5×/day).
+            </p>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+function MessageBubble({ role, content }: { role: "user" | "assistant"; content: string }) {
+  const isUser = role === "user";
+  return (
+    <div className={cn("flex items-end gap-2", isUser && "flex-row-reverse")}>
+      <div className={cn(
+        "h-7 w-7 rounded-full inline-flex items-center justify-center shrink-0 text-xs font-semibold",
+        isUser ? "bg-secondary text-secondary-foreground" : "bg-gradient-to-br from-primary to-teal text-primary-foreground",
+      )}>
+        {isUser ? "You" : <Bot className="h-4 w-4" />}
+      </div>
+      <div className={cn(
+        "max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm whitespace-pre-wrap break-words",
+        isUser
+          ? "bg-primary text-primary-foreground rounded-br-sm"
+          : "bg-card border rounded-bl-sm",
+      )}>
+        {renderMarkdownLite(content)}
+      </div>
+    </div>
+  );
+}
+
+/** Lightweight markdown: **bold**, line breaks, and bullets. Avoids extra deps. */
+function renderMarkdownLite(text: string) {
+  const lines = text.split("\n");
+  return (
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        const bullet = /^\s*[-*]\s+/.test(line);
+        const clean = bullet ? line.replace(/^\s*[-*]\s+/, "") : line;
+        const parts = clean.split(/(\*\*[^*]+\*\*)/g).map((p, j) =>
+          /^\*\*[^*]+\*\*$/.test(p)
+            ? <strong key={j}>{p.slice(2, -2)}</strong>
+            : <span key={j}>{p}</span>
+        );
+        return bullet
+          ? <div key={i} className="flex gap-2"><span className="text-muted-foreground">•</span><div>{parts}</div></div>
+          : <div key={i}>{parts.length === 1 && parts[0].props.children === "" ? <br /> : parts}</div>;
+      })}
+    </div>
+  );
+}
