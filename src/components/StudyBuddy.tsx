@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, Trash2, Bot, Star, MessageCircle } from "lucide-react";
+import { Sparkles, Send, Trash2, Bot, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -153,9 +153,6 @@ export function StudyBuddy() {
                 <Send className="h-4 w-4" />
               </Button>
             </div>
-            <p className="mt-1.5 text-[10px] text-muted-foreground flex items-center gap-1">
-              <Star className="h-3 w-3 text-amber-500 fill-amber-400" /> Earn star coins for chatting (up to 5×/day).
-            </p>
           </div>
         </SheetContent>
       </Sheet>
