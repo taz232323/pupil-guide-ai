@@ -72,27 +72,39 @@ export const TeacherClasses = () => {
       return;
     }
     setSubmitting(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error("Not signed in");
+    try {
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !user) {
+        toast.error("You're not signed in. Please sign in again.");
+        return;
+      }
+      const { error } = await supabase.from("classes").insert({
+        teacher_id: user.id,
+        name: parsed.data.name,
+        subject: parsed.data.subject,
+      });
+      if (error) {
+        console.error("Create class failed:", error);
+        if (error.code === "42501" || /permission denied|row-level security/i.test(error.message)) {
+          toast.error("You don't have permission to create classes. Make sure your account is a teacher account.");
+        } else if (/network|fetch|failed to fetch/i.test(error.message)) {
+          toast.error("Couldn't reach the server. Check your connection and try again.");
+        } else {
+          toast.error(`Couldn't create class: ${error.message}`);
+        }
+        return;
+      }
+      toast.success("Class created");
+      setOpen(false);
+      setName("");
+      setSubject("");
+      load();
+    } catch (err: any) {
+      console.error("Unexpected error creating class:", err);
+      toast.error(err?.message ?? "Something went wrong creating the class.");
+    } finally {
       setSubmitting(false);
-      return;
     }
-    const { error } = await supabase.from("classes").insert({
-      teacher_id: user.id,
-      name: parsed.data.name,
-      subject: parsed.data.subject,
-    });
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Class created");
-    setOpen(false);
-    setName("");
-    setSubject("");
-    load();
   };
 
   const handleDelete = async (id: string) => {
