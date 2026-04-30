@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Tag, Upload, LinkIcon } from "lucide-react";
+import { CalendarDays, Tag, Upload, LinkIcon, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 type Status = "not_started" | "in_progress" | "submitted";
 
@@ -166,7 +167,11 @@ export const StudentAssignments = () => {
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No assignments yet.</p>
+          <EmptyState
+            icon={ClipboardList}
+            title="No assignments yet"
+            description="Check back soon — your teacher hasn't posted anything for these classes."
+          />
         ) : (
           <div className="divide-y divide-border">
             {rows.map((r) => (
