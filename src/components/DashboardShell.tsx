@@ -311,7 +311,7 @@ export const DashboardShell = ({
         destructive
         onConfirm={handleDelete}
       />
-      {role === "student" && <StudyBuddy />}
+      {(role === "student" || role === "teacher") && <StudyBuddy />}
     </div>
   );
 };
