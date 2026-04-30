@@ -13,6 +13,11 @@ import {
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { createClassViaRest } from "@/lib/supabaseRest";
+import { SpinnerButton } from "@/components/SpinnerButton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconButton } from "@/components/IconButton";
+import { RowListSkeleton } from "@/components/Skeletons";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type ClassRow = {
   id: string;
@@ -35,6 +40,7 @@ export const TeacherClasses = () => {
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [toDelete, setToDelete] = useState<ClassRow | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -112,7 +118,6 @@ export const TeacherClasses = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this class? This cannot be undone.")) return;
     const { error } = await supabase.from("classes").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
@@ -152,9 +157,9 @@ export const TeacherClasses = () => {
                   placeholder="Algebra II" required />
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? "Creating..." : "Create class"}
-                </Button>
+                <SpinnerButton type="submit" loading={submitting} loadingText="Creating...">
+                  Create class
+                </SpinnerButton>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -162,7 +167,7 @@ export const TeacherClasses = () => {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <RowListSkeleton count={3} />
         ) : classes.length === 0 ? (
           <EmptyState
             icon={BookOpen}
@@ -175,7 +180,9 @@ export const TeacherClasses = () => {
               <div key={c.id} className="py-3 flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="font-medium truncate">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.subject}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {c.subject} · created <RelativeTime date={c.created_at} />
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
@@ -184,20 +191,29 @@ export const TeacherClasses = () => {
                   <button
                     onClick={() => copyCode(c.join_code)}
                     className="font-mono text-xs px-2 py-1 rounded bg-secondary hover:bg-accent inline-flex items-center gap-1.5"
-                    title="Copy join code"
+                    aria-label={`Copy join code ${c.join_code}`}
                   >
                     {c.join_code}
                     <Copy className="h-3 w-3" />
                   </button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}>
+                  <IconButton label="Delete class" onClick={() => setToDelete(c)}>
                     <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
+                  </IconButton>
                 </div>
               </div>
             ))}
           </div>
         )}
       </CardContent>
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={`Delete "${toDelete?.name ?? ""}"?`}
+        description="This permanently removes the class, its members, assignments, and submissions. This cannot be undone."
+        confirmLabel="Delete class"
+        destructive
+        onConfirm={async () => { if (toDelete) await handleDelete(toDelete.id); }}
+      />
     </Card>
   );
 };
