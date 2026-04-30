@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, Trash2, Bot, MessageCircle } from "lucide-react";
+import { Sparkles, Send, Trash2, Bot, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -82,17 +82,19 @@ export function StudyBuddy() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Open Study Buddy"
+        title="Study Buddy — AI helper"
         className={cn(
-          "fixed bottom-6 right-6 z-40 group inline-flex h-14 w-14 items-center justify-center rounded-full",
-          "bg-gradient-to-br from-primary to-teal text-primary-foreground shadow-elevated",
-          "transition-all hover:scale-105 hover:shadow-glow active:scale-95",
+          "fixed right-5 bottom-20 lg:bottom-6 z-[100] group inline-flex h-16 w-16 items-center justify-center rounded-full",
+          "bg-gradient-to-br from-primary to-teal text-primary-foreground shadow-elevated ring-4 ring-background",
+          "transition-all hover:scale-110 hover:shadow-glow active:scale-95 animate-in fade-in zoom-in",
           open && "opacity-0 pointer-events-none"
         )}
       >
-        <MessageCircle className="h-6 w-6" />
-        <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold shadow">
+        <Brain className="h-7 w-7" />
+        <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold shadow ring-2 ring-background">
           <Sparkles className="h-3 w-3" />
         </span>
+        <span className="pointer-events-none absolute inset-0 rounded-full bg-primary/40 animate-ping opacity-30" aria-hidden />
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
