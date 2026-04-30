@@ -14,6 +14,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Badge } from "@/components/ui/badge";
+import { StudyBuddy } from "@/components/StudyBuddy";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -310,6 +311,7 @@ export const DashboardShell = ({
         destructive
         onConfirm={handleDelete}
       />
+      {role === "student" && <StudyBuddy />}
     </div>
   );
 };
