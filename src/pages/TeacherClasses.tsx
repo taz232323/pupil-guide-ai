@@ -78,10 +78,9 @@ export const TeacherClasses = () => {
       setSubmitting(false);
       return;
     }
-    const { error } = await supabase.from("classes").insert({
-      teacher_id: user.id,
-      name: parsed.data.name,
-      subject: parsed.data.subject,
+    const { error } = await supabase.rpc("create_teacher_class", {
+      _name: parsed.data.name,
+      _subject: parsed.data.subject,
     });
     setSubmitting(false);
     if (error) {
