@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -93,6 +95,7 @@ export const DashboardShell = ({
   const nav = role === "teacher" ? TEACHER_NAV : STUDENT_NAV;
   const { pathname } = useLocation();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const unread = useUnreadMessages();
 
   const handleDelete = async () => {
     const { error } = await supabase.functions.invoke("delete-account");
@@ -134,6 +137,14 @@ export const DashboardShell = ({
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.label}</span>
+                {item.to === "/messages" && unread > 0 && (
+                  <Badge
+                    variant={active ? "secondary" : "default"}
+                    className="ml-auto h-5 min-w-[20px] px-1.5 text-[10px] tabular-nums justify-center"
+                  >
+                    {unread > 99 ? "99+" : unread}
+                  </Badge>
+                )}
               </NavLink>
             );
           })}
@@ -273,7 +284,14 @@ export const DashboardShell = ({
                       active ? "text-primary" : "text-muted-foreground"
                     )}
                   >
-                    <item.icon className={cn("h-5 w-5", active && "drop-shadow")} />
+                    <span className="relative">
+                      <item.icon className={cn("h-5 w-5", active && "drop-shadow")} />
+                      {item.to === "/messages" && unread > 0 && (
+                        <span className="absolute -top-1.5 -right-2 h-4 min-w-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-semibold flex items-center justify-center tabular-nums">
+                          {unread > 9 ? "9+" : unread}
+                        </span>
+                      )}
+                    </span>
                     <span className="truncate max-w-[60px]">{item.label}</span>
                   </NavLink>
                 </li>
