@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, Crown, Sparkles, ShieldCheck } from "lucide-react";
+import { Star, Crown, Sparkles, ShieldCheck, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 type Cosmetic = { key: string; name: string; cost: number; emoji: string; desc: string };
 type Privilege = { key: string; name: string; cost: number; desc: string };
@@ -170,7 +171,13 @@ export function Shop() {
               })}
             </div>
             {classes.length === 0 && (
-              <p className="text-sm text-muted-foreground">Join a class to request privileges.</p>
+              <div className="mt-4">
+                <EmptyState
+                  icon={BookOpen}
+                  title="Join a class first"
+                  description="Privilege requests are sent to your teacher, so you'll need to be in a class to request them."
+                />
+              </div>
             )}
           </TabsContent>
         </Tabs>
