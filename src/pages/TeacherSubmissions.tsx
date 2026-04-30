@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type Submission = {
   id: string;
@@ -110,7 +111,9 @@ export const TeacherSubmissions = () => {
                     <div key={s.id} className="px-3 py-2 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{s.studentName}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(s.submitted_at).toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">
+                          submitted <RelativeTime date={s.submitted_at} />
+                        </p>
                       </div>
                       {s.file_path ? (
                         <Button size="sm" variant="outline" onClick={() => openFile(s.file_path!)}>

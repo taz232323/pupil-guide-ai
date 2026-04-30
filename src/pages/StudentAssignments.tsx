@@ -15,6 +15,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { SpinnerButton } from "@/components/SpinnerButton";
+import { CardListSkeleton } from "@/components/Skeletons";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type Status = "not_started" | "in_progress" | "submitted";
 
@@ -171,7 +174,7 @@ export const StudentAssignments = () => {
       <CardHeader><CardTitle className="text-base">Assignments</CardTitle></CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <CardListSkeleton count={3} />
         ) : rows.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
@@ -199,7 +202,7 @@ export const StudentAssignments = () => {
                     )}
                     {r.due_date && (
                       <span className="inline-flex items-center gap-1">
-                        <CalendarDays className="h-3 w-3" />Due {new Date(r.due_date).toLocaleString()}
+                        <CalendarDays className="h-3 w-3" />Due <RelativeTime date={r.due_date} />
                       </span>
                     )}
                     {r.submission?.link_url && (
@@ -252,9 +255,9 @@ export const StudentAssignments = () => {
               <Input id="sub-file" type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </div>
             <DialogFooter>
-              <Button onClick={() => handleSubmit("file")} disabled={busy || !file}>
-                {busy ? "Submitting..." : "Submit file"}
-              </Button>
+              <SpinnerButton onClick={() => handleSubmit("file")} loading={busy} disabled={!file} loadingText="Submitting...">
+                Submit file
+              </SpinnerButton>
             </DialogFooter>
           </TabsContent>
           <TabsContent value="link" className="space-y-3 pt-3">
@@ -263,9 +266,9 @@ export const StudentAssignments = () => {
               <Input id="sub-link" type="url" placeholder="https://..." value={link} onChange={(e) => setLink(e.target.value)} />
             </div>
             <DialogFooter>
-              <Button onClick={() => handleSubmit("link")} disabled={busy || !link}>
-                {busy ? "Submitting..." : "Submit link"}
-              </Button>
+              <SpinnerButton onClick={() => handleSubmit("link")} loading={busy} disabled={!link} loadingText="Submitting...">
+                Submit link
+              </SpinnerButton>
             </DialogFooter>
           </TabsContent>
         </Tabs>

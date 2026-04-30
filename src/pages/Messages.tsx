@@ -9,6 +9,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
+import { SpinnerButton } from "@/components/SpinnerButton";
+import { ConversationListSkeleton } from "@/components/Skeletons";
+import { RelativeTime } from "@/components/RelativeTime";
+
+const MAX_MSG = 5000;
 
 type ClassRow = { id: string; name: string; teacher_id: string };
 type Profile = { id: string; full_name: string | null; avatar_items: string[] | null };
@@ -265,7 +270,7 @@ export const Messages = () => {
       <CardHeader><CardTitle className="text-base">Messages</CardTitle></CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <ConversationListSkeleton count={5} />
         ) : classes.length === 0 ? (
           <EmptyState
             icon={MessageSquare}
@@ -363,7 +368,7 @@ export const Messages = () => {
                                 <p className="text-[10px] opacity-70 mb-0.5">{nameOf(m.sender_id)} → {nameOf(m.recipient_id)}</p>
                               )}
                               <p className="text-sm whitespace-pre-wrap break-words">{m.body}</p>
-                              <p className="text-[10px] opacity-70 mt-1">{new Date(m.created_at).toLocaleString()}</p>
+                              <RelativeTime date={m.created_at} className="text-[10px] opacity-70 mt-1 block" />
                             </div>
                           </div>
                         );
@@ -371,16 +376,26 @@ export const Messages = () => {
                     )}
                   </div>
                   {!active.observed && (
-                    <form onSubmit={send} className="p-3 border-t border-border flex items-center gap-2">
-                      <Input
-                        value={body}
-                        onChange={(e) => setBody(e.target.value)}
-                        placeholder="Type a message"
-                        maxLength={5000}
-                      />
-                      <Button type="submit" size="icon" disabled={sending || !body.trim()}>
-                        <Send className="h-4 w-4" />
-                      </Button>
+                    <form onSubmit={send} className="p-3 border-t border-border space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={body}
+                          onChange={(e) => setBody(e.target.value.slice(0, MAX_MSG))}
+                          placeholder="Type a message"
+                          maxLength={MAX_MSG}
+                        />
+                        <SpinnerButton type="submit" size="icon" loading={sending} disabled={!body.trim()} aria-label="Send message">
+                          {!sending && <Send className="h-4 w-4" />}
+                        </SpinnerButton>
+                      </div>
+                      <p
+                        className={`text-[10px] text-right tabular-nums ${
+                          body.length >= MAX_MSG ? "text-destructive" : "text-muted-foreground"
+                        }`}
+                        aria-live="polite"
+                      >
+                        {body.length} / {MAX_MSG}
+                      </p>
                     </form>
                   )}
                 </>

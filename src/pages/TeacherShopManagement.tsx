@@ -12,6 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Star, Crown, Sparkles, ShieldCheck, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { TeacherPrivilegeRequests } from "./TeacherPrivilegeRequests";
+import { SpinnerButton } from "@/components/SpinnerButton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconButton } from "@/components/IconButton";
+import { ShopGridSkeleton } from "@/components/Skeletons";
 
 type Kind = "cosmetic" | "privilege";
 type Currency = "star" | "crown";
@@ -127,7 +131,9 @@ function ItemForm({
       </div>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" disabled={saving}>{saving ? "Saving..." : isEdit ? "Save changes" : "Add item"}</Button>
+        <SpinnerButton type="submit" loading={saving} loadingText="Saving...">
+          {isEdit ? "Save changes" : "Add item"}
+        </SpinnerButton>
       </DialogFooter>
     </form>
   );
@@ -139,6 +145,7 @@ export function TeacherShopManagement() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ShopItem | null>(null);
   const [creating, setCreating] = useState<Kind | null>(null);
+  const [toDelete, setToDelete] = useState<ShopItem | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -199,7 +206,6 @@ export function TeacherShopManagement() {
   };
 
   const remove = async (item: ShopItem): Promise<void> => {
-    if (!confirm(`Delete "${item.item_name}"? Existing student purchases are kept.`)) return;
     const { error } = await supabase.from("shop_items").delete().eq("item_key", item.item_key);
     if (error) { toast.error(error.message); return; }
     toast.success("Item deleted");
@@ -208,7 +214,7 @@ export function TeacherShopManagement() {
 
   const renderList = (kind: Kind) => {
     const list = items.filter((i) => i.kind === kind);
-    if (loading) return <p className="text-sm text-muted-foreground">Loading...</p>;
+    if (loading) return <ShopGridSkeleton count={4} />;
     if (list.length === 0)
       return <p className="text-sm text-muted-foreground">No {kind} items yet. Add one to get started.</p>;
     return (
@@ -230,12 +236,12 @@ export function TeacherShopManagement() {
                 {it.cost}
               </span>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setEditing(it)}>
-                  <Pencil className="h-3.5 w-3.5" /> Edit
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => remove(it)}>
-                  <Trash2 className="h-3.5 w-3.5" /> Delete
-                </Button>
+                <IconButton label="Edit item" variant="outline" size="sm" onClick={() => setEditing(it)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </IconButton>
+                <IconButton label="Delete item" variant="outline" size="sm" onClick={() => setToDelete(it)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </IconButton>
               </div>
             </div>
           </div>
@@ -314,6 +320,16 @@ export function TeacherShopManagement() {
       </Dialog>
 
       <TeacherPrivilegeRequests />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={`Delete "${toDelete?.item_name ?? ""}"?`}
+        description="Existing student purchases are kept, but this item will no longer appear in the shop."
+        confirmLabel="Delete item"
+        destructive
+        onConfirm={async () => { if (toDelete) await remove(toDelete); }}
+      />
     </div>
   );
 }
