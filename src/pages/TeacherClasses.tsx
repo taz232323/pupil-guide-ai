@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { createClassViaRest } from "@/lib/supabaseRest";
 
 type ClassRow = {
   id: string;
@@ -78,15 +79,18 @@ export const TeacherClasses = () => {
         toast.error("You're not signed in. Please sign in again.");
         return;
       }
-      const { error } = await supabase.from("classes").insert({
-        teacher_id: user.id,
-        name: parsed.data.name,
-        subject: parsed.data.subject,
-      });
-      if (error) {
+      try {
+        await createClassViaRest({
+          teacherId: user.id,
+          name: parsed.data.name,
+          subject: parsed.data.subject,
+        });
+      } catch (error: any) {
         console.error("Create class failed:", error);
         if (error.code === "42501" || /permission denied|row-level security/i.test(error.message)) {
           toast.error("You don't have permission to create classes. Make sure your account is a teacher account.");
+        } else if (error.code === "PGRST002") {
+          toast.error("The database is still refreshing its class schema. Please try again in a moment.");
         } else if (/network|fetch|failed to fetch/i.test(error.message)) {
           toast.error("Couldn't reach the server. Check your connection and try again.");
         } else {
