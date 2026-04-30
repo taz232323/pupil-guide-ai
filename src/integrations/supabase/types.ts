@@ -149,32 +149,94 @@ export type Database = {
         }
         Relationships: []
       }
-      messages: {
+      message_group_members: {
         Row: {
-          body: string
+          added_at: string
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "message_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_groups: {
+        Row: {
           class_id: string
           created_at: string
           id: string
+          name: string
+          teacher_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          name: string
+          teacher_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          teacher_id?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          body: string
+          broadcast_id: string | null
+          class_id: string
+          created_at: string
+          group_id: string | null
+          id: string
+          is_broadcast: boolean
           read_at: string | null
-          recipient_id: string
+          recipient_id: string | null
           sender_id: string
         }
         Insert: {
           body: string
+          broadcast_id?: string | null
           class_id: string
           created_at?: string
+          group_id?: string | null
           id?: string
+          is_broadcast?: boolean
           read_at?: string | null
-          recipient_id: string
+          recipient_id?: string | null
           sender_id: string
         }
         Update: {
           body?: string
+          broadcast_id?: string | null
           class_id?: string
           created_at?: string
+          group_id?: string | null
           id?: string
+          is_broadcast?: boolean
           read_at?: string | null
-          recipient_id?: string
+          recipient_id?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -183,6 +245,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "message_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -471,6 +540,14 @@ export type Database = {
       }
       is_class_teacher: {
         Args: { _class_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_group_teacher: {
+        Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
       join_class_by_code: { Args: { _code: string }; Returns: string }
