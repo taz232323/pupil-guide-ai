@@ -9,22 +9,15 @@ import { Star, Crown, Sparkles, ShieldCheck, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 
-type Cosmetic = { key: string; name: string; cost: number; emoji: string; desc: string };
-type Privilege = { key: string; name: string; cost: number; desc: string };
-
-const COSMETICS: Cosmetic[] = [
-  { key: "hat_wizard", name: "Wizard Hat", cost: 10, emoji: "🧙", desc: "A pointy hat for your avatar." },
-  { key: "glasses", name: "Cool Shades", cost: 15, emoji: "🕶️", desc: "Stay cool in class." },
-  { key: "crown_silver", name: "Silver Crown", cost: 25, emoji: "👑", desc: "Royal vibes, silver tier." },
-  { key: "halo", name: "Halo", cost: 40, emoji: "😇", desc: "For the truly studious." },
-  { key: "robot", name: "Robot Face", cost: 60, emoji: "🤖", desc: "Beep boop." },
-  { key: "rainbow_aura", name: "Rainbow Aura", cost: 100, emoji: "🌈", desc: "Glow around your avatar." },
-];
-
-const PRIVILEGES: Privilege[] = [
-  { key: "homework_pass", name: "Homework Pass", cost: 50, desc: "Skip one homework assignment (teacher approval required)." },
-  { key: "seat_swap", name: "Seat Swap", cost: 30, desc: "Swap seats with a classmate for a day." },
-];
+type ShopItem = {
+  item_key: string;
+  item_name: string;
+  description: string;
+  emoji: string;
+  kind: "cosmetic" | "privilege";
+  currency: "star" | "crown";
+  cost: number;
+};
 
 export function Shop() {
   const { user } = useAuth();
@@ -33,39 +26,54 @@ export function Shop() {
   const [classId, setClassId] = useState<string>("");
   const [owned, setOwned] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<string | null>(null);
+  const [items, setItems] = useState<ShopItem[]>([]);
 
   const refresh = async () => {
     if (!user) return;
-    const [{ data: c }, { data: cl }, { data: p }] = await Promise.all([
+    const [{ data: c }, { data: cl }, { data: p }, { data: si }] = await Promise.all([
       supabase.from("student_coins").select("star_coins, crown_coins").eq("student_id", user.id).maybeSingle(),
       supabase.from("class_members").select("class_id, classes!inner(id, name)").eq("student_id", user.id),
       supabase.from("shop_purchases").select("item_key, kind, status").eq("student_id", user.id),
+      supabase.from("shop_items")
+        .select("item_key, item_name, description, emoji, kind, currency, cost")
+        .eq("active", true)
+        .order("kind").order("cost"),
     ]);
     if (c) setCoins({ star: c.star_coins, crown: c.crown_coins });
     const cls = (cl ?? []).map((r: any) => ({ id: r.classes.id, name: r.classes.name }));
     setClasses(cls);
     if (!classId && cls[0]) setClassId(cls[0].id);
     setOwned(new Set((p ?? []).filter((x: any) => x.kind === "cosmetic" && x.status === "approved").map((x: any) => x.item_key)));
+    setItems((si ?? []) as ShopItem[]);
   };
 
-  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => {
+    refresh();
+    const ch = supabase
+      .channel("shop_items_public")
+      .on("postgres_changes", { event: "*", schema: "public", table: "shop_items" }, () => refresh())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    /* eslint-disable-next-line */
+  }, [user]);
 
-  const buy = async (item: Cosmetic | Privilege, kind: "cosmetic" | "privilege") => {
+  const buy = async (item: ShopItem) => {
     if (!user) return;
+    const kind = item.kind;
     if (kind === "privilege" && !classId) {
       toast.error("Pick a class first");
       return;
     }
-    setLoading(item.key);
+    setLoading(item.item_key);
     // Server-side trigger fills item_name, kind, currency, cost, and status from the canonical shop_items table.
     const { error } = await supabase.from("shop_purchases").insert({
       student_id: user.id,
       class_id: kind === "privilege" ? classId : null,
-      item_key: item.key,
+      item_key: item.item_key,
       // The fields below are required by the table schema but will be overwritten by the trigger.
-      item_name: item.name,
+      item_name: item.item_name,
       kind,
-      currency: kind === "cosmetic" ? "star" : "crown",
+      currency: item.currency,
       cost: item.cost,
     });
     setLoading(null);
@@ -73,9 +81,12 @@ export function Shop() {
       toast.error(error.message.includes("Insufficient") ? "Not enough coins" : error.message);
       return;
     }
-    toast.success(kind === "cosmetic" ? `Purchased ${item.name}` : `Requested ${item.name} — pending approval`);
+    toast.success(kind === "cosmetic" ? `Purchased ${item.item_name}` : `Requested ${item.item_name} — pending approval`);
     refresh();
   };
+
+  const cosmetics = items.filter((i) => i.kind === "cosmetic");
+  const privileges = items.filter((i) => i.kind === "privilege");
 
   return (
     <Card>
@@ -104,26 +115,30 @@ export function Shop() {
 
           <TabsContent value="cosmetics" className="mt-4">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {COSMETICS.map((c) => {
-                const isOwned = owned.has(c.key);
-                const canAfford = coins.star >= c.cost;
+              {cosmetics.map((c) => {
+                const isOwned = owned.has(c.item_key);
+                const balance = c.currency === "star" ? coins.star : coins.crown;
+                const canAfford = balance >= c.cost;
                 return (
-                  <div key={c.key} className="rounded-lg border border-border p-4 flex flex-col gap-3">
+                  <div key={c.item_key} className="rounded-lg border border-border p-4 flex flex-col gap-3">
                     <div className="flex items-start gap-3">
                       <div className="h-12 w-12 rounded-md bg-muted inline-flex items-center justify-center text-2xl">{c.emoji}</div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium">{c.name}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-2">{c.desc}</div>
+                        <div className="font-medium">{c.item_name}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-2">{c.description}</div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1 text-sm font-medium">
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" /> {c.cost}
+                        {c.currency === "star"
+                          ? <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                          : <Crown className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                        {c.cost}
                       </span>
                       <Button
                         size="sm"
-                        disabled={isOwned || !canAfford || loading === c.key}
-                        onClick={() => buy(c, "cosmetic")}
+                        disabled={isOwned || !canAfford || loading === c.item_key}
+                        onClick={() => buy(c)}
                       >
                         {isOwned ? "Owned" : !canAfford ? "Not enough" : "Buy"}
                       </Button>
@@ -131,6 +146,9 @@ export function Shop() {
                   </div>
                 );
               })}
+              {cosmetics.length === 0 && (
+                <p className="text-sm text-muted-foreground col-span-full">No cosmetics available yet.</p>
+              )}
             </div>
           </TabsContent>
 
@@ -147,22 +165,29 @@ export function Shop() {
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
-              {PRIVILEGES.map((p) => {
-                const canAfford = coins.crown >= p.cost;
+              {privileges.map((p) => {
+                const balance = p.currency === "star" ? coins.star : coins.crown;
+                const canAfford = balance >= p.cost;
                 return (
-                  <div key={p.key} className="rounded-lg border border-border p-4 flex flex-col gap-3">
-                    <div>
-                      <div className="font-medium">{p.name}</div>
-                      <div className="text-xs text-muted-foreground">{p.desc}</div>
+                  <div key={p.item_key} className="rounded-lg border border-border p-4 flex flex-col gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 rounded-md bg-muted inline-flex items-center justify-center text-2xl shrink-0">{p.emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium">{p.item_name}</div>
+                        <div className="text-xs text-muted-foreground">{p.description}</div>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1 text-sm font-medium">
-                        <Crown className="h-4 w-4 text-yellow-500 fill-yellow-500" /> {p.cost}
+                        {p.currency === "star"
+                          ? <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                          : <Crown className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                        {p.cost}
                       </span>
                       <Button
                         size="sm"
-                        disabled={!canAfford || !classId || loading === p.key}
-                        onClick={() => buy(p, "privilege")}
+                        disabled={!canAfford || !classId || loading === p.item_key}
+                        onClick={() => buy(p)}
                       >
                         {!canAfford ? "Not enough" : "Request"}
                       </Button>
@@ -170,6 +195,9 @@ export function Shop() {
                   </div>
                 );
               })}
+              {privileges.length === 0 && (
+                <p className="text-sm text-muted-foreground col-span-full">No privileges available yet.</p>
+              )}
             </div>
             {classes.length === 0 && (
               <div className="mt-4">
