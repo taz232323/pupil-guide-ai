@@ -140,8 +140,14 @@ export const StudentAssignments = () => {
         if (upErr) { toast.error(upErr.message); return; }
         payload.file_path = path;
       } else {
-        try { new URL(link); } catch { toast.error("Invalid URL"); return; }
-        payload.link_url = link.trim();
+        const trimmed = link.trim();
+        let parsed: URL;
+        try { parsed = new URL(trimmed); } catch { toast.error("Invalid URL"); return; }
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          toast.error("Link must start with http:// or https://");
+          return;
+        }
+        payload.link_url = trimmed;
       }
 
       const { error } = await supabase

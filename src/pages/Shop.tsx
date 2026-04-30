@@ -57,15 +57,16 @@ export function Shop() {
       return;
     }
     setLoading(item.key);
+    // Server-side trigger fills item_name, kind, currency, cost, and status from the canonical shop_items table.
     const { error } = await supabase.from("shop_purchases").insert({
       student_id: user.id,
       class_id: kind === "privilege" ? classId : null,
       item_key: item.key,
+      // The fields below are required by the table schema but will be overwritten by the trigger.
       item_name: item.name,
       kind,
       currency: kind === "cosmetic" ? "star" : "crown",
       cost: item.cost,
-      status: kind === "cosmetic" ? "approved" : "pending",
     });
     setLoading(null);
     if (error) {
