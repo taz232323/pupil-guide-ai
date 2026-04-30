@@ -16,6 +16,11 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { SpinnerButton } from "@/components/SpinnerButton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconButton } from "@/components/IconButton";
+import { CardListSkeleton } from "@/components/Skeletons";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type ClassRow = { id: string; name: string; subject: string };
 type Assignment = {
@@ -42,6 +47,7 @@ export const TeacherAssignments = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [toDelete, setToDelete] = useState<Assignment | null>(null);
 
   const [classId, setClassId] = useState("");
   const [title, setTitle] = useState("");
@@ -92,7 +98,6 @@ export const TeacherAssignments = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this assignment?")) return;
     const { error } = await supabase.from("assignments").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Assignment deleted");
@@ -147,9 +152,9 @@ export const TeacherAssignments = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? "Creating..." : "Create"}
-                </Button>
+                <SpinnerButton type="submit" loading={submitting} loadingText="Creating...">
+                  Create
+                </SpinnerButton>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -157,7 +162,7 @@ export const TeacherAssignments = () => {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <CardListSkeleton count={3} />
         ) : classes.length === 0 ? (
           <EmptyState
             icon={BookOpen}
@@ -176,26 +181,37 @@ export const TeacherAssignments = () => {
               <div key={a.id} className="py-3 flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="font-medium truncate">{a.title}</p>
-                  <p className="text-xs text-muted-foreground">{classNameFor(a.class_id)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {classNameFor(a.class_id)} · posted <RelativeTime date={a.created_at} />
+                  </p>
                   <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                     {a.unit_tag && (
                       <span className="inline-flex items-center gap-1"><Tag className="h-3 w-3" />{a.unit_tag}</span>
                     )}
                     {a.due_date && (
                       <span className="inline-flex items-center gap-1">
-                        <CalendarDays className="h-3 w-3" />Due {new Date(a.due_date).toLocaleString()}
+                        <CalendarDays className="h-3 w-3" />Due <RelativeTime date={a.due_date} />
                       </span>
                     )}
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(a.id)}>
+                <IconButton label="Delete assignment" onClick={() => setToDelete(a)}>
                   <Trash2 className="h-4 w-4 text-muted-foreground" />
-                </Button>
+                </IconButton>
               </div>
             ))}
           </div>
         )}
       </CardContent>
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={`Delete "${toDelete?.title ?? ""}"?`}
+        description="Students will lose visibility of this assignment and any submissions tied to it. This cannot be undone."
+        confirmLabel="Delete assignment"
+        destructive
+        onConfirm={async () => { if (toDelete) await handleDelete(toDelete.id); }}
+      />
     </Card>
   );
 };
