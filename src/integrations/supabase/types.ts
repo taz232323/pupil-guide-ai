@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_coin_awards: {
+        Row: {
+          coins_awarded: number
+          created_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          coins_awarded?: number
+          created_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          coins_awarded?: number
+          created_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       assignment_status_records: {
         Row: {
           assignment_id: string
@@ -500,6 +521,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_ai_message_coins: { Args: { _student_id: string }; Returns: number }
       can_message: {
         Args: { _class_id: string; _recipient: string; _sender: string }
         Returns: boolean
