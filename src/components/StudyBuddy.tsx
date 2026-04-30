@@ -63,11 +63,7 @@ export function StudyBuddy() {
       });
       if (error) throw error;
       const reply = (data as any)?.reply ?? "Hmm, no response.";
-      const awarded = (data as any)?.awarded ?? 0;
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-      if (awarded > 0) {
-        toast.success(`+${awarded} Star Coins ⭐`, { duration: 1800 });
-      }
     } catch (e: any) {
       toast.error(e?.message ?? "Study Buddy is unavailable right now.");
       setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I had trouble answering that. Try again in a moment." }]);
