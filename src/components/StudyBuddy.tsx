@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, Trash2, Bot, Star, MessageCircle } from "lucide-react";
+import { Sparkles, Send, Trash2, Bot, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -63,11 +63,7 @@ export function StudyBuddy() {
       });
       if (error) throw error;
       const reply = (data as any)?.reply ?? "Hmm, no response.";
-      const awarded = (data as any)?.awarded ?? 0;
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-      if (awarded > 0) {
-        toast.success(`+${awarded} Star Coins ⭐`, { duration: 1800 });
-      }
     } catch (e: any) {
       toast.error(e?.message ?? "Study Buddy is unavailable right now.");
       setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I had trouble answering that. Try again in a moment." }]);
@@ -157,9 +153,6 @@ export function StudyBuddy() {
                 <Send className="h-4 w-4" />
               </Button>
             </div>
-            <p className="mt-1.5 text-[10px] text-muted-foreground flex items-center gap-1">
-              <Star className="h-3 w-3 text-amber-500 fill-amber-400" /> Earn star coins for chatting (up to 5×/day).
-            </p>
           </div>
         </SheetContent>
       </Sheet>
