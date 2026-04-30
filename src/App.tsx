@@ -18,8 +18,11 @@ import TeacherAssignmentsPage from "./pages/TeacherAssignmentsPage.tsx";
 import TeacherProgressPage from "./pages/TeacherProgressPage.tsx";
 import MessagesPage from "./pages/MessagesPage.tsx";
 import ShopPage from "./pages/ShopPage.tsx";
+import { reloadSchemaCache } from "@/lib/supabaseRest";
 
 const queryClient = new QueryClient();
+
+void reloadSchemaCache();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
