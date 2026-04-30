@@ -11,6 +11,14 @@ import { StudentAvatar } from "@/components/StudentAvatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/NotificationBell";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
 
