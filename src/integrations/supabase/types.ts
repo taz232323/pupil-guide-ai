@@ -426,6 +426,24 @@ export type Database = {
         Args: { _class_id: string; _recipient: string; _sender: string }
         Returns: boolean
       }
+      create_teacher_class: {
+        Args: { _name: string; _subject: string }
+        Returns: {
+          created_at: string
+          id: string
+          join_code: string
+          name: string
+          subject: string
+          teacher_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "classes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       generate_join_code: { Args: never; Returns: string }
       get_current_user_role: {
         Args: never
@@ -447,6 +465,7 @@ export type Database = {
         Returns: boolean
       }
       join_class_by_code: { Args: { _code: string }; Returns: string }
+      reload_schema_cache: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "student" | "teacher"
