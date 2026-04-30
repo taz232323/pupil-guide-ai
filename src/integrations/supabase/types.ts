@@ -241,6 +241,36 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_items: {
+        Row: {
+          active: boolean
+          cost: number
+          created_at: string
+          currency: Database["public"]["Enums"]["purchase_currency"]
+          item_key: string
+          item_name: string
+          kind: Database["public"]["Enums"]["purchase_kind"]
+        }
+        Insert: {
+          active?: boolean
+          cost: number
+          created_at?: string
+          currency: Database["public"]["Enums"]["purchase_currency"]
+          item_key: string
+          item_name: string
+          kind: Database["public"]["Enums"]["purchase_kind"]
+        }
+        Update: {
+          active?: boolean
+          cost?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["purchase_currency"]
+          item_key?: string
+          item_name?: string
+          kind?: Database["public"]["Enums"]["purchase_kind"]
+        }
+        Relationships: []
+      }
       shop_purchases: {
         Row: {
           class_id: string | null
