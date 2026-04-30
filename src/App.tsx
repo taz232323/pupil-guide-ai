@@ -18,6 +18,7 @@ import TeacherAssignmentsPage from "./pages/TeacherAssignmentsPage.tsx";
 import TeacherProgressPage from "./pages/TeacherProgressPage.tsx";
 import MessagesPage from "./pages/MessagesPage.tsx";
 import ShopPage from "./pages/ShopPage.tsx";
+import TeacherShopPage from "./pages/TeacherShopPage.tsx";
 import { reloadSchemaCache } from "@/lib/supabaseRest";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/teacher/classes" element={<ProtectedRoute requiredRole="teacher"><TeacherClassesPage /></ProtectedRoute>} />
             <Route path="/teacher/assignments" element={<ProtectedRoute requiredRole="teacher"><TeacherAssignmentsPage /></ProtectedRoute>} />
             <Route path="/teacher/progress" element={<ProtectedRoute requiredRole="teacher"><TeacherProgressPage /></ProtectedRoute>} />
+            <Route path="/teacher/shop" element={<ProtectedRoute requiredRole="teacher"><TeacherShopPage /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
