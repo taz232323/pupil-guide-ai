@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Download, ExternalLink, FileText } from "lucide-react";
+import { Download, ExternalLink, FileText, Inbox } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 type Submission = {
   id: string;
@@ -91,7 +92,11 @@ export const TeacherSubmissions = () => {
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No submissions yet.</p>
+          <EmptyState
+            icon={Inbox}
+            title="No submissions yet"
+            description="When students turn in work, it will show up here for review."
+          />
         ) : (
           <div className="space-y-5">
             {groups.map((g) => (

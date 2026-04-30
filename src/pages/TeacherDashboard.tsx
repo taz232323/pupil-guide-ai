@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, ClipboardList, Inbox, ShieldCheck, Plus } from "lucide-react";
+import { Users, ClipboardList, Inbox, ShieldCheck, Plus, GraduationCap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -141,15 +141,18 @@ export default function TeacherDashboard() {
 
         {!loading && classes.length === 0 ? (
           <Card className="overflow-hidden border-0 shadow-elevated">
-            <div className="bg-gradient-soft p-8 text-center">
-              <div className="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-card text-primary shadow-card">
-                <Plus className="h-7 w-7" />
+            <div className="bg-gradient-soft px-6 py-14 sm:py-20 text-center">
+              <div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-card text-primary shadow-card">
+                <GraduationCap className="h-10 w-10" />
               </div>
-              <h2 className="text-xl font-bold">Create your first class</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Set up a class to invite students and post assignments.</p>
-              <Button asChild className="mt-4">
-                <Link to="/teacher/classes">Create class</Link>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome to EduFlow! 🎉</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm sm:text-base text-muted-foreground">
+                You're all set up. Create your first class to invite students, post assignments, and start tracking progress.
+              </p>
+              <Button asChild size="lg" className="mt-6 h-12 px-8 text-base shadow-elevated">
+                <Link to="/teacher/classes"><Plus className="h-5 w-5" />Create Class</Link>
               </Button>
+              <p className="mt-4 text-xs text-muted-foreground">Takes less than a minute.</p>
             </div>
           </Card>
         ) : (

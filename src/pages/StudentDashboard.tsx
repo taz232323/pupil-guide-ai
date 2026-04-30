@@ -105,19 +105,27 @@ export default function StudentDashboard() {
 
         {!loading && !hasClasses ? (
           <Card className="overflow-hidden border-0 shadow-elevated">
-            <div className="bg-gradient-soft p-8 text-center">
-              <div className="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-card text-primary shadow-card">
-                <KeyRound className="h-7 w-7" />
+            <div className="bg-gradient-soft px-6 py-14 sm:py-20 text-center">
+              <div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-card text-primary shadow-card">
+                <KeyRound className="h-10 w-10" />
               </div>
-              <h2 className="text-xl font-bold">Join your first class</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Ask your teacher for a 6-character join code.</p>
-              <div className="mt-4 mx-auto flex max-w-sm gap-2">
-                <Input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="ABC123" className="text-center font-mono tracking-widest" maxLength={6} />
-                <Button onClick={join} disabled={joining || joinCode.length < 4}>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome aboard! 👋</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm sm:text-base text-muted-foreground">
+                Enter the 6-character join code your teacher shared with you to join your first class.
+              </p>
+              <div className="mt-6 mx-auto flex max-w-sm gap-2">
+                <Input
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                  className="h-12 text-center font-mono tracking-[0.4em] text-lg"
+                  maxLength={6}
+                />
+                <Button onClick={join} disabled={joining || joinCode.length < 4} size="lg" className="h-12 px-6">
                   {joining ? "Joining..." : "Join"}
                 </Button>
               </div>
+              <p className="mt-4 text-xs text-muted-foreground">Don't have one? Ask your teacher.</p>
             </div>
           </Card>
         ) : (

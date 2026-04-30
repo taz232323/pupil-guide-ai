@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { Plus, Trash2, CalendarDays, Tag } from "lucide-react";
+import { Plus, Trash2, CalendarDays, Tag, ClipboardList, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 type ClassRow = { id: string; name: string; subject: string };
 type Assignment = {
@@ -158,9 +159,17 @@ export const TeacherAssignments = () => {
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : classes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Create a class first to add assignments.</p>
+          <EmptyState
+            icon={BookOpen}
+            title="No classes yet"
+            description="Create a class first, then you can post assignments to it."
+          />
         ) : assignments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No assignments yet.</p>
+          <EmptyState
+            icon={ClipboardList}
+            title="No assignments yet"
+            description="Click Create to post your first assignment."
+          />
         ) : (
           <div className="divide-y divide-border">
             {assignments.map((a) => (

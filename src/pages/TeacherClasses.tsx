@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { Plus, Copy, Users, Trash2 } from "lucide-react";
+import { Plus, Copy, Users, Trash2, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import {
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 type ClassRow = {
   id: string;
@@ -147,7 +148,11 @@ export const TeacherClasses = () => {
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : classes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No classes yet. Create your first one.</p>
+          <EmptyState
+            icon={BookOpen}
+            title="No classes yet"
+            description="Create your first class to invite students and post assignments."
+          />
         ) : (
           <div className="divide-y divide-border">
             {classes.map((c) => (

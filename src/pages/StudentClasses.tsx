@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { BookOpen } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentAvatar } from "@/components/StudentAvatar";
+import { EmptyState } from "@/components/EmptyState";
+import { Button } from "@/components/ui/button";
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
 type ClassRow = { id: string; name: string; subject: string; members: Member[] };
@@ -60,7 +64,12 @@ export function StudentClasses() {
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : classes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">You haven't joined any classes yet.</p>
+          <EmptyState
+            icon={BookOpen}
+            title="No classes yet"
+            description="Enter a join code from your teacher to start learning."
+            action={<Button asChild><Link to="/student">Enter join code</Link></Button>}
+          />
         ) : (
           <div className="space-y-4">
             {classes.map((c) => (
