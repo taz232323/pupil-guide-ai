@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Plus, Copy, Users, Trash2, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,7 @@ const createSchema = z.object({
 });
 
 export const TeacherClasses = () => {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -177,14 +179,21 @@ export const TeacherClasses = () => {
         ) : (
           <div className="divide-y divide-border">
             {classes.map((c) => (
-              <div key={c.id} className="py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0">
+              <div
+                key={c.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/teacher/classes/${c.id}`)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(`/teacher/classes/${c.id}`); }}
+                className="py-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-md transition-colors"
+              >
+                <div className="min-w-0 pointer-events-none">
                   <p className="font-medium truncate">{c.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {c.subject} · created <RelativeTime date={c.created_at} />
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                     <Users className="h-3.5 w-3.5" />{c.member_count}
                   </span>
