@@ -170,6 +170,39 @@ export type Database = {
         }
         Relationships: []
       }
+      coin_transactions: {
+        Row: {
+          amount: number
+          assignment_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          note: string | null
+          reason: string
+          student_id: string
+        }
+        Insert: {
+          amount: number
+          assignment_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          note?: string | null
+          reason: string
+          student_id: string
+        }
+        Update: {
+          amount?: number
+          assignment_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          note?: string | null
+          reason?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       message_group_members: {
         Row: {
           added_at: string
