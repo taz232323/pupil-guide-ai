@@ -298,6 +298,7 @@ export type Database = {
           join_code: string
           name: string
           subject: string
+          syllabus: string | null
           teacher_id: string
           updated_at: string
         }
@@ -307,6 +308,7 @@ export type Database = {
           join_code?: string
           name: string
           subject: string
+          syllabus?: string | null
           teacher_id: string
           updated_at?: string
         }
@@ -316,6 +318,7 @@ export type Database = {
           join_code?: string
           name?: string
           subject?: string
+          syllabus?: string | null
           teacher_id?: string
           updated_at?: string
         }
@@ -457,6 +460,133 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "message_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_item_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          item_id: string
+          student_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          item_id: string
+          student_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          item_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_item_completions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "module_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_items: {
+        Row: {
+          assignment_id: string | null
+          content_html: string | null
+          created_at: string
+          file_name: string | null
+          file_path: string | null
+          id: string
+          item_type: Database["public"]["Enums"]["module_item_type"]
+          module_id: string
+          position: number
+          title: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          content_html?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          item_type: Database["public"]["Enums"]["module_item_type"]
+          module_id: string
+          position?: number
+          title: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          content_html?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          item_type?: Database["public"]["Enums"]["module_item_type"]
+          module_id?: string
+          position?: number
+          title?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_items_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_items_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modules: {
+        Row: {
+          class_id: string
+          created_at: string
+          description: string | null
+          id: string
+          position: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modules_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
@@ -718,6 +848,7 @@ export type Database = {
           join_code: string
           name: string
           subject: string
+          syllabus: string | null
           teacher_id: string
           updated_at: string
         }
@@ -762,6 +893,12 @@ export type Database = {
     Enums: {
       app_role: "student" | "teacher"
       assignment_status: "not_started" | "in_progress" | "submitted"
+      module_item_type:
+        | "lesson"
+        | "announcement"
+        | "file"
+        | "link"
+        | "assignment"
       purchase_currency: "star" | "crown"
       purchase_kind: "cosmetic" | "privilege"
       purchase_status: "approved" | "pending" | "denied"
@@ -895,6 +1032,13 @@ export const Constants = {
     Enums: {
       app_role: ["student", "teacher"],
       assignment_status: ["not_started", "in_progress", "submitted"],
+      module_item_type: [
+        "lesson",
+        "announcement",
+        "file",
+        "link",
+        "assignment",
+      ],
       purchase_currency: ["star", "crown"],
       purchase_kind: ["cosmetic", "privilege"],
       purchase_status: ["approved", "pending", "denied"],
