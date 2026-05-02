@@ -26,6 +26,7 @@ type Row = {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   useOverduePenaltyToast();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
