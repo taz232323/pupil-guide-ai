@@ -73,7 +73,11 @@ export function StudentClasses() {
         ) : (
           <div className="space-y-4">
             {classes.map((c) => (
-              <div key={c.id} className="rounded-lg border border-border p-3">
+              <Link
+                key={c.id}
+                to={`/student/classes/${c.id}`}
+                className="block rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors"
+              >
                 <div className="mb-2">
                   <p className="font-medium">{c.name}</p>
                   <p className="text-xs text-muted-foreground">{c.subject}</p>
@@ -89,7 +93,7 @@ export function StudentClasses() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </Link>
             ))}
           </div>
         )}
