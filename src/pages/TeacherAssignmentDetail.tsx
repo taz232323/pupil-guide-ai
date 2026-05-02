@@ -1,0 +1,381 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, CalendarDays, Tag, CheckCircle2, XCircle, Save, Pencil } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { DashboardShell } from "@/components/DashboardShell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { SpinnerButton } from "@/components/SpinnerButton";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { QuestionBuilder, DraftQuestion, validateQuestions } from "@/components/assignments/QuestionBuilder";
+
+type QType = "multiple_choice" | "short_answer" | "long_answer";
+type Question = {
+  id: string;
+  position: number;
+  question_type: QType;
+  prompt: string;
+  options: string[] | null;
+  correct_index: number | null;
+  max_score: number;
+};
+type Answer = {
+  id: string;
+  question_id: string;
+  student_id: string;
+  selected_index: number | null;
+  text_response: string | null;
+  is_correct: boolean | null;
+  score: number | null;
+  feedback: string | null;
+};
+type Profile = { id: string; full_name: string | null };
+
+export default function TeacherAssignmentDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [assignment, setAssignment] = useState<any>(null);
+  const [className, setClassName] = useState("");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [students, setStudents] = useState<Profile[]>([]);
+  const [grades, setGrades] = useState<Record<string, { overall_score: number | null; overall_feedback: string | null }>>({});
+  const [activeStudent, setActiveStudent] = useState<string | null>(null);
+
+  // Edit questions dialog
+  const [editOpen, setEditOpen] = useState(false);
+  const [draft, setDraft] = useState<DraftQuestion[]>([]);
+  const [savingQs, setSavingQs] = useState(false);
+
+  const load = async () => {
+    if (!id) return;
+    setLoading(true);
+    const { data: a, error } = await supabase
+      .from("assignments").select("*").eq("id", id).maybeSingle();
+    if (error || !a) { toast.error("Not found"); navigate("/teacher/assignments"); return; }
+    setAssignment(a);
+
+    const [{ data: cls }, { data: qs }, { data: ans }, { data: subs }, { data: gr }] = await Promise.all([
+      supabase.from("classes").select("name").eq("id", a.class_id).maybeSingle(),
+      supabase.from("assignment_questions").select("*").eq("assignment_id", id).order("position"),
+      supabase.from("assignment_answers").select("*").eq("assignment_id", id),
+      supabase.from("submissions").select("student_id").eq("assignment_id", id),
+      supabase.from("assignment_grades").select("student_id, overall_score, overall_feedback").eq("assignment_id", id),
+    ]);
+    setClassName(cls?.name ?? "Class");
+    setQuestions((qs ?? []) as Question[]);
+    setAnswers((ans ?? []) as Answer[]);
+
+    // Build student list from class members + anyone with answer/submission
+    const sIds = new Set<string>();
+    (ans ?? []).forEach((r: any) => sIds.add(r.student_id));
+    (subs ?? []).forEach((r: any) => sIds.add(r.student_id));
+    const { data: members } = await supabase.from("class_members").select("student_id").eq("class_id", a.class_id);
+    (members ?? []).forEach((m: any) => sIds.add(m.student_id));
+    const ids = Array.from(sIds);
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      setStudents(profs ?? []);
+      if (!activeStudent && profs && profs.length) setActiveStudent(profs[0].id);
+    }
+    const gmap: typeof grades = {};
+    (gr ?? []).forEach((g: any) => { gmap[g.student_id] = { overall_score: g.overall_score, overall_feedback: g.overall_feedback }; });
+    setGrades(gmap);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [id]);
+
+  const openEditQuestions = () => {
+    setDraft(questions.map((q) => ({
+      id: q.id, question_type: q.question_type, prompt: q.prompt,
+      options: q.options ?? undefined, correct_index: q.correct_index, max_score: q.max_score,
+    })));
+    setEditOpen(true);
+  };
+
+  const saveQuestions = async () => {
+    const err = validateQuestions(draft);
+    if (err) { toast.error(err); return; }
+    if (!id) return;
+    setSavingQs(true);
+    try {
+      // Replace strategy: delete removed, upsert kept/new
+      const keepIds = new Set(draft.filter((d) => d.id).map((d) => d.id!));
+      const toDelete = questions.filter((q) => !keepIds.has(q.id)).map((q) => q.id);
+      if (toDelete.length) {
+        const { error } = await supabase.from("assignment_questions").delete().in("id", toDelete);
+        if (error) { toast.error(error.message); return; }
+      }
+      const rows = draft.map((d, i) => ({
+        id: d.id, assignment_id: id, position: i,
+        question_type: d.question_type, prompt: d.prompt.trim(),
+        options: d.question_type === "multiple_choice" ? d.options : null,
+        correct_index: d.question_type === "multiple_choice" ? d.correct_index : null,
+        max_score: d.max_score,
+      }));
+      // Insert new ones (no id) and update existing
+      const inserts = rows.filter((r) => !r.id).map(({ id: _omit, ...rest }) => rest);
+      const updates = rows.filter((r) => r.id);
+      if (inserts.length) {
+        const { error } = await supabase.from("assignment_questions").insert(inserts);
+        if (error) { toast.error(error.message); return; }
+      }
+      for (const u of updates) {
+        const { error } = await supabase.from("assignment_questions").update(u).eq("id", u.id!);
+        if (error) { toast.error(error.message); return; }
+      }
+      toast.success("Questions saved");
+      setEditOpen(false);
+      load();
+    } finally { setSavingQs(false); }
+  };
+
+  const updateAnswer = async (a: Answer, patch: Partial<Pick<Answer, "score" | "feedback">>) => {
+    const next = answers.map((x) => x.id === a.id ? { ...x, ...patch } : x);
+    setAnswers(next);
+    const { error } = await supabase.from("assignment_answers")
+      .update({ ...patch, graded_at: new Date().toISOString() })
+      .eq("id", a.id);
+    if (error) toast.error(error.message);
+  };
+
+  const saveOverall = async (studentId: string) => {
+    if (!id) return;
+    const g = grades[studentId] ?? { overall_score: null, overall_feedback: null };
+    const { error } = await supabase.from("assignment_grades").upsert(
+      {
+        assignment_id: id, student_id: studentId,
+        overall_score: g.overall_score, overall_feedback: g.overall_feedback,
+        graded_at: new Date().toISOString(),
+      },
+      { onConflict: "assignment_id,student_id" }
+    );
+    if (error) { toast.error(error.message); return; }
+    toast.success("Overall grade saved");
+
+    // Notify student
+    await supabase.from("notifications").insert({
+      user_id: studentId,
+      type: "assignment_graded",
+      message: `Your work on "${assignment.title}" has been graded`,
+      link: `/student/assignments/${id}`,
+    });
+  };
+
+  if (loading) {
+    return <DashboardShell title="Assignment"><Card><CardContent className="p-8 text-center text-muted-foreground">Loading...</CardContent></Card></DashboardShell>;
+  }
+  if (!assignment) return null;
+
+  const studentAnswers = answers.filter((a) => a.student_id === activeStudent);
+  const totalEarned = studentAnswers.reduce((sum, a) => sum + (a.score ?? 0), 0);
+  const totalPossible = questions.reduce((sum, q) => sum + q.max_score, 0);
+
+  return (
+    <DashboardShell title="Assignment Review">
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/teacher/assignments")}>
+          <ArrowLeft className="h-4 w-4 mr-1" />Back
+        </Button>
+
+        <Card>
+          <CardContent className="p-6 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-3xl font-bold tracking-tight">{assignment.title}</h1>
+              <Button variant="outline" size="sm" onClick={openEditQuestions}>
+                <Pencil className="h-4 w-4 mr-1" />Edit questions
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">{className}</span>
+              {assignment.unit_tag && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-3 py-1 text-xs font-medium">
+                  <Tag className="h-3 w-3" />{assignment.unit_tag}
+                </span>
+              )}
+              {assignment.due_date && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs">
+                  <CalendarDays className="h-3 w-3" />Due {new Date(assignment.due_date).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+            {assignment.description && (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap pt-2 border-t">{assignment.description}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Students</CardTitle></CardHeader>
+            <CardContent className="p-2">
+              {students.length === 0 ? (
+                <p className="text-xs text-muted-foreground p-2">No students yet</p>
+              ) : students.map((s) => {
+                const hasAns = answers.some((a) => a.student_id === s.id);
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setActiveStudent(s.id)}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between",
+                      activeStudent === s.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                    )}
+                  >
+                    <span className="truncate">{s.full_name || "Unnamed"}</span>
+                    {hasAns && <CheckCircle2 className="h-3 w-3 shrink-0" />}
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">
+                {students.find((s) => s.id === activeStudent)?.full_name || "Select a student"}
+              </CardTitle>
+              {activeStudent && questions.length > 0 && (
+                <span className="text-sm font-semibold">{totalEarned} / {totalPossible}</span>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {!activeStudent ? (
+                <p className="text-sm text-muted-foreground">Pick a student to review their answers.</p>
+              ) : questions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">This assignment has no questions yet. Click "Edit questions" to add some.</p>
+              ) : questions.map((q, i) => {
+                const a = studentAnswers.find((x) => x.question_id === q.id);
+                return (
+                  <div key={q.id} className="space-y-2 pb-4 border-b last:border-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">Q{i + 1} · {q.max_score} pts</p>
+                        <p className="font-medium whitespace-pre-wrap">{q.prompt}</p>
+                      </div>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-3 text-sm">
+                      {q.question_type === "multiple_choice" ? (
+                        <>
+                          {a?.selected_index != null ? (
+                            <p className="flex items-center gap-2">
+                              {a.is_correct
+                                ? <CheckCircle2 className="h-4 w-4 text-success" />
+                                : <XCircle className="h-4 w-4 text-destructive" />}
+                              <span className="font-medium">
+                                {String.fromCharCode(65 + a.selected_index)}. {q.options?.[a.selected_index]}
+                              </span>
+                              {!a.is_correct && q.correct_index != null && (
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  Correct: {String.fromCharCode(65 + q.correct_index)}. {q.options?.[q.correct_index]}
+                                </span>
+                              )}
+                            </p>
+                          ) : <p className="italic text-muted-foreground">No answer</p>}
+                        </>
+                      ) : (
+                        <p className="whitespace-pre-wrap">{a?.text_response || <span className="italic text-muted-foreground">No answer</span>}</p>
+                      )}
+                    </div>
+                    {a && (
+                      <div className="grid gap-2 sm:grid-cols-[120px_1fr_auto]">
+                        <div>
+                          <Label className="text-xs">Score (/{q.max_score})</Label>
+                          <Input
+                            type="number" min={0} max={q.max_score}
+                            value={a.score ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value === "" ? null : Math.max(0, Math.min(q.max_score, Number(e.target.value)));
+                              setAnswers(answers.map((x) => x.id === a.id ? { ...x, score: v } : x));
+                            }}
+                            onBlur={(e) => {
+                              const v = e.target.value === "" ? null : Math.max(0, Math.min(q.max_score, Number(e.target.value)));
+                              updateAnswer(a, { score: v });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Feedback</Label>
+                          <Input
+                            value={a.feedback ?? ""}
+                            onChange={(e) => setAnswers(answers.map((x) => x.id === a.id ? { ...x, feedback: e.target.value } : x))}
+                            onBlur={(e) => updateAnswer(a, { feedback: e.target.value })}
+                            placeholder="Optional comment..."
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {activeStudent && (
+                <div className="rounded-lg border-2 border-primary/30 p-4 space-y-3 bg-primary-soft/30">
+                  <h3 className="font-semibold">Overall Grade</h3>
+                  <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
+                    <div>
+                      <Label className="text-xs">Overall score</Label>
+                      <Input
+                        type="number"
+                        value={grades[activeStudent]?.overall_score ?? ""}
+                        onChange={(e) =>
+                          setGrades({
+                            ...grades,
+                            [activeStudent]: {
+                              ...(grades[activeStudent] ?? { overall_feedback: null }),
+                              overall_score: e.target.value === "" ? null : Number(e.target.value),
+                            },
+                          })
+                        }
+                        placeholder={`/ ${totalPossible}`}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Overall feedback</Label>
+                      <Textarea
+                        rows={2}
+                        value={grades[activeStudent]?.overall_feedback ?? ""}
+                        onChange={(e) =>
+                          setGrades({
+                            ...grades,
+                            [activeStudent]: {
+                              ...(grades[activeStudent] ?? { overall_score: null }),
+                              overall_feedback: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Comments for the student..."
+                      />
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={() => saveOverall(activeStudent)}>
+                    <Save className="h-4 w-4 mr-1" />Save & notify student
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Edit questions</DialogTitle></DialogHeader>
+          <QuestionBuilder questions={draft} onChange={setDraft} />
+          <DialogFooter>
+            <SpinnerButton onClick={saveQuestions} loading={savingQs} loadingText="Saving...">Save questions</SpinnerButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </DashboardShell>
+  );
+}

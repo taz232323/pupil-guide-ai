@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { CalendarDays, CheckCircle2, Star, Crown, KeyRound, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,7 @@ type Row = {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   useOverduePenaltyToast();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
@@ -148,10 +149,11 @@ export default function StudentDashboard() {
                   description="No assignments are waiting. Check back soon." />
               ) : (
                 <div className="space-y-3">
-                  {upcoming.map(r => (
-                    <AssignmentCard key={r.id} title={r.title} classLabel={classes[r.class_id]}
-                      unitTag={r.unit_tag} dueDate={r.due_date} status={r.status} />
-                  ))}
+                   {upcoming.map(r => (
+                     <AssignmentCard key={r.id} title={r.title} classLabel={classes[r.class_id]}
+                       unitTag={r.unit_tag} dueDate={r.due_date} status={r.status}
+                       onClick={() => navigate(`/student/assignments/${r.id}`)} />
+                   ))}
                 </div>
               )}
             </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Plus, Trash2, CalendarDays, Tag, ClipboardList, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconButton } from "@/components/IconButton";
 import { CardListSkeleton } from "@/components/Skeletons";
 import { RelativeTime } from "@/components/RelativeTime";
+import { QuestionBuilder, DraftQuestion, validateQuestions } from "@/components/assignments/QuestionBuilder";
 
 type ClassRow = { id: string; name: string; subject: string };
 type Assignment = {
@@ -42,6 +44,7 @@ const schema = z.object({
 });
 
 export const TeacherAssignments = () => {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +57,7 @@ export const TeacherAssignments = () => {
   const [description, setDescription] = useState("");
   const [unitTag, setUnitTag] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [questions, setQuestions] = useState<DraftQuestion[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -78,22 +82,37 @@ export const TeacherAssignments = () => {
       toast.error(parsed.error.issues[0].message);
       return;
     }
+    const qErr = validateQuestions(questions);
+    if (qErr) { toast.error(qErr); return; }
     setSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not signed in"); setSubmitting(false); return; }
-    const { error } = await supabase.from("assignments").insert({
+    const { data: created, error } = await supabase.from("assignments").insert({
       class_id: parsed.data.class_id,
       teacher_id: user.id,
       title: parsed.data.title,
       description: parsed.data.description || null,
       unit_tag: parsed.data.unit_tag || null,
       due_date: parsed.data.due_date ? new Date(parsed.data.due_date).toISOString() : null,
-    });
+    }).select("id").single();
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
+    if (created && questions.length) {
+      const rows = questions.map((q, i) => ({
+        assignment_id: created.id,
+        position: i,
+        question_type: q.question_type,
+        prompt: q.prompt.trim(),
+        options: q.question_type === "multiple_choice" ? q.options : null,
+        correct_index: q.question_type === "multiple_choice" ? q.correct_index : null,
+        max_score: q.max_score,
+      }));
+      const { error: qerr } = await supabase.from("assignment_questions").insert(rows);
+      if (qerr) { toast.error(`Assignment created, but questions failed: ${qerr.message}`); }
+    }
     toast.success("Assignment created");
     setOpen(false);
-    setClassId(""); setTitle(""); setDescription(""); setUnitTag(""); setDueDate("");
+    setClassId(""); setTitle(""); setDescription(""); setUnitTag(""); setDueDate(""); setQuestions([]);
     load();
   };
 
@@ -116,7 +135,7 @@ export const TeacherAssignments = () => {
               <Plus className="h-4 w-4 mr-1" />New assignment
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create an assignment</DialogTitle>
               <DialogDescription>Students in the selected class will see it.</DialogDescription>
@@ -151,6 +170,11 @@ export const TeacherAssignments = () => {
                   <Input id="a-due" type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                 </div>
               </div>
+              <div className="space-y-2 pt-2 border-t">
+                <Label>Questions (optional)</Label>
+                <p className="text-xs text-muted-foreground">Add questions students will answer in the app.</p>
+                <QuestionBuilder questions={questions} onChange={setQuestions} />
+              </div>
               <DialogFooter>
                 <SpinnerButton type="submit" loading={submitting} loadingText="Creating...">
                   Create
@@ -178,7 +202,11 @@ export const TeacherAssignments = () => {
         ) : (
           <div className="divide-y divide-border">
             {assignments.map((a) => (
-              <div key={a.id} className="py-3 flex items-start justify-between gap-4">
+              <div
+                key={a.id}
+                className="py-3 flex items-start justify-between gap-4 cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-md transition-colors"
+                onClick={() => navigate(`/teacher/assignments/${a.id}`)}
+              >
                 <div className="min-w-0">
                   <p className="font-medium truncate">{a.title}</p>
                   <p className="text-xs text-muted-foreground">
@@ -195,9 +223,11 @@ export const TeacherAssignments = () => {
                     )}
                   </div>
                 </div>
-                <IconButton label="Delete assignment" onClick={() => setToDelete(a)}>
-                  <Trash2 className="h-4 w-4 text-muted-foreground" />
-                </IconButton>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <IconButton label="Delete assignment" onClick={() => setToDelete(a)}>
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  </IconButton>
+                </div>
               </div>
             ))}
           </div>

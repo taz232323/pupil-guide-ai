@@ -35,6 +35,157 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_answers: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          feedback: string | null
+          graded_at: string | null
+          graded_by: string | null
+          id: string
+          is_correct: boolean | null
+          question_id: string
+          score: number | null
+          selected_index: number | null
+          student_id: string
+          text_response: string | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          is_correct?: boolean | null
+          question_id: string
+          score?: number | null
+          selected_index?: number | null
+          student_id: string
+          text_response?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          is_correct?: boolean | null
+          question_id?: string
+          score?: number | null
+          selected_index?: number | null
+          student_id?: string
+          text_response?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_answers_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_grades: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          graded_at: string | null
+          graded_by: string | null
+          id: string
+          overall_feedback: string | null
+          overall_score: number | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          overall_feedback?: string | null
+          overall_score?: number | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          overall_feedback?: string | null
+          overall_score?: number | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_grades_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_questions: {
+        Row: {
+          assignment_id: string
+          correct_index: number | null
+          created_at: string
+          id: string
+          max_score: number
+          options: Json | null
+          position: number
+          prompt: string
+          question_type: Database["public"]["Enums"]["question_type"]
+        }
+        Insert: {
+          assignment_id: string
+          correct_index?: number | null
+          created_at?: string
+          id?: string
+          max_score?: number
+          options?: Json | null
+          position?: number
+          prompt: string
+          question_type: Database["public"]["Enums"]["question_type"]
+        }
+        Update: {
+          assignment_id?: string
+          correct_index?: number | null
+          created_at?: string
+          id?: string
+          max_score?: number
+          options?: Json | null
+          position?: number
+          prompt?: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_questions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_status_records: {
         Row: {
           assignment_id: string
@@ -614,6 +765,7 @@ export type Database = {
       purchase_currency: "star" | "crown"
       purchase_kind: "cosmetic" | "privilege"
       purchase_status: "approved" | "pending" | "denied"
+      question_type: "multiple_choice" | "short_answer" | "long_answer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -746,6 +898,7 @@ export const Constants = {
       purchase_currency: ["star", "crown"],
       purchase_kind: ["cosmetic", "privilege"],
       purchase_status: ["approved", "pending", "denied"],
+      question_type: ["multiple_choice", "short_answer", "long_answer"],
     },
   },
 } as const
