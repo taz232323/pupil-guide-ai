@@ -148,10 +148,11 @@ export default function StudentDashboard() {
                   description="No assignments are waiting. Check back soon." />
               ) : (
                 <div className="space-y-3">
-                  {upcoming.map(r => (
-                    <AssignmentCard key={r.id} title={r.title} classLabel={classes[r.class_id]}
-                      unitTag={r.unit_tag} dueDate={r.due_date} status={r.status} />
-                  ))}
+                   {upcoming.map(r => (
+                     <AssignmentCard key={r.id} title={r.title} classLabel={classes[r.class_id]}
+                       unitTag={r.unit_tag} dueDate={r.due_date} status={r.status}
+                       onClick={() => navigate(`/student/assignments/${r.id}`)} />
+                   ))}
                 </div>
               )}
             </div>
