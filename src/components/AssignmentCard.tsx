@@ -1,4 +1,4 @@
-import { CalendarDays, Tag, Users } from "lucide-react";
+import { CalendarDays, Tag, Users, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type AssignmentStatus = "not_started" | "in_progress" | "submitted";
@@ -55,6 +55,12 @@ export const AssignmentCard = ({
   rightSlot?: React.ReactNode;
 }) => {
   const s = STATUS[status];
+  // Overdue penalty: 1 ⭐ per day late, capped per-student elsewhere.
+  let overdueDays = 0;
+  if (dueDate && status !== "submitted") {
+    const ms = Date.now() - new Date(dueDate).getTime();
+    if (ms > 0) overdueDays = Math.max(1, Math.floor(ms / 86_400_000));
+  }
   return (
     <div
       onClick={onClick}
@@ -71,6 +77,15 @@ export const AssignmentCard = ({
           <span className={cn("text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full", s.cls)}>
             {s.label}
           </span>
+          {overdueDays > 0 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive"
+              title={`Overdue ${overdueDays} day${overdueDays === 1 ? "" : "s"} — costing you ${overdueDays} ⭐ per day`}
+            >
+              <AlertTriangle className="h-3 w-3" />
+              -{overdueDays} ⭐/day
+            </span>
+          )}
         </div>
         {classLabel && (
           <p className="text-xs text-muted-foreground mt-0.5">{classLabel}</p>

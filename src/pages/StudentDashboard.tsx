@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarDays, CheckCircle2, Star, Crown, KeyRound, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useOverduePenaltyToast } from "@/hooks/useOverduePenaltyToast";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Greeting } from "@/components/Greeting";
 import { StatCard } from "@/components/StatCard";
@@ -25,6 +26,7 @@ type Row = {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  useOverduePenaltyToast();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
   const [classes, setClasses] = useState<Record<string, string>>({});
