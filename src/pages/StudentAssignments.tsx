@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CalendarDays, Tag, Upload, LinkIcon, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +46,7 @@ const STATUS_STYLES: Record<Status, string> = {
 };
 
 export const StudentAssignments = () => {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [classes, setClasses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -184,7 +186,11 @@ export const StudentAssignments = () => {
         ) : (
           <div className="divide-y divide-border">
             {rows.map((r) => (
-              <div key={r.id} className="py-3 flex items-start justify-between gap-4">
+              <div
+                key={r.id}
+                className="py-3 flex items-start justify-between gap-4 cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-md transition-colors"
+                onClick={() => navigate(`/student/assignments/${r.id}`)}
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium truncate">{r.title}</p>
@@ -218,7 +224,7 @@ export const StudentAssignments = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v as Status)} disabled={r.status === "submitted"}>
                     <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
