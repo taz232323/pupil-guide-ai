@@ -22,6 +22,7 @@ import TeacherProgressPage from "./pages/TeacherProgressPage.tsx";
 import MessagesPage from "./pages/MessagesPage.tsx";
 import ShopPage from "./pages/ShopPage.tsx";
 import TeacherShopPage from "./pages/TeacherShopPage.tsx";
+import ClassDetail from "./pages/ClassDetail.tsx";
 import { reloadSchemaCache } from "@/lib/supabaseRest";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
               }
             />
             <Route path="/student/classes" element={<ProtectedRoute requiredRole="student"><StudentClassesPage /></ProtectedRoute>} />
+            <Route path="/student/classes/:id" element={<ProtectedRoute requiredRole="student"><ClassDetail /></ProtectedRoute>} />
             <Route path="/student/assignments" element={<ProtectedRoute requiredRole="student"><StudentAssignmentsPage /></ProtectedRoute>} />
             <Route path="/student/assignments/:id" element={<ProtectedRoute requiredRole="student"><StudentAssignmentDetail /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute requiredRole="student"><ShopPage /></ProtectedRoute>} />
@@ -68,6 +70,7 @@ const App = () => (
               }
             />
             <Route path="/teacher/classes" element={<ProtectedRoute requiredRole="teacher"><TeacherClassesPage /></ProtectedRoute>} />
+            <Route path="/teacher/classes/:id" element={<ProtectedRoute requiredRole="teacher"><ClassDetail /></ProtectedRoute>} />
             <Route path="/teacher/assignments" element={<ProtectedRoute requiredRole="teacher"><TeacherAssignmentsPage /></ProtectedRoute>} />
             <Route path="/teacher/assignments/:id" element={<ProtectedRoute requiredRole="teacher"><TeacherAssignmentDetail /></ProtectedRoute>} />
             <Route path="/teacher/progress" element={<ProtectedRoute requiredRole="teacher"><TeacherProgressPage /></ProtectedRoute>} />
