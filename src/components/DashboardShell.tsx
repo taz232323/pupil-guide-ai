@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Badge } from "@/components/ui/badge";
 import { StudyBuddy } from "@/components/StudyBuddy";
+import eduflowLogo from "@/assets/eduflow-logo.png";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -115,10 +116,14 @@ export const DashboardShell = ({
       <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-border bg-card">
         <div className="px-5 py-5 border-b border-border">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero text-primary-foreground shadow-elevated">
-              <GraduationCap className="h-5 w-5" />
-            </span>
-            <span className="font-bold tracking-tight text-lg">EduFlow</span>
+            <img
+              src={eduflowLogo}
+              alt="Eduflow"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+            />
+            <span className="font-bold tracking-tight text-lg text-primary">Eduflow</span>
           </Link>
         </div>
 
@@ -191,10 +196,14 @@ export const DashboardShell = ({
         <header className="lg:hidden sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
           <div className="px-4 h-14 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-hero text-primary-foreground">
-                <GraduationCap className="h-4 w-4" />
-              </span>
-              <span className="font-bold">EduFlow</span>
+              <img
+                src={eduflowLogo}
+                alt="Eduflow"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+              />
+              <span className="font-bold text-primary">Eduflow</span>
             </Link>
             <div className="flex items-center gap-1.5">
               {role === "student" && coins && (

@@ -8,34 +8,35 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Airy light gray canvas (#F8FAFC) with deep slate text */
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    /* Airy coastal sky canvas with deep ocean text */
+    --background: 210 60% 98%;
+    --foreground: 222 65% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222 65% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 222 65% 12%;
 
-    /* Primary: deep indigo #4F46E5 */
-    --primary: 243 75% 59%;
+    /* Primary: deep ocean blue #1B3A8C */
+    --primary: 222 67% 33%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 243 75% 96%;
+    --primary-soft: 215 90% 95%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 210 70% 96%;
+    --secondary-foreground: 222 65% 12%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 60% 96%;
+    --muted-foreground: 215 20% 45%;
 
-    --accent: 243 75% 96%;
-    --accent-foreground: 243 75% 40%;
+    /* Accent: bright indigo blue from CTA */
+    --accent: 222 90% 96%;
+    --accent-foreground: 222 85% 50%;
 
-    /* Secondary accent: soft teal #0D9488 */
-    --teal: 173 84% 32%;
+    /* Secondary accent: bright cyan-blue from wave crest */
+    --teal: 200 85% 45%;
     --teal-foreground: 0 0% 100%;
-    --teal-soft: 173 84% 95%;
+    --teal-soft: 200 85% 95%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 30 80% 15%;
@@ -50,63 +51,57 @@ All colors MUST be HSL.
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 243 75% 59%;
+    --border: 214 50% 90%;
+    --input: 214 50% 90%;
+    --ring: 222 85% 50%;
 
     --radius: 0.75rem;
 
     /* Reusable design tokens */
-    --gradient-hero: linear-gradient(135deg, hsl(243 75% 59% / 0.95), hsl(173 84% 32% / 0.85));
-    --gradient-soft: linear-gradient(135deg, hsl(243 75% 96%), hsl(173 84% 95%));
-    --shadow-card: 0 1px 2px 0 hsl(222 47% 11% / 0.04), 0 1px 3px 0 hsl(222 47% 11% / 0.04);
-    --shadow-elevated: 0 10px 30px -12px hsl(243 75% 35% / 0.18), 0 2px 6px -2px hsl(222 47% 11% / 0.06);
-    --shadow-glow: 0 0 0 4px hsl(243 75% 59% / 0.12);
+    --gradient-hero: linear-gradient(135deg, hsl(222 67% 33% / 0.95), hsl(200 85% 45% / 0.85));
+    --gradient-soft: linear-gradient(135deg, hsl(215 90% 95%), hsl(200 85% 95%));
+    --gradient-coastal: linear-gradient(180deg, hsl(210 100% 97%), hsl(200 80% 92%));
+    --shadow-card: 0 1px 2px 0 hsl(222 67% 20% / 0.04), 0 1px 3px 0 hsl(222 67% 20% / 0.04);
+    --shadow-elevated: 0 10px 30px -12px hsl(222 67% 25% / 0.18), 0 2px 6px -2px hsl(222 47% 11% / 0.06);
+    --shadow-glow: 0 0 0 4px hsl(222 85% 50% / 0.12);
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
+    --sidebar-background: 210 60% 98%;
+    --sidebar-foreground: 222 40% 25%;
+    --sidebar-primary: 222 67% 33%;
     --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 210 70% 95%;
+    --sidebar-accent-foreground: 222 67% 33%;
+    --sidebar-border: 214 50% 90%;
+    --sidebar-ring: 222 85% 50%;
   }
 
   .dark {
     /* Dark slate canvas with airy light text */
-    --background: 222 47% 7%;
+    --background: 222 60% 8%;
     --foreground: 210 40% 96%;
 
-    --card: 222 47% 10%;
+    --card: 222 55% 11%;
     --card-foreground: 210 40% 96%;
 
-    --popover: 222 47% 10%;
+    --popover: 222 55% 11%;
     --popover-foreground: 210 40% 96%;
 
-    --primary: 243 85% 70%;
+    --primary: 210 90% 65%;
     --primary-foreground: 222 47% 8%;
-    --primary-soft: 243 50% 18%;
+    --primary-soft: 215 60% 18%;
 
-    --secondary: 217 33% 17%;
+    --secondary: 217 40% 17%;
     --secondary-foreground: 210 40% 96%;
 
-    --muted: 217 33% 15%;
+    --muted: 217 40% 15%;
     --muted-foreground: 215 20% 70%;
 
-    --accent: 243 50% 18%;
-    --accent-foreground: 243 85% 80%;
+    --accent: 215 60% 18%;
+    --accent-foreground: 210 90% 80%;
 
-    --teal: 173 75% 50%;
+    --teal: 200 85% 60%;
     --teal-foreground: 222 47% 8%;
-    --teal-soft: 173 50% 16%;
+    --teal-soft: 200 50% 16%;
 
     --warning: 38 92% 60%;
     --warning-foreground: 30 80% 10%;
@@ -121,24 +116,25 @@ All colors MUST be HSL.
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 243 85% 70%;
+    --border: 217 40% 20%;
+    --input: 217 40% 20%;
+    --ring: 210 90% 65%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(243 85% 60% / 0.95), hsl(173 75% 40% / 0.85));
-    --gradient-soft: linear-gradient(135deg, hsl(243 50% 18%), hsl(173 50% 16%));
+    --gradient-hero: linear-gradient(135deg, hsl(222 80% 45% / 0.95), hsl(200 85% 50% / 0.85));
+    --gradient-soft: linear-gradient(135deg, hsl(215 60% 18%), hsl(200 50% 16%));
+    --gradient-coastal: linear-gradient(180deg, hsl(222 60% 10%), hsl(215 50% 14%));
     --shadow-card: 0 1px 2px 0 hsl(0 0% 0% / 0.3), 0 1px 3px 0 hsl(0 0% 0% / 0.25);
     --shadow-elevated: 0 10px 30px -12px hsl(0 0% 0% / 0.55), 0 2px 6px -2px hsl(0 0% 0% / 0.3);
-    --shadow-glow: 0 0 0 4px hsl(243 85% 70% / 0.18);
+    --shadow-glow: 0 0 0 4px hsl(210 90% 65% / 0.18);
 
-    --sidebar-background: 222 47% 9%;
+    --sidebar-background: 222 60% 9%;
     --sidebar-foreground: 210 40% 92%;
-    --sidebar-primary: 243 85% 70%;
+    --sidebar-primary: 210 90% 65%;
     --sidebar-primary-foreground: 222 47% 8%;
-    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent: 217 40% 17%;
     --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 217 33% 18%;
-    --sidebar-ring: 243 85% 70%;
+    --sidebar-border: 217 40% 18%;
+    --sidebar-ring: 210 90% 65%;
   }
 }
 
@@ -160,6 +156,7 @@ All colors MUST be HSL.
   .shadow-elevated { box-shadow: var(--shadow-elevated); }
   .bg-gradient-hero { background-image: var(--gradient-hero); }
   .bg-gradient-soft { background-image: var(--gradient-soft); }
+  .bg-gradient-coastal { background-image: var(--gradient-coastal); }
   .transition-base { transition: all 0.2s ease; }
   .hover-lift { @apply transition-base hover:-translate-y-0.5 hover:shadow-elevated; }
 }

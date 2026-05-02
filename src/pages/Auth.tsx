@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import eduflowLogo from "@/assets/eduflow-logo.png";
 
 type Role = "student" | "teacher";
 
@@ -93,14 +94,18 @@ export default function Auth() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+    <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-coastal">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-primary text-primary-foreground mb-4">
-            <GraduationCap className="h-6 w-6" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">EduFlow</h1>
-          <p className="text-sm text-muted-foreground mt-1">Classroom, simplified.</p>
+          <img
+            src={eduflowLogo}
+            alt="Eduflow logo"
+            width={96}
+            height={96}
+            className="mx-auto h-24 w-24 object-contain drop-shadow-md"
+          />
+          <h1 className="text-3xl font-bold tracking-tight mt-3 text-primary">Eduflow</h1>
+          <p className="text-sm text-muted-foreground mt-1">Learn Better. Flow Together.</p>
         </div>
 
         <Card className="border-border/60 shadow-sm">
