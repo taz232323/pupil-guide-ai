@@ -265,21 +265,6 @@ export function ClassModules({ classId, isTeacher }: { classId: string; isTeache
 
   if (loading) return <CardListSkeleton count={2} />;
 
-  if (modules.length === 0) {
-    return (
-      <EmptyState
-        icon={FileText}
-        title="No modules yet"
-        description={isTeacher
-          ? "Create your first module to organize lessons, files, and assignments."
-          : "Your teacher hasn't added any modules to this class yet."}
-        action={isTeacher ? (
-          <Button onClick={openCreateModule}><Plus className="h-4 w-4 mr-1" />New module</Button>
-        ) : undefined}
-      />
-    );
-  }
-
   return (
     <div className="space-y-4">
       {isTeacher && (
@@ -288,7 +273,18 @@ export function ClassModules({ classId, isTeacher }: { classId: string; isTeache
         </div>
       )}
 
-      {isTeacher ? (
+      {modules.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No modules yet"
+          description={isTeacher
+            ? "Create your first module to organize lessons, files, and assignments."
+            : "Your teacher hasn't added any modules to this class yet."}
+          action={isTeacher ? (
+            <Button onClick={openCreateModule}><Plus className="h-4 w-4 mr-1" />New module</Button>
+          ) : undefined}
+        />
+      ) : isTeacher ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onModuleDragEnd}>
           <SortableContext items={modules.map((m) => m.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
