@@ -40,7 +40,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
+      if (error) {
+        // Transient error — don't wipe the user; let onAuthStateChange recover.
+        console.warn("getSession error", error);
+        setLoading(false);
+        return;
+      }
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       if (currentSession?.user) {
@@ -48,6 +54,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setLoading(false);
       }
+    }).catch((err) => {
+      console.warn("getSession threw", err);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
