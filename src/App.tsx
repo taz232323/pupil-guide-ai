@@ -20,6 +20,7 @@ import StudentAssignmentDetail from "./pages/StudentAssignmentDetail.tsx";
 import StudentGrades from "./pages/StudentGrades.tsx";
 import TeacherAssignmentDetail from "./pages/TeacherAssignmentDetail.tsx";
 import TeacherProgressPage from "./pages/TeacherProgressPage.tsx";
+import TeacherGradebook from "./pages/TeacherGradebook.tsx";
 import MessagesPage from "./pages/MessagesPage.tsx";
 import ShopPage from "./pages/ShopPage.tsx";
 import TeacherShopPage from "./pages/TeacherShopPage.tsx";
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/teacher/assignments" element={<ProtectedRoute requiredRole="teacher"><TeacherAssignmentsPage /></ProtectedRoute>} />
             <Route path="/teacher/assignments/:id" element={<ProtectedRoute requiredRole="teacher"><TeacherAssignmentDetail /></ProtectedRoute>} />
             <Route path="/teacher/progress" element={<ProtectedRoute requiredRole="teacher"><TeacherProgressPage /></ProtectedRoute>} />
+            <Route path="/teacher/gradebook" element={<ProtectedRoute requiredRole="teacher"><TeacherGradebook /></ProtectedRoute>} />
             <Route path="/teacher/shop" element={<ProtectedRoute requiredRole="teacher"><TeacherShopPage /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
