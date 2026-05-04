@@ -1,142 +1,292 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, ClipboardList, Inbox, ShieldCheck, Plus, GraduationCap } from "lucide-react";
+import {
+  Users, ClipboardList, Inbox, Plus, GraduationCap, AlertTriangle, FileText,
+  ShoppingBag, MessageSquare, Award, LineChart, Megaphone, ArrowRight,
+  CalendarDays, Activity, ShieldCheck, CheckCircle2, Sparkles,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
-import { Greeting } from "@/components/Greeting";
-import { StatCard } from "@/components/StatCard";
-import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { TeacherPrivilegeRequests } from "./TeacherPrivilegeRequests";
+import { cn } from "@/lib/utils";
 
-type ClassOverview = {
-  id: string; name: string; subject: string;
-  studentCount: number; rate: number;
+type ClassRow = { id: string; name: string; subject: string };
+type AsgnRow = { id: string; class_id: string; title: string; due_date: string | null };
+type SubRow = { id: string; assignment_id: string; student_id: string; submitted_at: string };
+type GradeRow = { assignment_id: string; student_id: string; overall_score: number | null; graded_at: string | null };
+type PrivRow = { id: string; student_id: string; class_id: string | null; item_name: string; created_at: string };
+type MsgRow = { id: string; sender_id: string; class_id: string; body: string; created_at: string };
+type PurchaseRow = { id: string; student_id: string; item_name: string; created_at: string; status: string };
+
+type ActivityItem = {
+  id: string; type: "submission" | "message" | "purchase";
+  studentId: string; text: string; ts: string; link: string;
 };
 
-type SubmissionRow = {
-  id: string; assignment_id: string; student_id: string; submitted_at: string;
-  studentName: string; assignmentTitle: string;
-};
+function timeGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function relTime(iso: string) {
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.round(ms / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+const startOfDay = (d = new Date()) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const endOfDay = (d = new Date()) => { const x = new Date(d); x.setHours(23, 59, 59, 999); return x; };
+
+const QUICK_ACTIONS = [
+  { to: "/teacher/assignments", label: "Create Assignment", icon: Plus, tone: "bg-primary-soft text-primary" },
+  { to: "/messages", label: "Send Announcement", icon: Megaphone, tone: "bg-teal-soft text-teal" },
+  { to: "/teacher/gradebook", label: "Open Gradebook", icon: Award, tone: "bg-warning-soft text-warning" },
+  { to: "/teacher/progress", label: "View Progress", icon: LineChart, tone: "bg-success-soft text-success" },
+];
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [classes, setClasses] = useState<ClassOverview[]>([]);
-  const [stats, setStats] = useState({
-    totalStudents: 0, weekAsgn: 0, pendingSubs: 0, pendingApprovals: 0,
-  });
-  const [recentSubs, setRecentSubs] = useState<SubmissionRow[]>([]);
+  const [name, setName] = useState("");
+  const [classes, setClasses] = useState<ClassRow[]>([]);
+  const [assignments, setAssignments] = useState<AsgnRow[]>([]);
+  const [submissions, setSubmissions] = useState<SubRow[]>([]);
+  const [grades, setGrades] = useState<GradeRow[]>([]);
+  const [pendingPrivs, setPendingPrivs] = useState<PrivRow[]>([]);
+  const [recentMsgs, setRecentMsgs] = useState<MsgRow[]>([]);
+  const [recentPurchases, setRecentPurchases] = useState<PurchaseRow[]>([]);
+  const [members, setMembers] = useState<{ class_id: string; student_id: string }[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [unreadTeacherMsgs, setUnreadTeacherMsgs] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data: cls } = await supabase
-        .from("classes").select("id, name, subject").eq("teacher_id", user.id);
-      const classList = (cls ?? []) as { id: string; name: string; subject: string }[];
-      const ids = classList.map(c => c.id);
 
-      if (ids.length === 0) {
-        setClasses([]); setStats({ totalStudents: 0, weekAsgn: 0, pendingSubs: 0, pendingApprovals: 0 });
-        setRecentSubs([]); setLoading(false); return;
+      const [{ data: prof }, { data: cls }] = await Promise.all([
+        supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+        supabase.from("classes").select("id, name, subject").eq("teacher_id", user.id),
+      ]);
+      setName((prof?.full_name as string) || (user.email?.split("@")[0] ?? ""));
+
+      const classList = (cls ?? []) as ClassRow[];
+      setClasses(classList);
+      const classIds = classList.map(c => c.id);
+
+      if (classIds.length === 0) { setLoading(false); return; }
+
+      const [{ data: asgn }, { data: mems }, { data: privs }, { data: msgsIn }, { count: unreadCnt }] = await Promise.all([
+        supabase.from("assignments").select("id, class_id, title, due_date").in("class_id", classIds),
+        supabase.from("class_members").select("class_id, student_id").in("class_id", classIds),
+        supabase.from("shop_purchases").select("id, student_id, class_id, item_name, created_at")
+          .eq("status", "pending").in("class_id", classIds).order("created_at", { ascending: true }),
+        supabase.from("messages").select("id, sender_id, class_id, body, created_at")
+          .in("class_id", classIds).neq("sender_id", user.id)
+          .order("created_at", { ascending: false }).limit(20),
+        supabase.from("messages").select("id", { count: "exact", head: true })
+          .eq("recipient_id", user.id).is("read_at", null),
+      ]);
+
+      const asgnList = (asgn ?? []) as AsgnRow[];
+      setAssignments(asgnList);
+      setMembers((mems ?? []) as any);
+      setPendingPrivs((privs ?? []) as PrivRow[]);
+      setRecentMsgs((msgsIn ?? []) as MsgRow[]);
+      setUnreadTeacherMsgs(unreadCnt ?? 0);
+
+      const aIds = asgnList.map(a => a.id);
+      const [{ data: subs }, { data: grds }] = await Promise.all([
+        aIds.length
+          ? supabase.from("submissions").select("id, assignment_id, student_id, submitted_at")
+              .in("assignment_id", aIds).order("submitted_at", { ascending: false })
+          : Promise.resolve({ data: [] as any[] }),
+        aIds.length
+          ? supabase.from("assignment_grades").select("assignment_id, student_id, overall_score, graded_at")
+              .in("assignment_id", aIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      setSubmissions((subs ?? []) as SubRow[]);
+      setGrades((grds ?? []) as GradeRow[]);
+
+      // Recent purchases (resolved or pending) across the teacher's class students
+      const studentIds = Array.from(new Set(((mems ?? []) as any[]).map(m => m.student_id))) as string[];
+      const { data: purchases } = studentIds.length
+        ? await supabase.from("shop_purchases").select("id, student_id, item_name, created_at, status")
+            .in("student_id", studentIds).order("created_at", { ascending: false }).limit(20)
+        : { data: [] as any[] };
+      setRecentPurchases((purchases ?? []) as PurchaseRow[]);
+
+      // Profile lookup for student names referenced anywhere
+      const allIds = new Set<string>([
+        ...studentIds,
+        ...((subs ?? []) as any[]).map(s => s.student_id),
+        ...((msgsIn ?? []) as any[]).map(m => m.sender_id),
+        ...((privs ?? []) as any[]).map(p => p.student_id),
+      ]);
+      if (allIds.size > 0) {
+        const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", Array.from(allIds));
+        const map: Record<string, string> = {};
+        (profs ?? []).forEach((p: any) => { map[p.id] = p.full_name || "Student"; });
+        setProfiles(map);
       }
 
-      const [{ data: members }, { data: asgn }, { data: subs }, { data: approvals }] = await Promise.all([
-        supabase.from("class_members").select("class_id, student_id").in("class_id", ids),
-        supabase.from("assignments").select("id, class_id, created_at").in("class_id", ids),
-        supabase.from("submissions").select("id, assignment_id, student_id, submitted_at")
-          .in("assignment_id", []).then(async () => {
-            const aIds = ((await supabase.from("assignments").select("id").in("class_id", ids)).data ?? []).map((a: any) => a.id);
-            return aIds.length
-              ? supabase.from("submissions").select("id, assignment_id, student_id, submitted_at")
-                  .in("assignment_id", aIds).order("submitted_at", { ascending: false }).limit(8)
-              : { data: [] as any[] };
-          }),
-        supabase.from("shop_purchases").select("id").eq("status", "pending").in("class_id", ids),
-      ]);
-
-      const week = Date.now() - 7 * 86_400_000;
-      const weekAsgn = (asgn ?? []).filter((a: any) => new Date(a.created_at).getTime() >= week).length;
-      const totalStudents = new Set((members ?? []).map((m: any) => m.student_id)).size;
-
-      // class overview rates
-      const memByClass = new Map<string, number>();
-      (members ?? []).forEach((m: any) => memByClass.set(m.class_id, (memByClass.get(m.class_id) ?? 0) + 1));
-      const asgnByClass = new Map<string, string[]>();
-      (asgn ?? []).forEach((a: any) => {
-        const arr = asgnByClass.get(a.class_id) ?? [];
-        arr.push(a.id); asgnByClass.set(a.class_id, arr);
-      });
-      const allAsgnIds = (asgn ?? []).map((a: any) => a.id);
-      const { data: allSubs } = allAsgnIds.length
-        ? await supabase.from("submissions").select("assignment_id, student_id").in("assignment_id", allAsgnIds)
-        : { data: [] as any[] };
-
-      const subSet = new Set((allSubs ?? []).map((s: any) => `${s.assignment_id}|${s.student_id}`));
-      const overview: ClassOverview[] = classList.map(c => {
-        const studentCount = memByClass.get(c.id) ?? 0;
-        const aIds = asgnByClass.get(c.id) ?? [];
-        const expected = studentCount * aIds.length;
-        let done = 0;
-        const studentIds = (members ?? []).filter((m: any) => m.class_id === c.id).map((m: any) => m.student_id);
-        aIds.forEach(aid => studentIds.forEach((sid: string) => { if (subSet.has(`${aid}|${sid}`)) done++; }));
-        return { ...c, studentCount, rate: expected > 0 ? done / expected : 0 };
-      });
-
-      // pending = expected - done across all
-      const totalExpected = overview.reduce((sum, c) => sum + c.studentCount * (asgnByClass.get(c.id)?.length ?? 0), 0);
-      const totalDone = overview.reduce((sum, c) => sum + Math.round(c.rate * c.studentCount * (asgnByClass.get(c.id)?.length ?? 0)), 0);
-
-      // resolve names for recent subs
-      const recent = (subs as any).data ?? subs ?? [];
-      const sIds = Array.from(new Set(recent.map((s: any) => s.student_id))) as string[];
-      const aIdsRecent = Array.from(new Set(recent.map((s: any) => s.assignment_id))) as string[];
-      const [{ data: profs }, { data: titles }] = await Promise.all([
-        sIds.length ? supabase.from("profiles").select("id, full_name").in("id", sIds) : Promise.resolve({ data: [] as any[] }),
-        aIdsRecent.length ? supabase.from("assignments").select("id, title").in("id", aIdsRecent) : Promise.resolve({ data: [] as any[] }),
-      ]);
-      const pmap = new Map((profs ?? []).map((p: any) => [p.id, p.full_name || "Student"]));
-      const tmap = new Map((titles ?? []).map((t: any) => [t.id, t.title]));
-      const recentRows: SubmissionRow[] = recent.map((s: any) => ({
-        id: s.id, assignment_id: s.assignment_id, student_id: s.student_id, submitted_at: s.submitted_at,
-        studentName: pmap.get(s.student_id) || "Student",
-        assignmentTitle: tmap.get(s.assignment_id) || "Assignment",
-      }));
-
-      setClasses(overview);
-      setStats({
-        totalStudents, weekAsgn,
-        pendingSubs: Math.max(totalExpected - totalDone, 0),
-        pendingApprovals: (approvals ?? []).length,
-      });
-      setRecentSubs(recentRows);
       setLoading(false);
     })();
   }, [user]);
 
-  const relTime = (iso: string) => {
-    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-    if (m < 1) return "just now";
-    if (m < 60) return `${m}m ago`;
-    const h = Math.round(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.round(h / 24)}d ago`;
-  };
+  const todayStart = startOfDay().getTime();
+  const todayEnd = endOfDay().getTime();
+  const dayAgo = Date.now() - 86_400_000;
+  const classNameMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    classes.forEach(c => { m[c.id] = c.name; });
+    return m;
+  }, [classes]);
+
+  // Today's agenda
+  const todaysAgenda = useMemo(() => assignments
+    .filter(a => a.due_date && new Date(a.due_date).getTime() >= todayStart && new Date(a.due_date).getTime() <= todayEnd)
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+  , [assignments, todayStart, todayEnd]);
+
+  // Needs attention — ungraded submissions oldest first
+  const ungradedSubs = useMemo(() => {
+    const gradedKeys = new Set(grades.filter(g => g.graded_at).map(g => `${g.assignment_id}|${g.student_id}`));
+    return submissions
+      .filter(s => !gradedKeys.has(`${s.assignment_id}|${s.student_id}`))
+      .sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
+  }, [submissions, grades]);
+
+  // At-risk students (3+ overdue assignments)
+  const atRisk = useMemo(() => {
+    const memByClass = new Map<string, string[]>();
+    members.forEach(m => {
+      const arr = memByClass.get(m.class_id) ?? [];
+      arr.push(m.student_id); memByClass.set(m.class_id, arr);
+    });
+    const subKey = new Set(submissions.map(s => `${s.assignment_id}|${s.student_id}`));
+    const overdueByStudent = new Map<string, number>();
+    assignments.forEach(a => {
+      if (!a.due_date) return;
+      if (new Date(a.due_date).getTime() >= Date.now()) return;
+      (memByClass.get(a.class_id) ?? []).forEach(sid => {
+        if (!subKey.has(`${a.id}|${sid}`)) overdueByStudent.set(sid, (overdueByStudent.get(sid) ?? 0) + 1);
+      });
+    });
+    return Array.from(overdueByStudent.entries())
+      .filter(([, n]) => n >= 3)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([sid, n]) => ({ id: sid, name: profiles[sid] || "Student", overdue: n }));
+  }, [assignments, members, submissions, profiles]);
+
+  // Class pulse
+  const pulse = useMemo(() => {
+    return classes.map(c => {
+      const cAsgnIds = new Set(assignments.filter(a => a.class_id === c.id).map(a => a.id));
+      const cMembers = members.filter(m => m.class_id === c.id).map(m => m.student_id);
+      const studentCount = cMembers.length;
+
+      const activeIds = new Set<string>();
+      submissions.forEach(s => {
+        if (cAsgnIds.has(s.assignment_id) && new Date(s.submitted_at).getTime() >= dayAgo)
+          activeIds.add(s.student_id);
+      });
+      recentMsgs.forEach(m => {
+        if (m.class_id === c.id && new Date(m.created_at).getTime() >= dayAgo) activeIds.add(m.sender_id);
+      });
+
+      const cGrades = grades.filter(g => cAsgnIds.has(g.assignment_id) && g.overall_score != null);
+      const avg = cGrades.length
+        ? Math.round(cGrades.reduce((s, g) => s + (g.overall_score ?? 0), 0) / cGrades.length)
+        : null;
+
+      const subKey = new Set(submissions.map(s => `${s.assignment_id}|${s.student_id}`));
+      let missing = 0;
+      assignments.forEach(a => {
+        if (a.class_id !== c.id) return;
+        if (!a.due_date || new Date(a.due_date).getTime() >= Date.now()) return;
+        cMembers.forEach(sid => { if (!subKey.has(`${a.id}|${sid}`)) missing += 1; });
+      });
+
+      return { ...c, studentCount, active: activeIds.size, avg, missing };
+    });
+  }, [classes, assignments, submissions, grades, members, recentMsgs, dayAgo]);
+
+  // Activity feed
+  const activity = useMemo<ActivityItem[]>(() => {
+    const items: ActivityItem[] = [];
+    submissions.slice(0, 20).forEach(s => {
+      items.push({
+        id: `sub-${s.id}`, type: "submission", studentId: s.student_id, ts: s.submitted_at,
+        text: `submitted "${assignments.find(a => a.id === s.assignment_id)?.title ?? "an assignment"}"`,
+        link: `/teacher/assignments/${s.assignment_id}`,
+      });
+    });
+    recentMsgs.forEach(m => {
+      items.push({
+        id: `msg-${m.id}`, type: "message", studentId: m.sender_id, ts: m.created_at,
+        text: `sent a message: "${m.body.slice(0, 60)}${m.body.length > 60 ? "…" : ""}"`,
+        link: `/messages`,
+      });
+    });
+    recentPurchases.forEach(p => {
+      items.push({
+        id: `buy-${p.id}`, type: "purchase", studentId: p.student_id, ts: p.created_at,
+        text: `redeemed ${p.item_name}`,
+        link: `/teacher/shop`,
+      });
+    });
+    return items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()).slice(0, 10);
+  }, [submissions, assignments, recentMsgs, recentPurchases]);
+
+  const summary = loading
+    ? "Loading your day…"
+    : `You have ${ungradedSubs.length} ungraded submission${ungradedSubs.length === 1 ? "" : "s"}${unreadTeacherMsgs ? ` and ${unreadTeacherMsgs} message${unreadTeacherMsgs === 1 ? "" : "s"} waiting` : ""}.`;
 
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <Greeting subtitle="A snapshot of your classes today." />
-
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total students" value={stats.totalStudents} icon={Users} tone="indigo" loading={loading} />
-          <StatCard label="Assignments this week" value={stats.weekAsgn} icon={ClipboardList} tone="teal" loading={loading} />
-          <StatCard label="Pending submissions" value={stats.pendingSubs} icon={Inbox} tone="amber" loading={loading} />
-          <StatCard label="Shop approvals" value={stats.pendingApprovals} icon={ShieldCheck} tone="emerald" loading={loading} />
+        {/* Greeting */}
+        <div className="rounded-3xl bg-gradient-hero p-6 sm:p-8 text-primary-foreground shadow-elevated relative overflow-hidden animate-fade-in">
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium opacity-80">{timeGreeting()}</p>
+              <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight truncate">
+                {name || "Welcome back"} 👋
+              </h1>
+              <p className="mt-2 text-sm sm:text-base opacity-95 max-w-xl">{summary}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
+                <Users className="h-5 w-5" />
+                <div className="leading-tight">
+                  <p className="text-lg font-bold tabular-nums">
+                    {new Set(members.map(m => m.student_id)).size}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wide opacity-80">Students</p>
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
+                <ClipboardList className="h-5 w-5" />
+                <div className="leading-tight">
+                  <p className="text-lg font-bold tabular-nums">{classes.length}</p>
+                  <p className="text-[10px] uppercase tracking-wide opacity-80">Classes</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {!loading && classes.length === 0 ? (
@@ -147,90 +297,282 @@ export default function TeacherDashboard() {
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome to EduFlow! 🎉</h2>
               <p className="mx-auto mt-2 max-w-md text-sm sm:text-base text-muted-foreground">
-                You're all set up. Create your first class to invite students, post assignments, and start tracking progress.
+                Create your first class to invite students, post assignments, and start tracking progress.
               </p>
               <Button asChild size="lg" className="mt-6 h-12 px-8 text-base shadow-elevated">
                 <Link to="/teacher/classes"><Plus className="h-5 w-5" />Create Class</Link>
               </Button>
-              <p className="mt-4 text-xs text-muted-foreground">Takes less than a minute.</p>
             </div>
           </Card>
         ) : (
           <>
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Class overview</h2>
-                <Button variant="ghost" size="sm" asChild><Link to="/teacher/classes">Manage</Link></Button>
+            {/* Today's Agenda */}
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-soft text-teal">
+                    <CalendarDays className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-bold tracking-tight">Today's Agenda</h2>
+                    <p className="text-xs text-muted-foreground">Assignments due today across your classes.</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/teacher/assignments">All <ArrowRight className="h-4 w-4" /></Link>
+                </Button>
               </div>
               {loading ? (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {[0,1,2].map(i => <Skeleton key={i} className="h-28 rounded-2xl" />)}
-                </div>
+                <Skeleton className="h-16 rounded-xl" />
+              ) : todaysAgenda.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">Nothing is due today.</p>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {classes.map(c => (
-                    <Card key={c.id} className="hover-lift">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="font-semibold truncate">{c.name}</p>
-                            <p className="text-xs text-muted-foreground">{c.subject}</p>
-                          </div>
-                          <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1">
-                            <Users className="h-3 w-3" />{c.studentCount}
-                          </span>
+                <ul className="space-y-2">
+                  {todaysAgenda.map(a => (
+                    <li key={a.id}>
+                      <Link to={`/teacher/assignments/${a.id}`}
+                        className="flex items-center gap-3 rounded-xl border border-border p-3 hover-lift">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                          <ClipboardList className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold truncate">{a.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {classNameMap[a.class_id]} · Due {new Date(a.due_date!).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                          </p>
                         </div>
-                        <div className="mt-3">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-muted-foreground">Avg completion</span>
-                            <span className="font-semibold tabular-nums">{Math.round(c.rate * 100)}%</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                            <div className="h-full rounded-full bg-gradient-hero transition-all"
-                              style={{ width: `${Math.min(100, Math.round(c.rate * 100))}%` }} />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </section>
 
-            <section className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold">Submissions inbox</h2>
-                {loading ? (
-                  <Skeleton className="h-40 rounded-2xl" />
-                ) : recentSubs.length === 0 ? (
-                  <EmptyState icon={Inbox} title="No submissions yet"
-                    description="Once students turn in work, it will appear here." />
-                ) : (
-                  <Card>
-                    <CardContent className="p-2">
-                      <ul className="divide-y divide-border">
-                        {recentSubs.map(s => (
-                          <li key={s.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{s.studentName}</p>
-                              <p className="text-xs text-muted-foreground truncate">{s.assignmentTitle}</p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs text-muted-foreground">{relTime(s.submitted_at)}</span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+            {/* Needs Attention — most prominent */}
+            <section className="rounded-3xl border-2 border-warning/40 bg-gradient-to-br from-warning-soft/60 via-card to-card p-5 sm:p-6 shadow-elevated">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-warning text-warning-foreground shadow-card">
+                  <AlertTriangle className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight">Needs Attention</h2>
+                  <p className="text-xs text-muted-foreground">Items that need your action.</p>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold">Pending approvals</h2>
-                <TeacherPrivilegeRequests />
+              <div className="grid gap-4 lg:grid-cols-3">
+                {/* Ungraded */}
+                <div className="rounded-2xl bg-card border border-border p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <Inbox className="h-4 w-4 text-primary" /> Ungraded
+                    </p>
+                    <span className="text-xs font-bold rounded-full bg-primary-soft text-primary px-2 py-0.5 tabular-nums">
+                      {ungradedSubs.length}
+                    </span>
+                  </div>
+                  {loading ? <Skeleton className="h-24 rounded-lg" /> : ungradedSubs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center flex flex-col items-center gap-1">
+                      <CheckCircle2 className="h-5 w-5 text-success" /> All caught up
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {ungradedSubs.slice(0, 5).map(s => {
+                        const a = assignments.find(x => x.id === s.assignment_id);
+                        return (
+                          <li key={s.id}>
+                            <Link to={`/teacher/assignments/${s.assignment_id}`}
+                              className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{profiles[s.student_id] || "Student"}</p>
+                                <p className="text-[11px] text-muted-foreground truncate">{a?.title ?? "Assignment"}</p>
+                              </div>
+                              <span className="text-[10px] text-muted-foreground shrink-0">{relTime(s.submitted_at)}</span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Pending privileges */}
+                <div className="rounded-2xl bg-card border border-border p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <ShieldCheck className="h-4 w-4 text-teal" /> Privilege requests
+                    </p>
+                    <span className="text-xs font-bold rounded-full bg-teal-soft text-teal px-2 py-0.5 tabular-nums">
+                      {pendingPrivs.length}
+                    </span>
+                  </div>
+                  {loading ? <Skeleton className="h-24 rounded-lg" /> : pendingPrivs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center flex flex-col items-center gap-1">
+                      <Sparkles className="h-5 w-5 text-success" /> No pending requests
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {pendingPrivs.slice(0, 5).map(p => (
+                        <li key={p.id}>
+                          <Link to="/teacher/shop"
+                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{profiles[p.student_id] || "Student"}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">{p.item_name}</p>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{relTime(p.created_at)}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* At risk */}
+                <div className="rounded-2xl bg-card border border-border p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <AlertTriangle className="h-4 w-4 text-destructive" /> At-risk students
+                    </p>
+                    <span className="text-xs font-bold rounded-full bg-destructive/10 text-destructive px-2 py-0.5 tabular-nums">
+                      {atRisk.length}
+                    </span>
+                  </div>
+                  {loading ? <Skeleton className="h-24 rounded-lg" /> : atRisk.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center flex flex-col items-center gap-1">
+                      <CheckCircle2 className="h-5 w-5 text-success" /> Everyone is on track
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {atRisk.map(s => (
+                        <li key={s.id}>
+                          <Link to="/teacher/progress"
+                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
+                            <p className="font-medium truncate min-w-0">{s.name}</p>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold px-2 py-0.5 shrink-0">
+                              At Risk · {s.overdue}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             </section>
+
+            {/* Quick Actions */}
+            <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {QUICK_ACTIONS.map(q => (
+                <Link key={q.to} to={q.to}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 shadow-card hover-lift">
+                  <span className={cn("inline-flex h-12 w-12 items-center justify-center rounded-2xl", q.tone)}>
+                    <q.icon className="h-6 w-6" />
+                  </span>
+                  <p className="text-sm font-semibold text-center">{q.label}</p>
+                </Link>
+              ))}
+            </section>
+
+            {/* Class Pulse + Activity */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              <section className="lg:col-span-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-primary" /> Class Pulse
+                  </h2>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/teacher/classes">All <ArrowRight className="h-4 w-4" /></Link>
+                  </Button>
+                </div>
+                {loading ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[0, 1].map(i => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {pulse.map(c => {
+                      const avgTone = c.avg == null ? "text-muted-foreground"
+                        : c.avg >= 80 ? "text-success" : c.avg >= 70 ? "text-warning" : "text-destructive";
+                      return (
+                        <Link key={c.id} to={`/teacher/classes/${c.id}`}
+                          className="block rounded-2xl border border-border bg-card p-4 shadow-card hover-lift">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold truncate">{c.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{c.subject}</p>
+                            </div>
+                            <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1 shrink-0">
+                              <Users className="h-3 w-3" />{c.studentCount}
+                            </span>
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                            <div className="rounded-lg bg-muted/50 p-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Active 24h</p>
+                              <p className="mt-0.5 text-lg font-bold tabular-nums">{c.active}</p>
+                            </div>
+                            <div className="rounded-lg bg-muted/50 p-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Avg</p>
+                              <p className={cn("mt-0.5 text-lg font-bold tabular-nums", avgTone)}>
+                                {c.avg == null ? "—" : `${c.avg}%`}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-muted/50 p-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Missing</p>
+                              <p className={cn("mt-0.5 text-lg font-bold tabular-nums", c.missing > 0 ? "text-destructive" : "")}>
+                                {c.missing}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              <section className="space-y-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-teal" /> Recent Activity
+                </h2>
+                {loading ? (
+                  <Skeleton className="h-64 rounded-2xl" />
+                ) : activity.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                      No recent activity yet.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <ul className="space-y-2">
+                    {activity.map(a => {
+                      const Icon = a.type === "submission" ? FileText : a.type === "message" ? MessageSquare : ShoppingBag;
+                      const tone = a.type === "submission" ? "bg-primary-soft text-primary"
+                        : a.type === "message" ? "bg-teal-soft text-teal"
+                        : "bg-warning-soft text-warning";
+                      return (
+                        <li key={a.id}>
+                          <Link to={a.link}
+                            className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 hover-lift">
+                            <span className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tone)}>
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm leading-snug">
+                                <span className="font-semibold">{profiles[a.studentId] || "Student"}</span>{" "}
+                                <span className="text-muted-foreground">{a.text}</span>
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-muted-foreground">{relTime(a.ts)}</p>
+                            </div>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            </div>
           </>
         )}
       </div>
