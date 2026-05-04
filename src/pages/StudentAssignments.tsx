@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Tag, Upload, LinkIcon, ClipboardList } from "lucide-react";
+import { CalendarDays, Tag, Upload, LinkIcon, ClipboardList, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -31,6 +31,8 @@ type Row = {
   due_date: string | null;
   status: Status;
   submission?: { file_path: string | null; link_url: string | null } | null;
+  graded?: boolean;
+  grade_score?: number | null;
 };
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -69,7 +71,7 @@ export const StudentAssignments = () => {
     const ids = (asgn ?? []).map((a) => a.id);
     const classIds = Array.from(new Set((asgn ?? []).map((a) => a.class_id)));
 
-    const [{ data: statuses }, { data: cls }, { data: subs }] = await Promise.all([
+    const [{ data: statuses }, { data: cls }, { data: subs }, { data: grades }] = await Promise.all([
       ids.length
         ? supabase.from("assignment_status_records")
             .select("assignment_id, status")
@@ -85,6 +87,12 @@ export const StudentAssignments = () => {
             .eq("student_id", user.id)
             .in("assignment_id", ids)
         : Promise.resolve({ data: [] as { assignment_id: string; file_path: string | null; link_url: string | null }[] }),
+      ids.length
+        ? supabase.from("assignment_grades")
+            .select("assignment_id, overall_score, graded_at")
+            .eq("student_id", user.id)
+            .in("assignment_id", ids)
+        : Promise.resolve({ data: [] as { assignment_id: string; overall_score: number | null; graded_at: string | null }[] }),
     ]);
 
     const statusMap = new Map<string, Status>();
@@ -93,12 +101,16 @@ export const StudentAssignments = () => {
     (cls ?? []).forEach((c: any) => { classMap[c.id] = c.name; });
     const subMap = new Map<string, { file_path: string | null; link_url: string | null }>();
     (subs ?? []).forEach((s: any) => subMap.set(s.assignment_id, { file_path: s.file_path, link_url: s.link_url }));
+    const gradeMap = new Map<string, { score: number | null }>();
+    (grades ?? []).forEach((g: any) => { if (g.graded_at) gradeMap.set(g.assignment_id, { score: g.overall_score }); });
 
     setClasses(classMap);
     setRows((asgn ?? []).map((a) => ({
       ...a,
       status: statusMap.get(a.id) ?? "not_started",
       submission: subMap.get(a.id) ?? null,
+      graded: gradeMap.has(a.id),
+      grade_score: gradeMap.get(a.id)?.score ?? null,
     })));
     setLoading(false);
   };
@@ -197,6 +209,11 @@ export const StudentAssignments = () => {
                     <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full ${STATUS_STYLES[r.status]}`}>
                       {STATUS_LABEL[r.status]}
                     </span>
+                    {r.graded && (
+                      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/15 text-primary font-semibold">
+                        <Award className="h-3 w-3" />Graded{r.grade_score != null ? ` · ${r.grade_score}` : ""}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">{classes[r.class_id] ?? "Class"}</p>
                   {r.description && (
