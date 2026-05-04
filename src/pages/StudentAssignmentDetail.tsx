@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Tag, AlertTriangle, Upload, LinkIcon, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, Tag, AlertTriangle, Upload, LinkIcon, CheckCircle2, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,7 @@ export default function StudentAssignmentDetail() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [submission, setSubmission] = useState<{ file_path: string | null; link_url: string | null } | null>(null);
+  const [grade, setGrade] = useState<{ overall_score: number | null; overall_feedback: string | null; graded_at: string | null } | null>(null);
   const [link, setLink] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
@@ -74,7 +75,7 @@ export default function StudentAssignmentDetail() {
     if (error || !a) { toast.error("Assignment not found"); navigate("/student/assignments"); return; }
     setAssignment(a);
 
-    const [{ data: cls }, { data: stat }, { data: qs }, { data: sub }, { data: ans }] = await Promise.all([
+    const [{ data: cls }, { data: stat }, { data: qs }, { data: sub }, { data: ans }, { data: gr }] = await Promise.all([
       supabase.from("classes").select("name").eq("id", a.class_id).maybeSingle(),
       supabase.from("assignment_status_records").select("status")
         .eq("assignment_id", id).eq("student_id", user.id).maybeSingle(),
@@ -84,11 +85,14 @@ export default function StudentAssignmentDetail() {
         .eq("assignment_id", id).eq("student_id", user.id).maybeSingle(),
       supabase.from("assignment_answers").select("question_id, selected_index, text_response")
         .eq("assignment_id", id).eq("student_id", user.id),
+      supabase.from("assignment_grades").select("overall_score, overall_feedback, graded_at")
+        .eq("assignment_id", id).eq("student_id", user.id).maybeSingle(),
     ]);
     setClassName(cls?.name ?? "Class");
     setStatus((stat?.status as Status) ?? "not_started");
     setQuestions((qs ?? []) as Question[]);
     setSubmission(sub ?? null);
+    setGrade(gr ?? null);
     const map: Record<string, AnswerState> = {};
     (ans ?? []).forEach((r: any) => {
       map[r.question_id] = { selected_index: r.selected_index, text_response: r.text_response };
@@ -217,6 +221,11 @@ export default function StudentAssignmentDetail() {
               <span className={cn("inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide", STATUS_PILL[status])}>
                 {status.replace("_", " ")}
               </span>
+              {grade?.graded_at && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                  <Award className="h-3 w-3" />Graded
+                </span>
+              )}
               {overdueDays > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
                   <AlertTriangle className="h-3 w-3" />Costing {overdueDays} ⭐/day
@@ -230,6 +239,30 @@ export default function StudentAssignmentDetail() {
             )}
           </CardContent>
         </Card>
+
+        {grade?.graded_at && (
+          <Card className="border-2 border-primary/30 bg-primary-soft/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base inline-flex items-center gap-2">
+                <Award className="h-5 w-5 text-primary" />Your Grade
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {grade.overall_score != null && (
+                <p className="text-3xl font-bold text-primary">{grade.overall_score}</p>
+              )}
+              {grade.overall_feedback && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Teacher Feedback</p>
+                  <p className="text-sm whitespace-pre-wrap">{grade.overall_feedback}</p>
+                </div>
+              )}
+              {grade.overall_score == null && !grade.overall_feedback && (
+                <p className="text-sm text-muted-foreground">Your teacher has reviewed this assignment.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {questions.length > 0 && (
           <Card>
