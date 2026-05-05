@@ -326,6 +326,7 @@ export type Database = {
           created_at: string
           id: string
           join_code: string
+          leaderboard_anonymous: boolean
           name: string
           subject: string
           syllabus: string | null
@@ -336,6 +337,7 @@ export type Database = {
           created_at?: string
           id?: string
           join_code?: string
+          leaderboard_anonymous?: boolean
           name: string
           subject: string
           syllabus?: string | null
@@ -346,6 +348,7 @@ export type Database = {
           created_at?: string
           id?: string
           join_code?: string
+          leaderboard_anonymous?: boolean
           name?: string
           subject?: string
           syllabus?: string | null
@@ -695,6 +698,7 @@ export type Database = {
           full_name: string | null
           id: string
           inapp_reminders_enabled: boolean
+          leaderboard_username: string | null
           theme: string
           updated_at: string
         }
@@ -705,6 +709,7 @@ export type Database = {
           full_name?: string | null
           id: string
           inapp_reminders_enabled?: boolean
+          leaderboard_username?: string | null
           theme?: string
           updated_at?: string
         }
@@ -715,6 +720,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           inapp_reminders_enabled?: boolean
+          leaderboard_username?: string | null
           theme?: string
           updated_at?: string
         }
@@ -918,6 +924,7 @@ export type Database = {
           created_at: string
           id: string
           join_code: string
+          leaderboard_anonymous: boolean
           name: string
           subject: string
           syllabus: string | null
