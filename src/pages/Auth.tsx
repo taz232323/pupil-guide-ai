@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import eduflowLogo from "@/assets/eduflow-logo.png";
+import grapheionLogo from "@/assets/grapheion-logo.png";
 
 type Role = "student" | "teacher";
 
@@ -98,14 +98,14 @@ export default function Auth() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img
-            src={eduflowLogo}
-            alt="Eduflow logo"
-            width={96}
-            height={96}
-            className="mx-auto h-24 w-24 object-contain drop-shadow-md"
+            src={grapheionLogo}
+            alt="Grapheion logo"
+            width={420}
+            height={236}
+            className="mx-auto w-full max-w-xs h-auto object-contain"
+            style={{ background: "transparent" }}
           />
-          <h1 className="text-3xl font-bold tracking-tight mt-3 text-primary">Eduflow</h1>
-          <p className="text-sm text-muted-foreground mt-1">Learn Better. Flow Together.</p>
+          <p className="text-sm text-muted-foreground mt-3 italic">Knowledge Surpasses Mountains</p>
         </div>
 
         <Card className="border-border/60 shadow-sm">
@@ -114,7 +114,7 @@ export default function Auth() {
               {mode === "signin" ? "Sign in" : "Create your account"}
             </CardTitle>
             <CardDescription>
-              {mode === "signin" ? "Welcome back to EduFlow." : "Choose your role to get started."}
+              {mode === "signin" ? "Welcome back to Grapheion." : "Choose your role to get started."}
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -15,7 +15,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Badge } from "@/components/ui/badge";
 import { StudyBuddy } from "@/components/StudyBuddy";
-import eduflowLogo from "@/assets/eduflow-logo.png";
+import grapheionMark from "@/assets/grapheion-mark.png";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -119,13 +119,14 @@ export const DashboardShell = ({
         <div className="px-5 py-5 border-b border-border">
           <Link to="/" className="flex items-center gap-2.5 group">
             <img
-              src={eduflowLogo}
-              alt="Eduflow"
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
+              src={grapheionMark}
+              alt="Grapheion"
+              width={36}
+              height={36}
+              className="h-9 w-9 object-contain"
+              style={{ background: "transparent" }}
             />
-            <span className="font-bold tracking-tight text-lg text-primary">Eduflow</span>
+            <span className="font-bold tracking-tight text-lg text-primary">Grapheion</span>
           </Link>
         </div>
 
@@ -199,13 +200,14 @@ export const DashboardShell = ({
           <div className="px-4 h-14 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
               <img
-                src={eduflowLogo}
-                alt="Eduflow"
-                width={32}
-                height={32}
-                className="h-8 w-8 object-contain"
+                src={grapheionMark}
+                alt="Grapheion"
+                width={28}
+                height={28}
+                className="h-7 w-7 object-contain"
+                style={{ background: "transparent" }}
               />
-              <span className="font-bold text-primary">Eduflow</span>
+              <span className="font-bold text-primary">Grapheion</span>
             </Link>
             <div className="flex items-center gap-1.5">
               {role === "student" && coins && (
