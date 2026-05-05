@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -248,6 +249,21 @@ export default function TeacherAssignmentDetail() {
             {assignment.description && (
               <p className="text-sm text-muted-foreground whitespace-pre-wrap pt-2 border-t">{assignment.description}</p>
             )}
+            <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 mt-2">
+              <div>
+                <p className="text-sm font-medium">Due-date reminders</p>
+                <p className="text-xs text-muted-foreground">Notify students 3 days and 24 hours before this assignment is due.</p>
+              </div>
+              <Switch
+                checked={!!assignment.reminders_enabled}
+                onCheckedChange={async (v) => {
+                  setAssignment({ ...assignment, reminders_enabled: v });
+                  const { error } = await supabase.from("assignments").update({ reminders_enabled: v }).eq("id", assignment.id);
+                  if (error) toast.error(error.message);
+                  else toast.success(v ? "Reminders on" : "Reminders off");
+                }}
+              />
+            </div>
           </CardContent>
         </Card>
 
