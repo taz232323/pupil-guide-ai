@@ -186,6 +186,33 @@ export type Database = {
           },
         ]
       }
+      assignment_reminder_log: {
+        Row: {
+          assignment_id: string
+          channel: string
+          id: string
+          kind: string
+          sent_at: string
+          student_id: string
+        }
+        Insert: {
+          assignment_id: string
+          channel?: string
+          id?: string
+          kind: string
+          sent_at?: string
+          student_id: string
+        }
+        Update: {
+          assignment_id?: string
+          channel?: string
+          id?: string
+          kind?: string
+          sent_at?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       assignment_status_records: {
         Row: {
           assignment_id: string
@@ -225,6 +252,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          reminders_enabled: boolean
           teacher_id: string
           title: string
           unit_tag: string | null
@@ -236,6 +264,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          reminders_enabled?: boolean
           teacher_id: string
           title: string
           unit_tag?: string | null
@@ -247,6 +276,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          reminders_enabled?: boolean
           teacher_id?: string
           title?: string
           unit_tag?: string | null
@@ -661,24 +691,30 @@ export type Database = {
         Row: {
           avatar_items: string[]
           created_at: string
+          email_reminders_enabled: boolean
           full_name: string | null
           id: string
+          inapp_reminders_enabled: boolean
           theme: string
           updated_at: string
         }
         Insert: {
           avatar_items?: string[]
           created_at?: string
+          email_reminders_enabled?: boolean
           full_name?: string | null
           id: string
+          inapp_reminders_enabled?: boolean
           theme?: string
           updated_at?: string
         }
         Update: {
           avatar_items?: string[]
           created_at?: string
+          email_reminders_enabled?: boolean
           full_name?: string | null
           id?: string
+          inapp_reminders_enabled?: boolean
           theme?: string
           updated_at?: string
         }

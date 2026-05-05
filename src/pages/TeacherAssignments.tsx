@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -57,6 +58,7 @@ export const TeacherAssignments = () => {
   const [description, setDescription] = useState("");
   const [unitTag, setUnitTag] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
 
   const load = async () => {
@@ -94,6 +96,7 @@ export const TeacherAssignments = () => {
       description: parsed.data.description || null,
       unit_tag: parsed.data.unit_tag || null,
       due_date: parsed.data.due_date ? new Date(parsed.data.due_date).toISOString() : null,
+      reminders_enabled: remindersEnabled,
     }).select("id").single();
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
@@ -112,7 +115,7 @@ export const TeacherAssignments = () => {
     }
     toast.success("Assignment created");
     setOpen(false);
-    setClassId(""); setTitle(""); setDescription(""); setUnitTag(""); setDueDate(""); setQuestions([]);
+    setClassId(""); setTitle(""); setDescription(""); setUnitTag(""); setDueDate(""); setQuestions([]); setRemindersEnabled(true);
     load();
   };
 
@@ -169,6 +172,13 @@ export const TeacherAssignments = () => {
                   <Label htmlFor="a-due">Due date</Label>
                   <Input id="a-due" type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                 </div>
+              </div>
+              <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
+                <div>
+                  <Label htmlFor="a-reminders" className="cursor-pointer">Send due-date reminders</Label>
+                  <p className="text-xs text-muted-foreground">Students get a notification 3 days and 24 hours before due.</p>
+                </div>
+                <Switch id="a-reminders" checked={remindersEnabled} onCheckedChange={setRemindersEnabled} />
               </div>
               <div className="space-y-2 pt-2 border-t">
                 <Label>Questions (optional)</Label>
