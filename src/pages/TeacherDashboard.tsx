@@ -534,9 +534,16 @@ export default function TeacherDashboard() {
                         <li key={s.id}>
                           <Link to="/teacher/progress"
                             className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
-                            <p className="font-medium truncate min-w-0">{s.name}</p>
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{s.name}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">
+                                {s.className}
+                                {s.avg != null ? ` · ${s.avg}% avg` : ""}
+                                {s.missing > 0 ? ` · ${s.missing} missing` : ""}
+                              </p>
+                            </div>
                             <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold px-2 py-0.5 shrink-0">
-                              At Risk · {s.overdue}
+                              At Risk
                             </span>
                           </Link>
                         </li>
