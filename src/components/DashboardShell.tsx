@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   GraduationCap, LayoutDashboard, BookOpen, ClipboardList, MessageSquare, Award,
-  ShoppingBag, User, LineChart, Star, Crown, LogOut,
+  ShoppingBag, User, LineChart, Star, Crown, LogOut, Calendar,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +31,7 @@ const STUDENT_NAV: NavItem[] = [
   { to: "/student", label: "Dashboard", icon: LayoutDashboard },
   { to: "/student/classes", label: "My Classes", icon: BookOpen },
   { to: "/student/assignments", label: "Assignments", icon: ClipboardList },
+  { to: "/student/calendar", label: "Calendar", icon: Calendar },
   { to: "/student/grades", label: "Grades", icon: Award },
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/shop", label: "Shop", icon: ShoppingBag },
