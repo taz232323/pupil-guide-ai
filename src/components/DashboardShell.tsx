@@ -75,11 +75,20 @@ function useProfile(userId?: string) {
   const [p, setP] = useState<{ name: string; items: string[] } | null>(null);
   useEffect(() => {
     if (!userId) return;
-    supabase.from("profiles").select("full_name, avatar_items").eq("id", userId).maybeSingle()
-      .then(({ data }) => setP({
-        name: (data?.full_name as string) || "",
-        items: (data?.avatar_items ?? []) as string[],
-      }));
+    const load = () => {
+      supabase.from("profiles").select("full_name, avatar_items").eq("id", userId).maybeSingle()
+        .then(({ data }) => setP({
+          name: (data?.full_name as string) || "",
+          items: (data?.avatar_items ?? []) as string[],
+        }));
+    };
+    load();
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.userId === userId) load();
+    };
+    window.addEventListener("profile:updated", handler);
+    return () => window.removeEventListener("profile:updated", handler);
   }, [userId]);
   return p;
 }
