@@ -16,9 +16,10 @@ import { StudentAvatar, COSMETIC_EMOJI } from "@/components/StudentAvatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Lock, Sparkles, Check, Star } from "lucide-react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth as useAuthForRole } from "@/hooks/useAuth";
 
 type Category = "hair" | "face" | "outfit" | "background";
 
@@ -47,7 +48,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
 };
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { theme, setTheme } = useTheme();
   const [name, setName] = useState("");
   const [owned, setOwned] = useState<Set<string>>(new Set());
@@ -57,13 +58,15 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [inappOn, setInappOn] = useState(true);
+  const [emailOn, setEmailOn] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       setLoading(true);
       const [{ data: prof }, { data: purchases }, { data: coinRow }] = await Promise.all([
-        supabase.from("profiles").select("full_name, avatar_items").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name, avatar_items, inapp_reminders_enabled, email_reminders_enabled").eq("id", user.id).maybeSingle(),
         supabase.from("shop_purchases").select("item_key").eq("student_id", user.id).eq("kind", "cosmetic").eq("status", "approved"),
         supabase.from("student_coins").select("star_coins").eq("student_id", user.id).maybeSingle(),
       ]);
@@ -71,6 +74,8 @@ export default function Profile() {
       const eq = (prof?.avatar_items ?? []) as string[];
       setEquipped(eq);
       setOriginalEquipped(eq);
+      setInappOn((prof as any)?.inapp_reminders_enabled !== false);
+      setEmailOn((prof as any)?.email_reminders_enabled !== false);
       setOwned(new Set((purchases ?? []).map((p: any) => p.item_key)));
       setCoins(coinRow?.star_coins ?? 0);
       setLoading(false);
