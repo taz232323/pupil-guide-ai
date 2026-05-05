@@ -324,6 +324,7 @@ export type Database = {
       classes: {
         Row: {
           created_at: string
+          daily_practice_enabled: boolean
           id: string
           join_code: string
           leaderboard_anonymous: boolean
@@ -335,6 +336,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          daily_practice_enabled?: boolean
           id?: string
           join_code?: string
           leaderboard_anonymous?: boolean
@@ -346,6 +348,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          daily_practice_enabled?: boolean
           id?: string
           join_code?: string
           leaderboard_anonymous?: boolean
@@ -387,6 +390,140 @@ export type Database = {
           note?: string | null
           reason?: string
           student_id?: string
+        }
+        Relationships: []
+      }
+      daily_practice_answers: {
+        Row: {
+          correct_index: number | null
+          created_at: string
+          expected_answer: string | null
+          id: string
+          is_correct: boolean | null
+          options: Json | null
+          position: number
+          prompt: string
+          question_type: string
+          selected_index: number | null
+          session_id: string
+          student_id: string
+          text_response: string | null
+        }
+        Insert: {
+          correct_index?: number | null
+          created_at?: string
+          expected_answer?: string | null
+          id?: string
+          is_correct?: boolean | null
+          options?: Json | null
+          position: number
+          prompt: string
+          question_type: string
+          selected_index?: number | null
+          session_id: string
+          student_id: string
+          text_response?: string | null
+        }
+        Update: {
+          correct_index?: number | null
+          created_at?: string
+          expected_answer?: string | null
+          id?: string
+          is_correct?: boolean | null
+          options?: Json | null
+          position?: number
+          prompt?: string
+          question_type?: string
+          selected_index?: number | null
+          session_id?: string
+          student_id?: string
+          text_response?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_practice_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "daily_practice_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_practice_sessions: {
+        Row: {
+          bonus_coins_awarded: number
+          class_id: string
+          coins_awarded: number
+          created_at: string
+          id: string
+          practice_date: string
+          status: string
+          student_id: string
+          submitted_at: string | null
+          total_answered: number
+          total_correct: number
+          updated_at: string
+        }
+        Insert: {
+          bonus_coins_awarded?: number
+          class_id: string
+          coins_awarded?: number
+          created_at?: string
+          id?: string
+          practice_date?: string
+          status?: string
+          student_id: string
+          submitted_at?: string | null
+          total_answered?: number
+          total_correct?: number
+          updated_at?: string
+        }
+        Update: {
+          bonus_coins_awarded?: number
+          class_id?: string
+          coins_awarded?: number
+          created_at?: string
+          id?: string
+          practice_date?: string
+          status?: string
+          student_id?: string
+          submitted_at?: string | null
+          total_answered?: number
+          total_correct?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      daily_practice_streaks: {
+        Row: {
+          class_id: string
+          current_streak: number
+          id: string
+          last_practice_date: string | null
+          longest_streak: number
+          milestones_awarded: number[]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          current_streak?: number
+          id?: string
+          last_practice_date?: string | null
+          longest_streak?: number
+          milestones_awarded?: number[]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          current_streak?: number
+          id?: string
+          last_practice_date?: string | null
+          longest_streak?: number
+          milestones_awarded?: number[]
+          student_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -922,6 +1059,7 @@ export type Database = {
         Args: { _name: string; _subject: string }
         Returns: {
           created_at: string
+          daily_practice_enabled: boolean
           id: string
           join_code: string
           leaderboard_anonymous: boolean
