@@ -295,7 +295,7 @@ export default function TeacherDashboard() {
               <div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-card text-primary shadow-card">
                 <GraduationCap className="h-10 w-10" />
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome to EduFlow! 🎉</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome to Grapheion</h2>
               <p className="mx-auto mt-2 max-w-md text-sm sm:text-base text-muted-foreground">
                 Create your first class to invite students, post assignments, and start tracking progress.
               </p>
