@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
 import { ClassModules } from "@/components/modules/ClassModules";
@@ -20,6 +22,7 @@ type ClassRow = {
   syllabus: string | null;
   teacher_id: string;
   join_code: string;
+  leaderboard_anonymous: boolean;
 };
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
@@ -44,7 +47,7 @@ export default function ClassDetail() {
       setLoading(true);
       const { data: c, error } = await supabase
         .from("classes")
-        .select("id, name, subject, syllabus, teacher_id, join_code")
+        .select("id, name, subject, syllabus, teacher_id, join_code, leaderboard_anonymous")
         .eq("id", id).maybeSingle();
       if (error || !c) {
         toast.error("Couldn't load this class.");
