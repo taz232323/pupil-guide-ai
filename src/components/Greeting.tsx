@@ -15,8 +15,17 @@ export const Greeting = ({ subtitle }: { subtitle?: string }) => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
-      .then(({ data }) => setName((data?.full_name as string) || (user.email?.split("@")[0] ?? "")));
+    const load = () => {
+      supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
+        .then(({ data }) => setName((data?.full_name as string) || (user.email?.split("@")[0] ?? "")));
+    };
+    load();
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.userId === user.id) load();
+    };
+    window.addEventListener("profile:updated", handler);
+    return () => window.removeEventListener("profile:updated", handler);
   }, [user]);
 
   return (
