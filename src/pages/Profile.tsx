@@ -61,13 +61,16 @@ export default function Profile() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [inappOn, setInappOn] = useState(true);
   const [emailOn, setEmailOn] = useState(true);
+  const [lbUsername, setLbUsername] = useState("");
+  const [lbOriginal, setLbOriginal] = useState("");
+  const [savingLb, setSavingLb] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       setLoading(true);
       const [{ data: prof }, { data: purchases }, { data: coinRow }] = await Promise.all([
-        supabase.from("profiles").select("full_name, avatar_items, inapp_reminders_enabled, email_reminders_enabled").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name, avatar_items, inapp_reminders_enabled, email_reminders_enabled, leaderboard_username").eq("id", user.id).maybeSingle(),
         supabase.from("shop_purchases").select("item_key").eq("student_id", user.id).eq("kind", "cosmetic").eq("status", "approved"),
         supabase.from("student_coins").select("star_coins").eq("student_id", user.id).maybeSingle(),
       ]);
@@ -78,6 +81,8 @@ export default function Profile() {
       setOriginalEquipped(eq);
       setInappOn((prof as any)?.inapp_reminders_enabled !== false);
       setEmailOn((prof as any)?.email_reminders_enabled !== false);
+      setLbUsername((prof as any)?.leaderboard_username ?? "");
+      setLbOriginal((prof as any)?.leaderboard_username ?? "");
       setOwned(new Set((purchases ?? []).map((p: any) => p.item_key)));
       setCoins(coinRow?.star_coins ?? 0);
       setLoading(false);
