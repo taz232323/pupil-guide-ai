@@ -343,7 +343,7 @@ export default function TeacherDashboard() {
     <DashboardShell>
       <div className="space-y-6">
         {/* Greeting */}
-        <div className="rounded-3xl bg-gradient-hero p-6 sm:p-8 text-primary-foreground shadow-elevated relative overflow-hidden animate-fade-in">
+        <div className="rounded-3xl bg-gradient-hero p-6 sm:p-8 text-white shadow-elevated relative overflow-hidden animate-fade-in">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
           <div className="relative flex flex-wrap items-end justify-between gap-4">
             <div className="min-w-0">
