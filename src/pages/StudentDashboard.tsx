@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { JoinClassCard } from "@/components/JoinClassCard";
 import { LeaderboardWidget } from "@/components/LeaderboardWidget";
+import { StreakWidget } from "@/components/StreakWidget";
 
 type Row = {
   id: string;
@@ -430,6 +431,7 @@ export default function StudentDashboard() {
               </section>
 
               <LeaderboardWidget />
+              <StreakWidget />
 
               <section className="space-y-3">
                 <h2 className="text-lg font-semibold">What's new</h2>
