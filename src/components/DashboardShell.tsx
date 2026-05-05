@@ -42,6 +42,7 @@ const TEACHER_NAV: NavItem[] = [
   { to: "/teacher", label: "Dashboard", icon: LayoutDashboard },
   { to: "/teacher/classes", label: "My Classes", icon: BookOpen },
   { to: "/teacher/assignments", label: "Assignments", icon: ClipboardList },
+  { to: "/teacher/calendar", label: "Calendar", icon: Calendar },
   { to: "/teacher/gradebook", label: "Gradebook", icon: Award },
   { to: "/teacher/progress", label: "Progress", icon: LineChart },
   { to: "/teacher/shop", label: "Shop", icon: ShoppingBag },
