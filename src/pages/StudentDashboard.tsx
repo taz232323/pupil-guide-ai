@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { JoinClassCard } from "@/components/JoinClassCard";
+import { LeaderboardWidget } from "@/components/LeaderboardWidget";
 
 type Row = {
   id: string;
