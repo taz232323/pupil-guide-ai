@@ -19,7 +19,6 @@ import { Lock, Sparkles, Check, Star } from "lucide-react";
 import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
-import { useAuth as useAuthForRole } from "@/hooks/useAuth";
 
 type Category = "hair" | "face" | "outfit" | "background";
 
