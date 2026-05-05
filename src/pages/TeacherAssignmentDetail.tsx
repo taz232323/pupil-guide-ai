@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Tag, CheckCircle2, XCircle, Save, Pencil } from "lucide-react";
+import { ArrowLeft, CalendarDays, Tag, CheckCircle2, XCircle, Save, Pencil, BellRing, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +47,8 @@ export default function TeacherAssignmentDetail() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [students, setStudents] = useState<Profile[]>([]);
+  const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
+  const [reminding, setReminding] = useState(false);
   const [grades, setGrades] = useState<Record<string, { overall_score: number | null; overall_feedback: string | null }>>({});
   const [activeStudent, setActiveStudent] = useState<string | null>(null);
 
@@ -74,6 +76,11 @@ export default function TeacherAssignmentDetail() {
     setQuestions((qs ?? []) as Question[]);
     setAnswers((ans ?? []) as Answer[]);
 
+    const submitted = new Set<string>();
+    (ans ?? []).forEach((r: any) => submitted.add(r.student_id));
+    (subs ?? []).forEach((r: any) => submitted.add(r.student_id));
+    setSubmittedIds(submitted);
+
     // Build student list from class members + anyone with answer/submission
     const sIds = new Set<string>();
     (ans ?? []).forEach((r: any) => sIds.add(r.student_id));
@@ -93,6 +100,36 @@ export default function TeacherAssignmentDetail() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  const sortedStudents = useMemo(() => {
+    return [...students].sort((a, b) => {
+      const am = submittedIds.has(a.id) ? 1 : 0;
+      const bm = submittedIds.has(b.id) ? 1 : 0;
+      if (am !== bm) return am - bm; // missing first
+      return (a.full_name || "").localeCompare(b.full_name || "");
+    });
+  }, [students, submittedIds]);
+
+  const missingStudents = useMemo(
+    () => students.filter((s) => !submittedIds.has(s.id)),
+    [students, submittedIds]
+  );
+
+  const remindMissing = async () => {
+    if (!id || !assignment || missingStudents.length === 0) return;
+    setReminding(true);
+    try {
+      const rows = missingStudents.map((s) => ({
+        user_id: s.id,
+        type: "assignment_reminder",
+        message: `Reminder: "${assignment.title}" is still missing from your work`,
+        link: `/student/assignments/${id}`,
+      }));
+      const { error } = await supabase.from("notifications").insert(rows);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Reminded ${missingStudents.length} student${missingStudents.length === 1 ? "" : "s"}`);
+    } finally { setReminding(false); }
+  };
 
   const openEditQuestions = () => {
     setDraft(questions.map((q) => ({
@@ -216,23 +253,56 @@ export default function TeacherAssignmentDetail() {
 
         <div className="grid gap-4 md:grid-cols-[220px_1fr]">
           <Card>
-            <CardHeader><CardTitle className="text-sm">Students</CardTitle></CardHeader>
+            <CardHeader className="space-y-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Students</span>
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  {submittedIds.size}/{students.length} submitted
+                </span>
+              </CardTitle>
+              {missingStudents.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full h-8 text-xs"
+                  onClick={remindMissing}
+                  disabled={reminding}
+                >
+                  <BellRing className="h-3 w-3 mr-1" />
+                  Remind {missingStudents.length} missing
+                </Button>
+              )}
+            </CardHeader>
             <CardContent className="p-2">
               {students.length === 0 ? (
                 <p className="text-xs text-muted-foreground p-2">No students yet</p>
-              ) : students.map((s) => {
-                const hasAns = answers.some((a) => a.student_id === s.id);
+              ) : sortedStudents.map((s) => {
+                const hasSub = submittedIds.has(s.id);
                 return (
                   <button
                     key={s.id}
                     onClick={() => setActiveStudent(s.id)}
                     className={cn(
-                      "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between",
+                      "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between gap-2",
                       activeStudent === s.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"
                     )}
                   >
                     <span className="truncate">{s.full_name || "Unnamed"}</span>
-                    {hasAns && <CheckCircle2 className="h-3 w-3 shrink-0" />}
+                    {hasSub ? (
+                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                    ) : (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold shrink-0",
+                          activeStudent === s.id
+                            ? "bg-primary-foreground/20 text-primary-foreground"
+                            : "bg-destructive/10 text-destructive"
+                        )}
+                      >
+                        <AlertTriangle className="h-2.5 w-2.5" />
+                        Missing
+                      </span>
+                    )}
                   </button>
                 );
               })}
