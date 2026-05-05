@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
 import { ClassModules } from "@/components/modules/ClassModules";
@@ -20,6 +22,7 @@ type ClassRow = {
   syllabus: string | null;
   teacher_id: string;
   join_code: string;
+  leaderboard_anonymous: boolean;
 };
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
@@ -44,7 +47,7 @@ export default function ClassDetail() {
       setLoading(true);
       const { data: c, error } = await supabase
         .from("classes")
-        .select("id, name, subject, syllabus, teacher_id, join_code")
+        .select("id, name, subject, syllabus, teacher_id, join_code, leaderboard_anonymous")
         .eq("id", id).maybeSingle();
       if (error || !c) {
         toast.error("Couldn't load this class.");
@@ -185,6 +188,35 @@ export default function ClassDetail() {
               )}
             </CardContent>
           </Card>
+
+          {isTeacher && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="text-base">Class settings</CardTitle>
+                <CardDescription>Control how this class appears to students.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
+                  <div className="pr-4">
+                    <Label className="text-sm font-medium">Anonymous leaderboard</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      When on, students see leaderboard usernames instead of real names on this class's leaderboard.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!cls.leaderboard_anonymous}
+                    onCheckedChange={async (v) => {
+                      setCls({ ...cls, leaderboard_anonymous: v });
+                      const { error } = await supabase.from("classes")
+                        .update({ leaderboard_anonymous: v }).eq("id", cls.id);
+                      if (error) toast.error(error.message);
+                      else toast.success(v ? "Anonymous leaderboard on" : "Anonymous leaderboard off");
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="modules">

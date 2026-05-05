@@ -61,13 +61,16 @@ export default function Profile() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [inappOn, setInappOn] = useState(true);
   const [emailOn, setEmailOn] = useState(true);
+  const [lbUsername, setLbUsername] = useState("");
+  const [lbOriginal, setLbOriginal] = useState("");
+  const [savingLb, setSavingLb] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       setLoading(true);
       const [{ data: prof }, { data: purchases }, { data: coinRow }] = await Promise.all([
-        supabase.from("profiles").select("full_name, avatar_items, inapp_reminders_enabled, email_reminders_enabled").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name, avatar_items, inapp_reminders_enabled, email_reminders_enabled, leaderboard_username").eq("id", user.id).maybeSingle(),
         supabase.from("shop_purchases").select("item_key").eq("student_id", user.id).eq("kind", "cosmetic").eq("status", "approved"),
         supabase.from("student_coins").select("star_coins").eq("student_id", user.id).maybeSingle(),
       ]);
@@ -78,6 +81,8 @@ export default function Profile() {
       setOriginalEquipped(eq);
       setInappOn((prof as any)?.inapp_reminders_enabled !== false);
       setEmailOn((prof as any)?.email_reminders_enabled !== false);
+      setLbUsername((prof as any)?.leaderboard_username ?? "");
+      setLbOriginal((prof as any)?.leaderboard_username ?? "");
       setOwned(new Set((purchases ?? []).map((p: any) => p.item_key)));
       setCoins(coinRow?.star_coins ?? 0);
       setLoading(false);
@@ -310,6 +315,44 @@ export default function Profile() {
           </div>
         </CardContent>
       </Card>
+
+      {role === "student" && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">Leaderboard username</CardTitle>
+            <CardDescription>Shown on class leaderboards when your teacher turns on anonymous mode.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                value={lbUsername}
+                onChange={(e) => setLbUsername(e.target.value)}
+                maxLength={30}
+                placeholder="e.g. NightOwl42"
+              />
+              <Button
+                type="button"
+                onClick={async () => {
+                  if (!user) return;
+                  const v = lbUsername.trim();
+                  if (v.length < 2) { toast.error("Pick at least 2 characters"); return; }
+                  if (v === lbOriginal) return;
+                  setSavingLb(true);
+                  const { error } = await supabase.from("profiles")
+                    .update({ leaderboard_username: v }).eq("id", user.id);
+                  setSavingLb(false);
+                  if (error) { toast.error(error.message); return; }
+                  setLbOriginal(v);
+                  toast.success("Leaderboard username saved");
+                }}
+                disabled={savingLb || !lbUsername.trim() || lbUsername.trim() === lbOriginal}
+              >
+                {savingLb ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {role === "student" && (
         <Card className="mt-6">
