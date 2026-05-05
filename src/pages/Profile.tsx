@@ -282,6 +282,45 @@ export default function Profile() {
           </div>
         </CardContent>
       </Card>
+
+      {role === "student" && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><Bell className="h-4 w-4 text-primary" /> Notification preferences</CardTitle>
+            <CardDescription>Choose how you'd like to hear about upcoming assignment due dates.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">In-app reminders</p>
+                <p className="text-xs text-muted-foreground">Get a notification 3 days and 24 hours before each assignment is due.</p>
+              </div>
+              <Switch
+                checked={inappOn}
+                onCheckedChange={async (v) => {
+                  setInappOn(v);
+                  const { error } = await supabase.from("profiles").update({ inapp_reminders_enabled: v }).eq("id", user!.id);
+                  if (error) toast.error(error.message);
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Email reminders</p>
+                <p className="text-xs text-muted-foreground">Get an email at the same times. (Email delivery activates once an email domain is connected.)</p>
+              </div>
+              <Switch
+                checked={emailOn}
+                onCheckedChange={async (v) => {
+                  setEmailOn(v);
+                  const { error } = await supabase.from("profiles").update({ email_reminders_enabled: v }).eq("id", user!.id);
+                  if (error) toast.error(error.message);
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </DashboardShell>
   );
 }
