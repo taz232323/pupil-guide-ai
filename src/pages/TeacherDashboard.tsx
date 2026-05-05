@@ -727,6 +727,20 @@ export default function TeacherDashboard() {
           </>
         )}
       </div>
+      <MissingStudentsDialog
+        open={missingDialog !== null}
+        onOpenChange={(v) => { if (!v) setMissingDialog(null); }}
+        title={
+          missingDialog?.kind === "class"
+            ? `Missing in ${missingDialog.className}`
+            : missingDialog?.kind === "student"
+            ? `${missingDialog.studentName} — missing work`
+            : "Missing assignments"
+        }
+        subtitle={`${dialogEntries.length} overdue submission${dialogEntries.length === 1 ? "" : "s"}`}
+        entries={dialogEntries}
+        groupBy={missingDialog?.kind === "student" ? "student" : "student"}
+      />
     </DashboardShell>
   );
 }
