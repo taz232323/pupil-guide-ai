@@ -250,7 +250,7 @@ export default function StudentDashboard() {
     <DashboardShell>
       <div className="space-y-6">
         {/* Hero greeting */}
-        <div className="rounded-3xl bg-gradient-hero p-6 sm:p-8 text-primary-foreground shadow-elevated animate-fade-in relative overflow-hidden">
+        <div className="rounded-3xl bg-gradient-hero p-6 sm:p-8 text-white shadow-elevated animate-fade-in relative overflow-hidden">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
           <div className="absolute -right-20 bottom-0 h-32 w-32 rounded-full bg-white/5 blur-2xl" />
           <div className="relative flex flex-wrap items-end justify-between gap-4">
