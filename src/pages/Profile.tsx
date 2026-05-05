@@ -50,6 +50,8 @@ export default function Profile() {
   const { user, role } = useAuth();
   const { theme, setTheme } = useTheme();
   const [name, setName] = useState("");
+  const [originalName, setOriginalName] = useState("");
+  const [savingName, setSavingName] = useState(false);
   const [owned, setOwned] = useState<Set<string>>(new Set());
   const [equipped, setEquipped] = useState<string[]>([]);
   const [originalEquipped, setOriginalEquipped] = useState<string[]>([]);
@@ -70,6 +72,7 @@ export default function Profile() {
         supabase.from("student_coins").select("star_coins").eq("student_id", user.id).maybeSingle(),
       ]);
       setName(prof?.full_name ?? "");
+      setOriginalName(prof?.full_name ?? "");
       const eq = (prof?.avatar_items ?? []) as string[];
       setEquipped(eq);
       setOriginalEquipped(eq);
@@ -94,13 +97,30 @@ export default function Profile() {
     if (!user) return;
     setSaving(true);
     const { error } = await supabase.from("profiles")
-      .update({ full_name: name.trim() || null, avatar_items: equipped })
+      .update({ avatar_items: equipped })
       .eq("id", user.id);
     setSaving(false);
     setConfirmOpen(false);
     if (error) { toast.error(error.message); return; }
     setOriginalEquipped(equipped);
     toast.success("Avatar saved");
+  };
+
+  const saveName = async () => {
+    if (!user) return;
+    const trimmed = name.trim();
+    if (!trimmed) { toast.error("Name can't be empty"); return; }
+    if (trimmed === originalName) return;
+    setSavingName(true);
+    const { error } = await supabase.from("profiles")
+      .update({ full_name: trimmed })
+      .eq("id", user.id);
+    setSavingName(false);
+    if (error) { toast.error(`Couldn't save name: ${error.message}`); return; }
+    setOriginalName(trimmed);
+    setName(trimmed);
+    window.dispatchEvent(new CustomEvent("profile:updated", { detail: { userId: user.id, full_name: trimmed } }));
+    toast.success("Name updated successfully");
   };
 
   return (
@@ -121,7 +141,16 @@ export default function Profile() {
           <CardContent className="space-y-4 pt-5">
             <div className="space-y-2">
               <Label htmlFor="full-name">Display name</Label>
-              <Input id="full-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+              <div className="flex gap-2">
+                <Input id="full-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+                <Button
+                  type="button"
+                  onClick={saveName}
+                  disabled={savingName || !name.trim() || name.trim() === originalName}
+                >
+                  {savingName ? "Saving..." : "Save"}
+                </Button>
+              </div>
             </div>
             <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2">
               <span className="text-sm text-muted-foreground">Your balance</span>
