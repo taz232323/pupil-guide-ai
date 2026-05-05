@@ -656,12 +656,25 @@ export default function TeacherDashboard() {
                                 {c.avg == null ? "—" : `${c.avg}%`}
                               </p>
                             </div>
-                            <div className="rounded-lg bg-muted/50 p-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (c.missing === 0) return;
+                                setMissingDialog({ kind: "class", classId: c.id, className: c.name });
+                              }}
+                              className={cn(
+                                "rounded-lg bg-muted/50 p-2 text-center transition-colors",
+                                c.missing > 0 ? "hover:bg-destructive/10 cursor-pointer" : "cursor-default"
+                              )}
+                              title={c.missing > 0 ? "View missing students" : undefined}
+                            >
                               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Missing</p>
                               <p className={cn("mt-0.5 text-lg font-bold tabular-nums", c.missing > 0 ? "text-destructive" : "")}>
                                 {c.missing}
                               </p>
-                            </div>
+                            </button>
                           </div>
                         </Link>
                       );
