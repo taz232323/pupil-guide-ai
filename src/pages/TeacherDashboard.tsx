@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { MissingStudentsDialog, type MissingEntry } from "@/components/teacher/MissingStudentsDialog";
 
 type ClassRow = { id: string; name: string; subject: string };
 type AsgnRow = { id: string; class_id: string; title: string; due_date: string | null };
@@ -308,6 +309,48 @@ export default function TeacherDashboard() {
     });
   }, [classes, assignments, submissions, grades, members, recentMsgs, dayAgo]);
 
+  // All missing entries (overdue, no submission) — used by dialogs
+  const missingEntries = useMemo<MissingEntry[]>(() => {
+    const memByClass = new Map<string, string[]>();
+    members.forEach(m => {
+      const arr = memByClass.get(m.class_id) ?? [];
+      arr.push(m.student_id); memByClass.set(m.class_id, arr);
+    });
+    const subKey = new Set(submissions.map(s => `${s.assignment_id}|${s.student_id}`));
+    const out: MissingEntry[] = [];
+    assignments.forEach(a => {
+      if (!a.due_date || new Date(a.due_date).getTime() >= Date.now()) return;
+      (memByClass.get(a.class_id) ?? []).forEach(sid => {
+        if (subKey.has(`${a.id}|${sid}`)) return;
+        out.push({
+          studentId: sid,
+          studentName: profiles[sid] || "Student",
+          assignmentId: a.id,
+          assignmentTitle: a.title,
+          dueDate: a.due_date,
+        });
+      });
+    });
+    return out;
+  }, [assignments, members, submissions, profiles]);
+
+  const [missingDialog, setMissingDialog] = useState<
+    | { kind: "class"; classId: string; className: string }
+    | { kind: "student"; studentId: string; studentName: string }
+    | null
+  >(null);
+
+  const dialogEntries = useMemo(() => {
+    if (!missingDialog) return [];
+    if (missingDialog.kind === "class") {
+      const classAsgnIds = new Set(
+        assignments.filter(a => a.class_id === missingDialog.classId).map(a => a.id)
+      );
+      return missingEntries.filter(e => classAsgnIds.has(e.assignmentId));
+    }
+    return missingEntries.filter(e => e.studentId === missingDialog.studentId);
+  }, [missingDialog, missingEntries, assignments]);
+
   // Activity feed
   const activity = useMemo<ActivityItem[]>(() => {
     const items: ActivityItem[] = [];
@@ -532,8 +575,11 @@ export default function TeacherDashboard() {
                     <ul className="space-y-1.5">
                       {atRisk.map(s => (
                         <li key={s.id}>
-                          <Link to="/teacher/progress"
-                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
+                          <button
+                            type="button"
+                            onClick={() => setMissingDialog({ kind: "student", studentId: s.id, studentName: s.name })}
+                            className="w-full flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm text-left"
+                          >
                             <div className="min-w-0">
                               <p className="font-medium truncate">{s.name}</p>
                               <p className="text-[11px] text-muted-foreground truncate">
@@ -545,7 +591,7 @@ export default function TeacherDashboard() {
                             <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold px-2 py-0.5 shrink-0">
                               At Risk
                             </span>
-                          </Link>
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -610,12 +656,25 @@ export default function TeacherDashboard() {
                                 {c.avg == null ? "—" : `${c.avg}%`}
                               </p>
                             </div>
-                            <div className="rounded-lg bg-muted/50 p-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (c.missing === 0) return;
+                                setMissingDialog({ kind: "class", classId: c.id, className: c.name });
+                              }}
+                              className={cn(
+                                "rounded-lg bg-muted/50 p-2 text-center transition-colors",
+                                c.missing > 0 ? "hover:bg-destructive/10 cursor-pointer" : "cursor-default"
+                              )}
+                              title={c.missing > 0 ? "View missing students" : undefined}
+                            >
                               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Missing</p>
                               <p className={cn("mt-0.5 text-lg font-bold tabular-nums", c.missing > 0 ? "text-destructive" : "")}>
                                 {c.missing}
                               </p>
-                            </div>
+                            </button>
                           </div>
                         </Link>
                       );
@@ -668,6 +727,20 @@ export default function TeacherDashboard() {
           </>
         )}
       </div>
+      <MissingStudentsDialog
+        open={missingDialog !== null}
+        onOpenChange={(v) => { if (!v) setMissingDialog(null); }}
+        title={
+          missingDialog?.kind === "class"
+            ? `Missing in ${missingDialog.className}`
+            : missingDialog?.kind === "student"
+            ? `${missingDialog.studentName} — missing work`
+            : "Missing assignments"
+        }
+        subtitle={`${dialogEntries.length} overdue submission${dialogEntries.length === 1 ? "" : "s"}`}
+        entries={dialogEntries}
+        groupBy={missingDialog?.kind === "student" ? "student" : "student"}
+      />
     </DashboardShell>
   );
 }
