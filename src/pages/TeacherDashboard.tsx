@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { MissingStudentsDialog, type MissingEntry } from "@/components/teacher/MissingStudentsDialog";
 
 type ClassRow = { id: string; name: string; subject: string };
 type AsgnRow = { id: string; class_id: string; title: string; due_date: string | null };
