@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { JoinClassCard } from "@/components/JoinClassCard";
 
 type Row = {
   id: string;
@@ -135,8 +136,6 @@ export default function StudentDashboard() {
   const [classes, setClasses] = useState<Record<string, string>>({});
   const [coins, setCoins] = useState({ star: 0, crown: 0 });
   const [hasClasses, setHasClasses] = useState(true);
-  const [joinCode, setJoinCode] = useState("");
-  const [joining, setJoining] = useState(false);
   const [name, setName] = useState("");
   const [notifs, setNotifs] = useState<NotifRow[]>([]);
   const [unreadMsgs, setUnreadMsgs] = useState(0);
@@ -182,17 +181,6 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
-
-  const join = async () => {
-    if (!joinCode.trim()) return;
-    setJoining(true);
-    const { error } = await supabase.rpc("join_class_by_code", { _code: joinCode.trim() });
-    setJoining(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Joined class");
-    setJoinCode("");
-    load();
-  };
 
   const todayEnd = endOfDay().getTime();
   const tomorrowEnd = endOfDay(new Date(Date.now() + 86_400_000)).getTime();
@@ -282,32 +270,10 @@ export default function StudentDashboard() {
         </div>
 
         {!loading && !hasClasses ? (
-          <Card className="overflow-hidden border-0 shadow-elevated">
-            <div className="bg-gradient-soft px-6 py-14 sm:py-20 text-center">
-              <div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-card text-primary shadow-card">
-                <KeyRound className="h-10 w-10" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome aboard! 👋</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm sm:text-base text-muted-foreground">
-                Enter the 6-character join code your teacher shared with you to join your first class.
-              </p>
-              <div className="mt-6 mx-auto flex max-w-sm gap-2">
-                <Input
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="ABC123"
-                  className="h-12 text-center font-mono tracking-[0.4em] text-lg"
-                  maxLength={6}
-                />
-                <Button onClick={join} disabled={joining || joinCode.length < 4} size="lg" className="h-12 px-6">
-                  {joining ? "Joining..." : "Join"}
-                </Button>
-              </div>
-              <p className="mt-4 text-xs text-muted-foreground">Don't have one? Ask your teacher.</p>
-            </div>
-          </Card>
+          <JoinClassCard variant="hero" onJoined={load} />
         ) : (
           <>
+            <JoinClassCard variant="compact" onJoined={load} />
             {/* Today's Focus — most prominent */}
             <section className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary-soft via-card to-card p-5 sm:p-6 shadow-elevated">
               <div className="flex items-center justify-between mb-4">

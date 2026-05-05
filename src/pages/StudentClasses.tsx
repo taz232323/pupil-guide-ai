@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
+import { JoinClassCard } from "@/components/JoinClassCard";
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
 type ClassRow = { id: string; name: string; subject: string; members: Member[] };
@@ -16,9 +17,8 @@ export function StudentClasses() {
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = async () => {
     if (!user) return;
-    (async () => {
       setLoading(true);
       const { data: cls } = await supabase
         .from("classes")
@@ -51,11 +51,14 @@ export function StudentClasses() {
 
       setClasses(list.map((c) => ({ ...c, members: byClass.get(c.id) ?? [] })));
       setLoading(false);
-    })();
-  }, [user]);
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
 
   return (
-    <Card>
+    <div className="space-y-4">
+      <JoinClassCard variant="compact" onJoined={load} />
+      <Card>
       <CardHeader>
         <CardTitle className="text-base">My classes</CardTitle>
         <CardDescription>Classmates and teachers.</CardDescription>
@@ -67,8 +70,7 @@ export function StudentClasses() {
           <EmptyState
             icon={BookOpen}
             title="No classes yet"
-            description="Enter a join code from your teacher to start learning."
-            action={<Button asChild><Link to="/student">Enter join code</Link></Button>}
+            description="Use the join code box above to enroll in your first class."
           />
         ) : (
           <div className="space-y-4">
@@ -98,6 +100,7 @@ export function StudentClasses() {
           </div>
         )}
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
 }
