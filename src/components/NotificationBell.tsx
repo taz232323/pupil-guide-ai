@@ -56,14 +56,14 @@ function iconFor(type: string) {
 function colorFor(type: string) {
   switch (type) {
     case "privilege_approved":
-      return "text-emerald-600 bg-emerald-100 dark:bg-emerald-500/15";
+      return "text-emerald-600 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/15";
     case "privilege_denied":
-      return "text-red-600 bg-red-100 dark:bg-red-500/15";
+      return "text-red-600 dark:text-red-300 bg-red-100 dark:bg-red-500/15";
     case "privilege_request":
-      return "text-amber-600 bg-amber-100 dark:bg-amber-500/15";
+      return "text-amber-600 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/15";
     case "message":
     case "new_message":
-      return "text-sky-600 bg-sky-100 dark:bg-sky-500/15";
+      return "text-sky-600 dark:text-sky-300 bg-sky-100 dark:bg-sky-500/15";
     default:
       return "text-primary bg-primary/10";
   }
