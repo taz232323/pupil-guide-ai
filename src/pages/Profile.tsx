@@ -319,6 +319,44 @@ export default function Profile() {
       {role === "student" && (
         <Card className="mt-6">
           <CardHeader>
+            <CardTitle className="text-base">Leaderboard username</CardTitle>
+            <CardDescription>Shown on class leaderboards when your teacher turns on anonymous mode.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                value={lbUsername}
+                onChange={(e) => setLbUsername(e.target.value)}
+                maxLength={30}
+                placeholder="e.g. NightOwl42"
+              />
+              <Button
+                type="button"
+                onClick={async () => {
+                  if (!user) return;
+                  const v = lbUsername.trim();
+                  if (v.length < 2) { toast.error("Pick at least 2 characters"); return; }
+                  if (v === lbOriginal) return;
+                  setSavingLb(true);
+                  const { error } = await supabase.from("profiles")
+                    .update({ leaderboard_username: v }).eq("id", user.id);
+                  setSavingLb(false);
+                  if (error) { toast.error(error.message); return; }
+                  setLbOriginal(v);
+                  toast.success("Leaderboard username saved");
+                }}
+                disabled={savingLb || !lbUsername.trim() || lbUsername.trim() === lbOriginal}
+              >
+                {savingLb ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {role === "student" && (
+        <Card className="mt-6">
+          <CardHeader>
             <CardTitle className="text-base flex items-center gap-2"><Bell className="h-4 w-4 text-primary" /> Notification preferences</CardTitle>
             <CardDescription>Choose how you'd like to hear about upcoming assignment due dates.</CardDescription>
           </CardHeader>
