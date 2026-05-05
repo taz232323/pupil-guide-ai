@@ -50,6 +50,8 @@ export default function Profile() {
   const { user, role } = useAuth();
   const { theme, setTheme } = useTheme();
   const [name, setName] = useState("");
+  const [originalName, setOriginalName] = useState("");
+  const [savingName, setSavingName] = useState(false);
   const [owned, setOwned] = useState<Set<string>>(new Set());
   const [equipped, setEquipped] = useState<string[]>([]);
   const [originalEquipped, setOriginalEquipped] = useState<string[]>([]);
@@ -70,6 +72,7 @@ export default function Profile() {
         supabase.from("student_coins").select("star_coins").eq("student_id", user.id).maybeSingle(),
       ]);
       setName(prof?.full_name ?? "");
+      setOriginalName(prof?.full_name ?? "");
       const eq = (prof?.avatar_items ?? []) as string[];
       setEquipped(eq);
       setOriginalEquipped(eq);
@@ -94,13 +97,30 @@ export default function Profile() {
     if (!user) return;
     setSaving(true);
     const { error } = await supabase.from("profiles")
-      .update({ full_name: name.trim() || null, avatar_items: equipped })
+      .update({ avatar_items: equipped })
       .eq("id", user.id);
     setSaving(false);
     setConfirmOpen(false);
     if (error) { toast.error(error.message); return; }
     setOriginalEquipped(equipped);
     toast.success("Avatar saved");
+  };
+
+  const saveName = async () => {
+    if (!user) return;
+    const trimmed = name.trim();
+    if (!trimmed) { toast.error("Name can't be empty"); return; }
+    if (trimmed === originalName) return;
+    setSavingName(true);
+    const { error } = await supabase.from("profiles")
+      .update({ full_name: trimmed })
+      .eq("id", user.id);
+    setSavingName(false);
+    if (error) { toast.error(`Couldn't save name: ${error.message}`); return; }
+    setOriginalName(trimmed);
+    setName(trimmed);
+    window.dispatchEvent(new CustomEvent("profile:updated", { detail: { userId: user.id, full_name: trimmed } }));
+    toast.success("Name updated successfully");
   };
 
   return (
