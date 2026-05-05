@@ -20,6 +20,7 @@ type GradeRow = { assignment_id: string; student_id: string; overall_score: numb
 type PrivRow = { id: string; student_id: string; class_id: string | null; item_name: string; created_at: string };
 type MsgRow = { id: string; sender_id: string; class_id: string; body: string; created_at: string };
 type PurchaseRow = { id: string; student_id: string; item_name: string; created_at: string; status: string };
+type QuestionRow = { assignment_id: string; max_score: number };
 
 type ActivityItem = {
   id: string; type: "submission" | "message" | "purchase";
@@ -61,6 +62,7 @@ export default function TeacherDashboard() {
   const [assignments, setAssignments] = useState<AsgnRow[]>([]);
   const [submissions, setSubmissions] = useState<SubRow[]>([]);
   const [grades, setGrades] = useState<GradeRow[]>([]);
+  const [questionTotals, setQuestionTotals] = useState<Record<string, number>>({});
   const [pendingPrivs, setPendingPrivs] = useState<PrivRow[]>([]);
   const [recentMsgs, setRecentMsgs] = useState<MsgRow[]>([]);
   const [recentPurchases, setRecentPurchases] = useState<PurchaseRow[]>([]);
@@ -105,7 +107,7 @@ export default function TeacherDashboard() {
       setUnreadTeacherMsgs(unreadCnt ?? 0);
 
       const aIds = asgnList.map(a => a.id);
-      const [{ data: subs }, { data: grds }] = await Promise.all([
+      const [{ data: subs }, { data: grds }, { data: qs }] = await Promise.all([
         aIds.length
           ? supabase.from("submissions").select("id, assignment_id, student_id, submitted_at")
               .in("assignment_id", aIds).order("submitted_at", { ascending: false })
@@ -114,9 +116,17 @@ export default function TeacherDashboard() {
           ? supabase.from("assignment_grades").select("assignment_id, student_id, overall_score, graded_at")
               .in("assignment_id", aIds)
           : Promise.resolve({ data: [] as any[] }),
+        aIds.length
+          ? supabase.from("assignment_questions").select("assignment_id, max_score").in("assignment_id", aIds)
+          : Promise.resolve({ data: [] as any[] }),
       ]);
       setSubmissions((subs ?? []) as SubRow[]);
       setGrades((grds ?? []) as GradeRow[]);
+      const totals: Record<string, number> = {};
+      ((qs ?? []) as QuestionRow[]).forEach(q => {
+        totals[q.assignment_id] = (totals[q.assignment_id] ?? 0) + (q.max_score ?? 0);
+      });
+      setQuestionTotals(totals);
 
       // Recent purchases (resolved or pending) across the teacher's class students
       const studentIds = Array.from(new Set(((mems ?? []) as any[]).map(m => m.student_id))) as string[];
@@ -144,6 +154,34 @@ export default function TeacherDashboard() {
     })();
   }, [user]);
 
+  // Realtime: refresh when grades or submissions change for any of the teacher's assignments
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`teacher-dashboard-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "assignment_grades" }, async () => {
+        const aIds = assignments.map(a => a.id);
+        if (!aIds.length) return;
+        const { data } = await supabase
+          .from("assignment_grades")
+          .select("assignment_id, student_id, overall_score, graded_at")
+          .in("assignment_id", aIds);
+        setGrades((data ?? []) as GradeRow[]);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "submissions" }, async () => {
+        const aIds = assignments.map(a => a.id);
+        if (!aIds.length) return;
+        const { data } = await supabase
+          .from("submissions")
+          .select("id, assignment_id, student_id, submitted_at")
+          .in("assignment_id", aIds)
+          .order("submitted_at", { ascending: false });
+        setSubmissions((data ?? []) as SubRow[]);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, assignments]);
+
   const todayStart = startOfDay().getTime();
   const todayEnd = endOfDay().getTime();
   const dayAgo = Date.now() - 86_400_000;
@@ -167,7 +205,7 @@ export default function TeacherDashboard() {
       .sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
   }, [submissions, grades]);
 
-  // At-risk students (3+ overdue assignments)
+  // At-risk students: avg < 70 OR 3+ missing/overdue assignments
   const atRisk = useMemo(() => {
     const memByClass = new Map<string, string[]>();
     members.forEach(m => {
@@ -175,20 +213,67 @@ export default function TeacherDashboard() {
       arr.push(m.student_id); memByClass.set(m.class_id, arr);
     });
     const subKey = new Set(submissions.map(s => `${s.assignment_id}|${s.student_id}`));
-    const overdueByStudent = new Map<string, number>();
+
+    // Per-student class assignment for display
+    const studentPrimaryClass = new Map<string, string>();
+    members.forEach(m => {
+      if (!studentPrimaryClass.has(m.student_id)) studentPrimaryClass.set(m.student_id, m.class_id);
+    });
+
+    // Missing/overdue counts (no submission for an assignment past its due date)
+    const missingByStudent = new Map<string, number>();
     assignments.forEach(a => {
       if (!a.due_date) return;
       if (new Date(a.due_date).getTime() >= Date.now()) return;
       (memByClass.get(a.class_id) ?? []).forEach(sid => {
-        if (!subKey.has(`${a.id}|${sid}`)) overdueByStudent.set(sid, (overdueByStudent.get(sid) ?? 0) + 1);
+        if (!subKey.has(`${a.id}|${sid}`)) missingByStudent.set(sid, (missingByStudent.get(sid) ?? 0) + 1);
       });
     });
-    return Array.from(overdueByStudent.entries())
-      .filter(([, n]) => n >= 3)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([sid, n]) => ({ id: sid, name: profiles[sid] || "Student", overdue: n }));
-  }, [assignments, members, submissions, profiles]);
+
+    // Average grade per student (across graded assignments)
+    const pctSum = new Map<string, number>();
+    const pctCount = new Map<string, number>();
+    grades.forEach(g => {
+      if (g.overall_score == null || !g.graded_at) return;
+      const total = questionTotals[g.assignment_id] || 100;
+      if (total <= 0) return;
+      const pct = (g.overall_score / total) * 100;
+      pctSum.set(g.student_id, (pctSum.get(g.student_id) ?? 0) + pct);
+      pctCount.set(g.student_id, (pctCount.get(g.student_id) ?? 0) + 1);
+    });
+
+    const candidates = new Set<string>([
+      ...Array.from(missingByStudent.keys()),
+      ...Array.from(pctCount.keys()),
+    ]);
+
+    const flagged: { id: string; name: string; className: string; avg: number | null; missing: number; reason: "grade" | "missing" | "both" }[] = [];
+    candidates.forEach(sid => {
+      const missing = missingByStudent.get(sid) ?? 0;
+      const cnt = pctCount.get(sid) ?? 0;
+      const avg = cnt > 0 ? Math.round((pctSum.get(sid) ?? 0) / cnt) : null;
+      const lowGrade = avg != null && avg < 70;
+      const manyMissing = missing >= 3;
+      if (!lowGrade && !manyMissing) return;
+      const cid = studentPrimaryClass.get(sid);
+      flagged.push({
+        id: sid,
+        name: profiles[sid] || "Student",
+        className: (cid && classNameMap[cid]) || "—",
+        avg,
+        missing,
+        reason: lowGrade && manyMissing ? "both" : lowGrade ? "grade" : "missing",
+      });
+    });
+
+    return flagged
+      .sort((a, b) => {
+        const aScore = (a.avg ?? 100) - a.missing * 5;
+        const bScore = (b.avg ?? 100) - b.missing * 5;
+        return aScore - bScore;
+      })
+      .slice(0, 8);
+  }, [assignments, members, submissions, grades, questionTotals, profiles, classNameMap]);
 
   // Class pulse
   const pulse = useMemo(() => {
