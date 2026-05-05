@@ -23,6 +23,7 @@ type ClassRow = {
   teacher_id: string;
   join_code: string;
   leaderboard_anonymous: boolean;
+  daily_practice_enabled: boolean;
 };
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
@@ -47,7 +48,7 @@ export default function ClassDetail() {
       setLoading(true);
       const { data: c, error } = await supabase
         .from("classes")
-        .select("id, name, subject, syllabus, teacher_id, join_code, leaderboard_anonymous")
+        .select("id, name, subject, syllabus, teacher_id, join_code, leaderboard_anonymous, daily_practice_enabled")
         .eq("id", id).maybeSingle();
       if (error || !c) {
         toast.error("Couldn't load this class.");
@@ -211,6 +212,24 @@ export default function ClassDetail() {
                         .update({ leaderboard_anonymous: v }).eq("id", cls.id);
                       if (error) toast.error(error.message);
                       else toast.success(v ? "Anonymous leaderboard on" : "Anonymous leaderboard off");
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3 mt-3">
+                  <div className="pr-4">
+                    <Label className="text-sm font-medium">Daily Practice</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      When on, students must complete a short daily practice session to maintain their streak for this class.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!cls.daily_practice_enabled}
+                    onCheckedChange={async (v) => {
+                      setCls({ ...cls, daily_practice_enabled: v });
+                      const { error } = await supabase.from("classes")
+                        .update({ daily_practice_enabled: v }).eq("id", cls.id);
+                      if (error) toast.error(error.message);
+                      else toast.success(v ? "Daily Practice enabled" : "Daily Practice disabled");
                     }}
                   />
                 </div>
