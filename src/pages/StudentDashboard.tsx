@@ -429,6 +429,8 @@ export default function StudentDashboard() {
                 )}
               </section>
 
+              <LeaderboardWidget />
+
               <section className="space-y-3">
                 <h2 className="text-lg font-semibold">What's new</h2>
                 {loading ? (
