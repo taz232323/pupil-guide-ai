@@ -1,74 +1,115 @@
-# Security hardening plan
+# Student Calendar Page
 
-## Findings up front (good news)
+A new `/student/calendar` route added to the student sidebar that aggregates assignment due dates across all enrolled classes plus private personal reminders, with smart planning features layered on top.
 
-- **All 12 tables already have RLS enabled** with policies (verified in the schema).
-- **No exposed secrets in the frontend.** `.env` only contains the Supabase URL, project ID, and the publishable (anon) key — these are designed to be public. There are no service-role keys, no third-party API keys, and no hardcoded credentials in `src/`.
+## 1. Database (new migration)
 
-So the "enable RLS on every table / move keys to env" parts of the request are already done. The real work is fixing **policy logic flaws** and **trigger gaps** flagged by the security scan.
+**Table `personal_reminders`** — private per-student events.
 
-## Issues to fix (one table at a time)
+Columns:
+- `id uuid pk default gen_random_uuid()`
+- `student_id uuid not null` (defaults to `auth.uid()`)
+- `title text not null`
+- `note text`
+- `start_at timestamptz not null` (date + time)
+- `duration_minutes int default 30`
+- `kind text default 'reminder'` (`reminder` or `study_block`)
+- `created_at`, `updated_at` timestamps
 
-### 1. `shop_purchases` — economy bypass (ERROR)
-Students can call PostgREST directly and insert a row with `cost: 1`, `currency: 'star'` for a crown item, or `status: 'approved'` for a privilege — bypassing pricing and teacher approval.
+RLS: students can SELECT/INSERT/UPDATE/DELETE only their own rows (`auth.uid() = student_id`). No teacher visibility.
 
-**Fix (migration):**
-- Create a server-side canonical price table `shop_items (item_key, item_name, kind, currency, cost)` and seed it with the 6 cosmetics + 2 privileges currently hardcoded in `src/pages/Shop.tsx`.
-- Add a `BEFORE INSERT` trigger on `shop_purchases` that:
-  - Looks up `item_key` in `shop_items`.
-  - Overwrites `cost`, `currency`, `kind`, `item_name` from the canonical row (ignoring client input).
-  - Forces `status = 'pending'` for `kind='privilege'`, `status = 'approved'` for `kind='cosmetic'`.
-  - Rejects unknown `item_key`.
-- Keep existing `handle_shop_purchase` trigger (balance deduction) — it now runs against trusted values.
+**Table `assignment_completions_view`** — not needed; we already mark assignments done via `assignment_status_records` (status = `submitted`/`completed`). The "mark done" action from the calendar will upsert into `assignment_status_records` with status `submitted` (matching the existing pattern), so no schema change required.
 
-### 2. `submissions` — stored XSS via `link_url` (ERROR)
-A student can submit `link_url = 'javascript:...'`; teacher clicks it in `TeacherSubmissions.tsx` and runs attacker JS.
+## 2. Routing & Navigation
 
-**Fix:**
-- Migration: add `CHECK (link_url IS NULL OR link_url ~* '^https?://')` on `submissions`.
-- `src/pages/StudentAssignments.tsx` (and any other submission entry point): validate scheme client-side before insert, show a clear error.
-- `TeacherSubmissions.tsx`: already opens in `target="_blank" rel="noreferrer"` — keep that; defense in depth.
+- Add route `/student/calendar` in `src/App.tsx` wrapped in `ProtectedRoute requiredRole="student"`.
+- Add `{ to: "/student/calendar", label: "Calendar", icon: Calendar }` to `STUDENT_NAV` in `src/components/DashboardShell.tsx` (placed between Assignments and Grades).
 
-### 3. `assignment_status_records` — cross-class inserts (WARN)
-Current "Students manage own status" policy only checks `auth.uid() = student_id`. A student can insert a status row for an assignment in a class they haven't joined.
+## 3. New page: `src/pages/StudentCalendar.tsx`
 
-**Fix (migration):** replace the ALL policy with split policies whose `WITH CHECK` confirms the assignment's `class_id` is one the student belongs to:
-```sql
-EXISTS (
-  SELECT 1 FROM assignments a
-  WHERE a.id = assignment_id
-    AND public.is_class_member(a.class_id, auth.uid())
-)
-```
+Uses `DashboardShell` and `date-fns` (already a dep via shadcn calendar).
 
-### 4. SECURITY DEFINER functions exposed to authenticated role (6 WARN)
-The Supabase linter flags six `SECURITY DEFINER` helpers (`has_role`, `is_class_member`, `is_class_teacher`, `get_current_user_role`, `can_message`, `generate_join_code`) as directly callable by signed-in users via PostgREST RPC.
+Data fetched on mount (filtered to current student):
+- `assignments` joined with `classes` (only classes the student is in via `class_members`) — gets title, due_date, class_id, class name.
+- `submissions` for this student → set of completed assignment ids.
+- `assignment_status_records` for this student → status per assignment.
+- `personal_reminders` for this student.
 
-`generate_join_code` is the only risky one — a student could RPC it and spam codes. The others are pure read helpers that already gate on the caller's `auth.uid()` inside RLS expressions.
+Color coding: deterministic palette mapped by `class.id` (hash → index into a fixed 8-color HSL palette using existing semantic tokens where possible). Same color used everywhere the class appears. Legend chips at top.
 
-**Fix (migration):**
-- `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` on all six (RLS policies still call them internally — they run as the policy owner, not the API caller, so policies keep working).
-- Keep `join_class_by_code` callable (it's the legitimate student RPC).
+### Header bar
+- Title "Calendar"
+- View toggle: **Month / Week** (Tabs)
+- **Today** button — snaps `cursorDate` back to `new Date()`
+- Prev / Next arrows
+- **Plan My Week** button (opens dialog, see §6)
+- **+ Add Reminder** button (opens dialog)
+- Class color legend row underneath (clickable chips also act as filters)
 
-### 5. Verify each remaining table is locked down
-Quick confirmation pass — for each of: `assignments`, `class_members`, `classes`, `messages`, `notifications`, `profiles`, `student_coins`, `unit_crowns`, `user_roles` — re-read the existing policies and confirm:
-- RLS is on.
-- No `USING (true)` except `profiles` SELECT (intentional — needed for showing names in messages/submissions; no PII beyond `full_name` and `avatar_items`).
-- No INSERT/UPDATE/DELETE missing where it should be denied.
+### Month view
+- 7-col grid of day cells. Each cell shows date number + up to 3 colored dots/pills:
+  - Assignment due → pill in class color, strike-through if completed, **red border + red text** if overdue & not completed.
+  - Personal reminder → muted outline pill with 🔔.
+- Click a day → opens right-side `Sheet` panel listing everything due that day:
+  - Assignment cards: title, class name in class color, due time, [Open] link (`/student/assignments/:id`), [Mark done] button (calls upsert on `assignment_status_records`). Overdue items shown with destructive styling.
+  - Personal reminders: title, time, note, edit/delete buttons.
+  - "+ Add reminder for this day" button.
 
-These already look correct from the schema dump; this step is just a final sweep, no migration expected.
+### Week view
+- 7 columns (Sun–Sat of cursor week). Each column has the day header + a stacked vertical list of cards (assignments + reminders) for that day, sorted by time. Same color coding, same actions inline.
 
-## Frontend secrets sweep
-- `.env` → only `VITE_SUPABASE_URL`, `VITE_SUPABASE_PROJECT_ID`, `VITE_SUPABASE_PUBLISHABLE_KEY`. Public keys, safe.
-- `rg` for `service_role|sk_|api[_-]?key` across `src/` — nothing found in this review; will re-grep during implementation to be sure.
-- Edge function `delete-account` correctly reads `SUPABASE_SERVICE_ROLE_KEY` from `Deno.env`, never exposed to client.
+### Overdue band
+- Persistent collapsible "Overdue" section above the calendar listing every past-due, not-submitted assignment in red. They also still appear on their original day in red.
 
-## Order of execution
-1. Create one migration containing: canonical `shop_items` table + seed + trigger, `submissions` URL check, `assignment_status_records` policy rewrite, `REVOKE EXECUTE` on the six helpers.
-2. Update `src/pages/Shop.tsx` so `buy()` no longer sends `cost`/`currency`/`status`/`item_name` (only `item_key`, `student_id`, `class_id`, `kind`) — the trigger fills the rest.
-3. Update `src/pages/StudentAssignments.tsx` to validate `link_url` scheme client-side.
-4. Re-run `security--run_security_scan` and `supabase--linter` to confirm clean.
+### Add / Edit reminder dialog
+- Fields: title (required), date (shadcn DatePicker with `pointer-events-auto`), time (HTML time input), optional note, kind (reminder / study block).
+- Insert/update into `personal_reminders`.
 
-## Out of scope / not changing
-- `profiles` table stays readable by authenticated users (needed across the app to render names/avatars; no sensitive PII stored).
-- `messages` policy allowing the realtime SELECT for any student/teacher — required for Supabase Realtime to subscribe; row-level filtering still enforced by the sender/recipient policy.
+## 4. Realtime
+- Subscribe to `personal_reminders` filtered by `student_id` for live updates.
+- Refetch assignments when `assignment_status_records` for this student changes.
+
+## 5. Smart features
+
+### Plan My Week (Sheet/Dialog)
+- Pulls all assignments + reminders due in next 7 days from current date.
+- Groups by day, sorted within each day by: overdue first → due today → earliest due time.
+- Each item shows class chip, title, urgency tag ("Due in 2 days"), and [Open]/[Mark done] actions.
+
+### Suggested Study Schedule (card below calendar)
+- Pure-client heuristic. For each upcoming assignment in the next 7 days that isn't completed:
+  - Estimate minutes: assignment without questions → 30 min; with multiple-choice questions → 15 min × question count capped 90; with open-response → 30 min × question count capped 180. (Question counts already available via `assignment_questions` count query.)
+  - Distribute the work into 30–60 min study blocks across the days between now and `due_date − 1 day`, preferring evenings (default 5–7 PM), avoiding doubling up the same class on the same day.
+- Render as a recommendation card with a list of suggested blocks (day · time · class · assignment).
+- **Accept** → bulk-insert each block as a `personal_reminders` row of kind `study_block`.
+- **Dismiss** → hides the card for the session (localStorage flag with daily reset).
+
+### 3-day & 1-day reminders
+- Add a new edge function `assignment-reminders` (scheduled via pg_cron hourly) that:
+  - Looks up every assignment whose `due_date` falls in 3 days ± 30 min OR 1 day ± 30 min from `now()`.
+  - For each enrolled student without an existing submission, inserts a row into `notifications` with type `assignment` and link `/student/assignments/:id`. Uses a small dedup key in the message so cron re-runs don't duplicate (check: select existing notification with same user_id + link + matching "X day" substring within last 2h).
+- Schedule via `cron.schedule` calling the function hourly (uses the `schedule-jobs-supabase-edge-functions` pattern). The existing `NotificationBell` already renders these with the ClipboardList icon.
+
+## 6. Files to add / change
+
+**New**
+- `supabase/migrations/<ts>_personal_reminders.sql` — table + RLS + updated_at trigger
+- `src/pages/StudentCalendar.tsx`
+- `src/components/calendar/MonthView.tsx`
+- `src/components/calendar/WeekView.tsx`
+- `src/components/calendar/DayPanel.tsx` (right side Sheet content)
+- `src/components/calendar/ReminderDialog.tsx`
+- `src/components/calendar/PlanWeekSheet.tsx`
+- `src/components/calendar/StudySuggestions.tsx`
+- `src/lib/calendar.ts` — color-by-class hash, time estimator, overdue helpers
+- `supabase/functions/assignment-reminders/index.ts` (+ cron schedule via insert SQL)
+
+**Edited**
+- `src/App.tsx` — add route
+- `src/components/DashboardShell.tsx` — add nav item
+
+## Out of scope
+- Drag-to-reschedule reminders (can be added later)
+- Teacher-side calendar
+- iCal export
+

@@ -18,6 +18,7 @@ import TeacherClassesPage from "./pages/TeacherClassesPage.tsx";
 import TeacherAssignmentsPage from "./pages/TeacherAssignmentsPage.tsx";
 import StudentAssignmentDetail from "./pages/StudentAssignmentDetail.tsx";
 import StudentGrades from "./pages/StudentGrades.tsx";
+import StudentCalendar from "./pages/StudentCalendar.tsx";
 import TeacherAssignmentDetail from "./pages/TeacherAssignmentDetail.tsx";
 import TeacherProgressPage from "./pages/TeacherProgressPage.tsx";
 import TeacherGradebook from "./pages/TeacherGradebook.tsx";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/student/assignments" element={<ProtectedRoute requiredRole="student"><StudentAssignmentsPage /></ProtectedRoute>} />
             <Route path="/student/assignments/:id" element={<ProtectedRoute requiredRole="student"><StudentAssignmentDetail /></ProtectedRoute>} />
             <Route path="/student/grades" element={<ProtectedRoute requiredRole="student"><StudentGrades /></ProtectedRoute>} />
+            <Route path="/student/calendar" element={<ProtectedRoute requiredRole="student"><StudentCalendar /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute requiredRole="student"><ShopPage /></ProtectedRoute>} />
             <Route
               path="/profile"
