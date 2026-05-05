@@ -621,6 +621,42 @@ export type Database = {
         }
         Relationships: []
       }
+      personal_reminders: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          id: string
+          kind: string
+          note: string | null
+          start_at: string
+          student_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          kind?: string
+          note?: string | null
+          start_at: string
+          student_id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          kind?: string
+          note?: string | null
+          start_at?: string
+          student_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_items: string[]
