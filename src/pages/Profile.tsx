@@ -141,7 +141,16 @@ export default function Profile() {
           <CardContent className="space-y-4 pt-5">
             <div className="space-y-2">
               <Label htmlFor="full-name">Display name</Label>
-              <Input id="full-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+              <div className="flex gap-2">
+                <Input id="full-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+                <Button
+                  type="button"
+                  onClick={saveName}
+                  disabled={savingName || !name.trim() || name.trim() === originalName}
+                >
+                  {savingName ? "Saving..." : "Save"}
+                </Button>
+              </div>
             </div>
             <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2">
               <span className="text-sm text-muted-foreground">Your balance</span>
