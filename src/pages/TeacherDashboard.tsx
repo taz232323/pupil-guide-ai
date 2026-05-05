@@ -309,6 +309,48 @@ export default function TeacherDashboard() {
     });
   }, [classes, assignments, submissions, grades, members, recentMsgs, dayAgo]);
 
+  // All missing entries (overdue, no submission) — used by dialogs
+  const missingEntries = useMemo<MissingEntry[]>(() => {
+    const memByClass = new Map<string, string[]>();
+    members.forEach(m => {
+      const arr = memByClass.get(m.class_id) ?? [];
+      arr.push(m.student_id); memByClass.set(m.class_id, arr);
+    });
+    const subKey = new Set(submissions.map(s => `${s.assignment_id}|${s.student_id}`));
+    const out: MissingEntry[] = [];
+    assignments.forEach(a => {
+      if (!a.due_date || new Date(a.due_date).getTime() >= Date.now()) return;
+      (memByClass.get(a.class_id) ?? []).forEach(sid => {
+        if (subKey.has(`${a.id}|${sid}`)) return;
+        out.push({
+          studentId: sid,
+          studentName: profiles[sid] || "Student",
+          assignmentId: a.id,
+          assignmentTitle: a.title,
+          dueDate: a.due_date,
+        });
+      });
+    });
+    return out;
+  }, [assignments, members, submissions, profiles]);
+
+  const [missingDialog, setMissingDialog] = useState<
+    | { kind: "class"; classId: string; className: string }
+    | { kind: "student"; studentId: string; studentName: string }
+    | null
+  >(null);
+
+  const dialogEntries = useMemo(() => {
+    if (!missingDialog) return [];
+    if (missingDialog.kind === "class") {
+      const classAsgnIds = new Set(
+        assignments.filter(a => a.class_id === missingDialog.classId).map(a => a.id)
+      );
+      return missingEntries.filter(e => classAsgnIds.has(e.assignmentId));
+    }
+    return missingEntries.filter(e => e.studentId === missingDialog.studentId);
+  }, [missingDialog, missingEntries, assignments]);
+
   // Activity feed
   const activity = useMemo<ActivityItem[]>(() => {
     const items: ActivityItem[] = [];
