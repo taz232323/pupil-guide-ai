@@ -25,15 +25,15 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
+type NavItem = { to: string; label: string; shortLabel?: string; icon: typeof LayoutDashboard };
 
 const STUDENT_NAV: NavItem[] = [
   { to: "/student", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/student/classes", label: "My Classes", icon: BookOpen },
-  { to: "/student/assignments", label: "Assignments", icon: ClipboardList },
+  { to: "/student/classes", label: "My Classes", shortLabel: "Classes", icon: BookOpen },
+  { to: "/student/assignments", label: "Assignments", shortLabel: "Work", icon: ClipboardList },
   { to: "/student/calendar", label: "Calendar", icon: Calendar },
   { to: "/student/grades", label: "Grades", icon: Award },
-  { to: "/student/leaderboard", label: "Leaderboard", icon: Trophy },
+  { to: "/student/leaderboard", label: "Leaderboard", shortLabel: "Ranks", icon: Trophy },
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/shop", label: "Shop", icon: ShoppingBag },
   { to: "/profile", label: "Profile", icon: User },
@@ -41,10 +41,10 @@ const STUDENT_NAV: NavItem[] = [
 
 const TEACHER_NAV: NavItem[] = [
   { to: "/teacher", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/teacher/classes", label: "My Classes", icon: BookOpen },
-  { to: "/teacher/assignments", label: "Assignments", icon: ClipboardList },
+  { to: "/teacher/classes", label: "My Classes", shortLabel: "Classes", icon: BookOpen },
+  { to: "/teacher/assignments", label: "Assignments", shortLabel: "Work", icon: ClipboardList },
   { to: "/teacher/calendar", label: "Calendar", icon: Calendar },
-  { to: "/teacher/gradebook", label: "Gradebook", icon: Award },
+  { to: "/teacher/gradebook", label: "Gradebook", shortLabel: "Grades", icon: Award },
   { to: "/teacher/progress", label: "Progress", icon: LineChart },
   { to: "/teacher/shop", label: "Shop", icon: ShoppingBag },
   { to: "/messages", label: "Messages", icon: MessageSquare },
