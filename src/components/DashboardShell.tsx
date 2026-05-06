@@ -294,7 +294,7 @@ export const DashboardShell = ({
 
         <main
           key={pathname}
-          className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:pb-10 max-w-6xl w-full mx-auto animate-fade-in pb-[calc(72px+env(safe-area-inset-bottom))]"
+          className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:pb-10 max-w-6xl w-full mx-auto animate-fade-in pb-[calc(170px+env(safe-area-inset-bottom))] lg:pb-10"
         >
           {(title || actions) && (
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
