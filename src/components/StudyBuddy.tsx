@@ -85,7 +85,9 @@ export function StudyBuddy() {
         aria-label={isTeacher ? "Open Study Buddy (teacher)" : "Open Study Buddy"}
         title="Study Buddy — AI helper"
         className={cn(
-          "fixed right-5 bottom-20 lg:bottom-6 z-[100] group inline-flex h-16 w-16 items-center justify-center rounded-full",
+          "fixed right-5 z-[100] group inline-flex h-16 w-16 items-center justify-center rounded-full",
+          // Sit above the mobile bottom navbar (~72px + iOS safe area), normal offset on desktop.
+          "bottom-[calc(90px+env(safe-area-inset-bottom))] lg:bottom-6",
           "bg-gradient-to-br from-primary to-teal text-primary-foreground shadow-elevated ring-4 ring-background",
           "transition-all hover:scale-110 hover:shadow-glow active:scale-95 animate-in fade-in zoom-in",
           open && "opacity-0 pointer-events-none"
