@@ -1,3 +1,4 @@
+import * as React from "react";
 import { cn } from "@/lib/utils";
 import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
 
@@ -91,11 +92,18 @@ export const StudentAvatar = ({
   items = [],
   size = "sm",
   className,
+  positionConfigs,
 }: {
   name?: string | null;
   items?: string[] | null;
   size?: AvatarSize;
   className?: string;
+  /**
+   * Optional map of cosmetic key -> position_config loaded from the DB.
+   * Overrides the built-in defaults so different hats/glasses can be
+   * positioned without code changes.
+   */
+  positionConfigs?: Record<string, CosmeticPositionConfig | null | undefined>;
 }) => {
   const equipped = (items ?? []).filter((k) => COSMETIC_EMOJI[k]);
   const hasAura = equipped.includes("rainbow_aura");
@@ -133,13 +141,12 @@ export const StudentAvatar = ({
           const cfg = COSMETIC_LAYERS[key] ?? { z: 20, position: "inset-0 flex items-center justify-center", layer: "accessory" as const };
           const img = COSMETIC_IMAGE[key];
           if (img) {
-            // Image cosmetic: ~70% of avatar width, centered, sits above the head.
+            // Image cosmetic — positioned dynamically from position_config
+            // (DB row) with a built-in default fallback per key.
+            const posCfg =
+              positionConfigs?.[key] ?? DEFAULT_POSITION_CONFIG[key] ?? { zIndex: cfg.z };
             return (
-              <span
-                key={key}
-                className="absolute left-1/2 -translate-x-1/2"
-                style={{ zIndex: cfg.z, top: "-22%", width: "70%" }}
-              >
+              <span key={key} style={cosmeticStyleFromConfig(posCfg)}>
                 <img
                   src={img}
                   alt=""
