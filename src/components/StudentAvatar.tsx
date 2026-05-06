@@ -10,6 +10,20 @@ export const COSMETIC_EMOJI: Record<string, string> = {
   rainbow_aura: "🌈",
 };
 
+// Z-index ordering for cosmetic layers. Higher = rendered on top.
+// Background sits behind the base avatar; face/hair/accessories stack above.
+const COSMETIC_LAYERS: Record<
+  string,
+  { z: number; position: string; layer: "background" | "face" | "hair" | "accessory" }
+> = {
+  rainbow_aura: { z: 0,  position: "inset-0",                                  layer: "background" },
+  glasses:      { z: 20, position: "inset-0 flex items-center justify-center", layer: "face" },
+  robot:        { z: 20, position: "inset-0 flex items-center justify-center", layer: "face" },
+  halo:         { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
+  hat_wizard:   { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
+  crown_silver: { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
+};
+
 const SIZE_CLASS = {
   xs: "h-6 w-6 text-xs",
   sm: "h-8 w-8 text-sm",
@@ -40,33 +54,51 @@ export const StudentAvatar = ({
   size?: AvatarSize;
   className?: string;
 }) => {
-  const equipped = (items ?? []).map((k) => COSMETIC_EMOJI[k]).filter(Boolean);
-  const hasAura = (items ?? []).includes("rainbow_aura");
+  const equipped = (items ?? []).filter((k) => COSMETIC_EMOJI[k]);
+  const hasAura = equipped.includes("rainbow_aura");
+
+  // Sort by z so layers render bottom → top in DOM order too.
+  const sorted = [...equipped].sort(
+    (a, b) => (COSMETIC_LAYERS[a]?.z ?? 10) - (COSMETIC_LAYERS[b]?.z ?? 10)
+  );
 
   return (
     <span
       className={cn(
-        "relative inline-flex items-center justify-center rounded-full bg-secondary text-secondary-foreground font-medium shrink-0",
-        hasAura && "ring-2 ring-offset-1 ring-offset-background ring-pink-400",
+        "relative inline-flex shrink-0 align-middle",
         SIZE_CLASS[size],
         className
       )}
       aria-label={name ?? "Avatar"}
     >
-      <span>{initials(name)}</span>
-      {equipped
-        .filter((_, i) => (items ?? [])[i] !== "rainbow_aura")
-        .slice(0, 3)
-        .map((emoji, i) => (
-          <span
-            key={i}
-            className="absolute -top-1.5 leading-none"
-            style={{ transform: `translateX(${(i - 1) * 8}px)` }}
-            aria-hidden
-          >
-            {emoji}
-          </span>
-        ))}
+      {/* Base avatar — bottom layer */}
+      <span
+        className={cn(
+          "relative z-10 inline-flex h-full w-full items-center justify-center rounded-full bg-secondary text-secondary-foreground font-medium",
+          hasAura && "ring-2 ring-offset-1 ring-offset-background ring-pink-400"
+        )}
+      >
+        {initials(name)}
+      </span>
+
+      {/* Cosmetic overlay container — does not affect layout size */}
+      <span
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+      >
+        {sorted.map((key) => {
+          const cfg = COSMETIC_LAYERS[key] ?? { z: 20, position: "inset-0 flex items-center justify-center", layer: "accessory" as const };
+          return (
+            <span
+              key={key}
+              className={cn("absolute leading-none", cfg.position)}
+              style={{ zIndex: cfg.z }}
+            >
+              {COSMETIC_EMOJI[key]}
+            </span>
+          );
+        })}
+      </span>
     </span>
   );
 };
