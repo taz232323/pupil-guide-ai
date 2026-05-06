@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
 
 // Shared catalog mapping cosmetic item keys to their emoji glyph.
 export const COSMETIC_EMOJI: Record<string, string> = {
@@ -8,6 +9,11 @@ export const COSMETIC_EMOJI: Record<string, string> = {
   halo: "😇",
   robot: "🤖",
   rainbow_aura: "🌈",
+};
+
+// Image-backed cosmetics override the emoji glyph with a transparent PNG/SVG.
+const COSMETIC_IMAGE: Record<string, string> = {
+  hat_wizard: wizardHatImg,
 };
 
 // Z-index ordering for cosmetic layers. Higher = rendered on top.
@@ -88,6 +94,24 @@ export const StudentAvatar = ({
       >
         {sorted.map((key) => {
           const cfg = COSMETIC_LAYERS[key] ?? { z: 20, position: "inset-0 flex items-center justify-center", layer: "accessory" as const };
+          const img = COSMETIC_IMAGE[key];
+          if (img) {
+            // Image cosmetic: ~70% of avatar width, centered, sits above the head.
+            return (
+              <span
+                key={key}
+                className="absolute left-1/2 -translate-x-1/2"
+                style={{ zIndex: cfg.z, top: "-22%", width: "70%" }}
+              >
+                <img
+                  src={img}
+                  alt=""
+                  className="block w-full h-auto pointer-events-none select-none"
+                  draggable={false}
+                />
+              </span>
+            );
+          }
           return (
             <span
               key={key}
