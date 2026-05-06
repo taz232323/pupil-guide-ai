@@ -112,6 +112,18 @@ export const DashboardShell = ({
   const { pathname } = useLocation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const unread = useUnreadMessages();
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      const diff = window.innerHeight - vv.height;
+      setKeyboardOpen(diff > 150);
+    };
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
 
   const handleDelete = async () => {
     const { error } = await supabase.functions.invoke("delete-account");
@@ -298,11 +310,13 @@ export const DashboardShell = ({
 
         {/* Mobile bottom tab bar */}
         <nav
-          className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-card/95 backdrop-blur"
+          className={cn(
+            "lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-card/95 backdrop-blur transition-all duration-200"
+          )}
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <ul
-            className="grid min-h-[68px]"
+            className={cn("grid", keyboardOpen ? "min-h-[52px]" : "min-h-[68px]")}
             style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
           >
             {nav.map((item) => {
@@ -311,11 +325,16 @@ export const DashboardShell = ({
                 <li key={item.to} className="flex-1 min-w-0">
                   <NavLink
                     to={item.to}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-1 px-2 py-2.5 h-full min-h-[68px] text-[10px] leading-tight font-medium transition-base w-full",
-                      active ? "text-primary" : "text-muted-foreground"
+                      "relative flex flex-col items-center justify-center gap-1 px-2 py-2 h-full text-[10px] leading-tight font-medium transition-base w-full min-w-[44px]",
+                      keyboardOpen ? "min-h-[44px]" : "min-h-[56px]",
+                      active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
+                    {active && (
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-primary" />
+                    )}
                     <span className="relative">
                       <item.icon className={cn("h-5 w-5", active && "drop-shadow")} />
                       {item.to === "/messages" && unread > 0 && (
@@ -324,12 +343,16 @@ export const DashboardShell = ({
                         </span>
                       )}
                     </span>
-                    <span className="hidden min-[400px]:block w-full text-center whitespace-nowrap overflow-hidden text-ellipsis">
-                      {item.label}
-                    </span>
-                    <span className="block min-[400px]:hidden w-full text-center whitespace-nowrap overflow-hidden text-ellipsis">
-                      {item.shortLabel ?? item.label}
-                    </span>
+                    {!keyboardOpen && (
+                      <>
+                        <span className="hidden min-[400px]:block w-full text-center whitespace-nowrap overflow-hidden text-ellipsis">
+                          {item.label}
+                        </span>
+                        <span className="block min-[400px]:hidden w-full text-center whitespace-nowrap overflow-hidden text-ellipsis">
+                          {item.shortLabel ?? item.label}
+                        </span>
+                      </>
+                    )}
                   </NavLink>
                 </li>
               );
