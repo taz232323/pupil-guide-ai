@@ -16,6 +16,43 @@ const COSMETIC_IMAGE: Record<string, string> = {
   hat_wizard: wizardHatImg,
 };
 
+// Default position_config used when the DB row doesn't provide one.
+export type CosmeticPositionConfig = {
+  top?: string | number;
+  left?: string | number;
+  scale?: number;
+  rotation?: number; // degrees
+  width?: string | number; // % of avatar width
+  zIndex?: number;
+};
+
+// Per-key fallback configs for built-in image cosmetics.
+const DEFAULT_POSITION_CONFIG: Record<string, CosmeticPositionConfig> = {
+  hat_wizard: { top: "-22%", left: "50%", width: "70%", scale: 1, rotation: 0, zIndex: 30 },
+};
+
+/**
+ * Render a cosmetic image positioned via a position_config object
+ * (typically loaded from the `cosmetics.position_config` JSON column).
+ * Supports: top, left, scale, rotation, width, zIndex.
+ */
+export function cosmeticStyleFromConfig(cfg: CosmeticPositionConfig | undefined | null): React.CSSProperties {
+  const c = cfg ?? {};
+  const scale = c.scale ?? 1;
+  const rotation = c.rotation ?? 0;
+  return {
+    position: "absolute",
+    top: c.top ?? "-20%",
+    left: c.left ?? "50%",
+    width: c.width ?? "70%",
+    zIndex: c.zIndex ?? 20,
+    // Combine centering + scale + rotation
+    transform: `translateX(-50%) scale(${scale}) rotate(${rotation}deg)`,
+    transformOrigin: "center center",
+    pointerEvents: "none",
+  };
+}
+
 // Z-index ordering for cosmetic layers. Higher = rendered on top.
 // Background sits behind the base avatar; face/hair/accessories stack above.
 const COSMETIC_LAYERS: Record<
