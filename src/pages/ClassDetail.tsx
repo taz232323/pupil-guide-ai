@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, ClipboardList, Layers, Pencil, Save, Users, Copy, X } from "lucide-react";
+import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -10,6 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
 import { ClassModules } from "@/components/modules/ClassModules";
@@ -42,8 +46,49 @@ export default function ClassDetail() {
   const [syllabusDraft, setSyllabusDraft] = useState("");
   const [savingSyllabus, setSavingSyllabus] = useState(false);
   const [toRemove, setToRemove] = useState<Member | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [awardOpen, setAwardOpen] = useState(false);
+  const [awardTargets, setAwardTargets] = useState<Member[]>([]);
+  const [awardCurrency, setAwardCurrency] = useState<"star" | "crown">("star");
+  const [awardAmount, setAwardAmount] = useState<string>("1");
+  const [awardReason, setAwardReason] = useState("");
+  const [awarding, setAwarding] = useState(false);
 
   const isTeacher = !!cls && !!user && cls.teacher_id === user.id;
+
+  const studentMembers = members.filter((m) => !m.isTeacher);
+
+  const openAward = (targets: Member[]) => {
+    setAwardTargets(targets);
+    setAwardCurrency("star");
+    setAwardAmount("1");
+    setAwardReason("");
+    setAwardOpen(true);
+  };
+
+  const submitAward = async () => {
+    if (!cls || awardTargets.length === 0) return;
+    const amt = parseInt(awardAmount, 10);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      toast.error("Enter a positive amount");
+      return;
+    }
+    setAwarding(true);
+    const { data, error } = await supabase.rpc("teacher_award_coins", {
+      _class_id: cls.id,
+      _student_ids: awardTargets.map((t) => t.id),
+      _currency: awardCurrency,
+      _amount: amt,
+      _reason: awardReason.trim() || null,
+    });
+    setAwarding(false);
+    if (error) { toast.error(error.message); return; }
+    const n = (data as number) ?? awardTargets.length;
+    const label = awardCurrency === "star" ? "Star" : "Crown";
+    toast.success(`Awarded ${amt} ${label} Coin${amt === 1 ? "" : "s"} to ${n} student${n === 1 ? "" : "s"}`);
+    setAwardOpen(false);
+    setSelectedIds(new Set());
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -305,14 +350,58 @@ export default function ClassDetail() {
               <CardDescription>{members.length} {members.length === 1 ? "person" : "people"} in this class.</CardDescription>
             </CardHeader>
             <CardContent>
+              {isTeacher && studentMembers.length > 0 && (
+                <div className="flex items-center justify-between mb-3 p-2 rounded-md bg-muted/40">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={selectedIds.size === studentMembers.length && studentMembers.length > 0}
+                      onCheckedChange={(v) => {
+                        if (v) setSelectedIds(new Set(studentMembers.map((m) => m.id)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                    <span>{selectedIds.size} selected</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={selectedIds.size === 0}
+                    onClick={() => openAward(studentMembers.filter((m) => selectedIds.has(m.id)))}
+                  >
+                    <Coins className="h-4 w-4 mr-1.5" />Give coins to selected
+                  </Button>
+                </div>
+              )}
               <ul className="flex flex-wrap gap-3">
                 {members.map((m) => (
                   <li key={m.id} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                    {isTeacher && !m.isTeacher && (
+                      <Checkbox
+                        checked={selectedIds.has(m.id)}
+                        onCheckedChange={(v) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (v) next.add(m.id); else next.delete(m.id);
+                            return next;
+                          });
+                        }}
+                        aria-label={`Select ${m.name}`}
+                      />
+                    )}
                     <StudentAvatar size="sm" name={m.name} items={m.items} />
                     <span className="text-sm">
                       {m.id === user?.id ? "You" : m.name}
                       {m.isTeacher && <span className="ml-1 text-xs text-muted-foreground">(Teacher)</span>}
                     </span>
+                    {isTeacher && !m.isTeacher && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2"
+                        onClick={() => openAward([m])}
+                      >
+                        <Coins className="h-3.5 w-3.5 mr-1" />Give coins
+                      </Button>
+                    )}
                     {isTeacher && !m.isTeacher && (
                       <IconButton label={`Remove ${m.name}`} onClick={() => setToRemove(m)}>
                         <X className="h-4 w-4 text-muted-foreground" />
@@ -334,6 +423,65 @@ export default function ClassDetail() {
         destructive
         onConfirm={async () => { if (toRemove) await removeStudent(toRemove); }}
       />
+      <Dialog open={awardOpen} onOpenChange={setAwardOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Give coins</DialogTitle>
+            <DialogDescription>
+              {awardTargets.length === 1
+                ? `Award coins to ${awardTargets[0]?.name}.`
+                : `Award the same coins to ${awardTargets.length} students.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm">Coin type</Label>
+              <RadioGroup
+                value={awardCurrency}
+                onValueChange={(v) => setAwardCurrency(v as "star" | "crown")}
+                className="flex gap-4 mt-2"
+              >
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <RadioGroupItem value="star" id="award-star" />
+                  <span>⭐ Star Coins</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <RadioGroupItem value="crown" id="award-crown" />
+                  <span>👑 Crown Coins</span>
+                </label>
+              </RadioGroup>
+            </div>
+            <div>
+              <Label htmlFor="award-amount" className="text-sm">Amount</Label>
+              <Input
+                id="award-amount"
+                type="number"
+                min={1}
+                value={awardAmount}
+                onChange={(e) => setAwardAmount(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="award-reason" className="text-sm">Reason (optional)</Label>
+              <Textarea
+                id="award-reason"
+                rows={3}
+                value={awardReason}
+                onChange={(e) => setAwardReason(e.target.value)}
+                placeholder='e.g. "Great participation today"'
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAwardOpen(false)} disabled={awarding}>Cancel</Button>
+            <Button onClick={submitAward} disabled={awarding}>
+              <Save className="h-4 w-4 mr-1" />{awarding ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardShell>
   );
 }
