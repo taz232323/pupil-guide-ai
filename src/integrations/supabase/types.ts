@@ -1174,6 +1174,16 @@ export type Database = {
       }
       join_class_by_code: { Args: { _code: string }; Returns: string }
       reload_schema_cache: { Args: never; Returns: undefined }
+      teacher_award_coins: {
+        Args: {
+          _amount: number
+          _class_id: string
+          _currency: string
+          _reason: string
+          _student_ids: string[]
+        }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "student" | "teacher"
