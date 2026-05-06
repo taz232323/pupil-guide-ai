@@ -327,11 +327,9 @@ export const DashboardShell = ({
                     <span className="hidden min-[400px]:block w-full text-center whitespace-nowrap overflow-hidden text-ellipsis">
                       {item.label}
                     </span>
-                    {item.shortLabel && (
-                      <span className="block min-[400px]:hidden w-full text-center whitespace-nowrap overflow-hidden text-ellipsis">
-                        {item.shortLabel}
-                      </span>
-                    )}
+                    <span className="block min-[400px]:hidden w-full text-center whitespace-nowrap overflow-hidden text-ellipsis">
+                      {item.shortLabel ?? item.label}
+                    </span>
                   </NavLink>
                 </li>
               );
