@@ -302,11 +302,11 @@ export const DashboardShell = ({
             {nav.map((item) => {
               const active = isActive(item.to);
               return (
-                <li key={item.to}>
+                <li key={item.to} className="flex-1 min-w-0">
                   <NavLink
                     to={item.to}
                     className={cn(
-                      "flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-base",
+                      "flex flex-col items-center justify-center gap-0.5 px-2 py-2.5 text-[10px] leading-tight font-medium transition-base w-full",
                       active ? "text-primary" : "text-muted-foreground"
                     )}
                   >
@@ -318,7 +318,9 @@ export const DashboardShell = ({
                         </span>
                       )}
                     </span>
-                    <span className="truncate max-w-[60px]">{item.label}</span>
+                    <span className="block w-full text-center whitespace-nowrap overflow-hidden text-ellipsis">
+                      {item.label}
+                    </span>
                   </NavLink>
                 </li>
               );
