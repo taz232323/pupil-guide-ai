@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, ClipboardList, Layers, Pencil, Save, Users, Copy } from "lucide-react";
+import { ArrowLeft, BookOpen, ClipboardList, Layers, Pencil, Save, Users, Copy, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
 import { ClassModules } from "@/components/modules/ClassModules";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconButton } from "@/components/IconButton";
 import { toast } from "sonner";
 
 type ClassRow = {
@@ -39,6 +41,7 @@ export default function ClassDetail() {
   const [editingSyllabus, setEditingSyllabus] = useState(false);
   const [syllabusDraft, setSyllabusDraft] = useState("");
   const [savingSyllabus, setSavingSyllabus] = useState(false);
+  const [toRemove, setToRemove] = useState<Member | null>(null);
 
   const isTeacher = !!cls && !!user && cls.teacher_id === user.id;
 
@@ -101,6 +104,27 @@ export default function ClassDetail() {
     if (!cls) return;
     navigator.clipboard.writeText(cls.join_code);
     toast.success("Join code copied");
+  };
+
+  const removeStudent = async (m: Member) => {
+    if (!cls) return;
+    // Notify first (RLS requires the student to still be in the class)
+    const { error: nerr } = await supabase.from("notifications").insert({
+      user_id: m.id,
+      type: "class_removed",
+      message: `You have been removed from ${cls.name} by your teacher.`,
+      link: "/student",
+    });
+    if (nerr) console.warn("notify failed:", nerr.message);
+
+    const { error } = await supabase
+      .from("class_members")
+      .delete()
+      .eq("class_id", cls.id)
+      .eq("student_id", m.id);
+    if (error) { toast.error(error.message); return; }
+    setMembers((prev) => prev.filter((x) => x.id !== m.id));
+    toast.success(`${m.name} removed from class`);
   };
 
   if (loading || !cls) {
@@ -289,6 +313,11 @@ export default function ClassDetail() {
                       {m.id === user?.id ? "You" : m.name}
                       {m.isTeacher && <span className="ml-1 text-xs text-muted-foreground">(Teacher)</span>}
                     </span>
+                    {isTeacher && !m.isTeacher && (
+                      <IconButton label={`Remove ${m.name}`} onClick={() => setToRemove(m)}>
+                        <X className="h-4 w-4 text-muted-foreground" />
+                      </IconButton>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -296,6 +325,15 @@ export default function ClassDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+      <ConfirmDialog
+        open={!!toRemove}
+        onOpenChange={(o) => !o && setToRemove(null)}
+        title="Remove student?"
+        description={toRemove ? `Are you sure you want to remove ${toRemove.name} from this class? This cannot be undone.` : ""}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={async () => { if (toRemove) await removeStudent(toRemove); }}
+      />
     </DashboardShell>
   );
 }
