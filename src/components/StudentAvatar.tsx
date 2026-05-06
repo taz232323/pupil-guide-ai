@@ -17,6 +17,22 @@ const COSMETIC_IMAGE: Record<string, string> = {
   hat_wizard: wizardHatImg,
 };
 
+/**
+ * Background / aura cosmetics. These render BEHIND the avatar circle,
+ * clipped to a circle so they never overflow the avatar container.
+ * Add new entries here (or load from DB) to swap textures later.
+ */
+const BACKGROUND_TEXTURES: Record<string, { background: string; ring?: string }> = {
+  rainbow_aura: {
+    background:
+      "conic-gradient(from 0deg, #ff5b8a, #ffb648, #ffe156, #5be0a0, #4ec3ff, #a779ff, #ff5b8a)",
+    ring: "ring-2 ring-offset-1 ring-offset-background ring-pink-400",
+  },
+  // Example future textures — uncomment / extend as needed:
+  // galaxy_aura: { background: "radial-gradient(circle at 30% 30%, #6a5cff, #1a0033 70%)" },
+  // gold_aura:   { background: "radial-gradient(circle, #ffe27a, #b8860b)" },
+};
+
 // Default position_config used when the DB row doesn't provide one.
 export type CosmeticPositionConfig = {
   top?: string | number;
@@ -56,6 +72,7 @@ export function cosmeticStyleFromConfig(cfg: CosmeticPositionConfig | undefined 
 
 // Z-index ordering for cosmetic layers. Higher = rendered on top.
 // Background sits behind the base avatar; face/hair/accessories stack above.
+// Layer scale: background < base avatar (z-10) < face/accessory < hair.
 const COSMETIC_LAYERS: Record<
   string,
   { z: number; position: string; layer: "background" | "face" | "hair" | "accessory" }
@@ -106,12 +123,14 @@ export const StudentAvatar = ({
   positionConfigs?: Record<string, CosmeticPositionConfig | null | undefined>;
 }) => {
   const equipped = (items ?? []).filter((k) => COSMETIC_EMOJI[k]);
-  const hasAura = equipped.includes("rainbow_aura");
+  // Pick the active background cosmetic (last one wins if multiple).
+  const activeBackgroundKey = [...equipped].reverse().find((k) => BACKGROUND_TEXTURES[k]);
+  const activeBackground = activeBackgroundKey ? BACKGROUND_TEXTURES[activeBackgroundKey] : null;
 
-  // Sort by z so layers render bottom → top in DOM order too.
-  const sorted = [...equipped].sort(
-    (a, b) => (COSMETIC_LAYERS[a]?.z ?? 10) - (COSMETIC_LAYERS[b]?.z ?? 10)
-  );
+  // Foreground cosmetics only — backgrounds are rendered separately below.
+  const sorted = [...equipped]
+    .filter((k) => !BACKGROUND_TEXTURES[k])
+    .sort((a, b) => (COSMETIC_LAYERS[a]?.z ?? 10) - (COSMETIC_LAYERS[b]?.z ?? 10));
 
   return (
     <span
@@ -122,11 +141,20 @@ export const StudentAvatar = ({
       )}
       aria-label={name ?? "Avatar"}
     >
+      {/* Background / aura layer — behind the avatar, clipped to a circle */}
+      {activeBackground && (
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-full overflow-hidden pointer-events-none"
+          style={{ zIndex: 0, background: activeBackground.background }}
+        />
+      )}
+
       {/* Base avatar — bottom layer */}
       <span
         className={cn(
           "relative z-10 inline-flex h-full w-full items-center justify-center rounded-full bg-secondary text-secondary-foreground font-medium",
-          hasAura && "ring-2 ring-offset-1 ring-offset-background ring-pink-400"
+          activeBackground?.ring
         )}
       >
         {initials(name)}
