@@ -282,7 +282,7 @@ export const DashboardShell = ({
 
         <main
           key={pathname}
-          className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-10 max-w-6xl w-full mx-auto animate-fade-in"
+          className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:pb-10 max-w-6xl w-full mx-auto animate-fade-in pb-[calc(72px+env(safe-area-inset-bottom))]"
         >
           {(title || actions) && (
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -297,8 +297,14 @@ export const DashboardShell = ({
         </main>
 
         {/* Mobile bottom tab bar */}
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-card/95 backdrop-blur">
-          <ul className="grid" style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}>
+        <nav
+          className="lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-card/95 backdrop-blur"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <ul
+            className="grid min-h-[68px]"
+            style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
+          >
             {nav.map((item) => {
               const active = isActive(item.to);
               return (
@@ -306,7 +312,7 @@ export const DashboardShell = ({
                   <NavLink
                     to={item.to}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-0.5 px-2 py-2.5 text-[10px] leading-tight font-medium transition-base w-full",
+                      "flex flex-col items-center justify-center gap-1 px-2 py-2.5 h-full min-h-[68px] text-[10px] leading-tight font-medium transition-base w-full",
                       active ? "text-primary" : "text-muted-foreground"
                     )}
                   >
