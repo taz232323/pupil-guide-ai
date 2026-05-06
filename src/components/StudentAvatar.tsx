@@ -73,9 +73,11 @@ export function cosmeticStyleFromConfig(cfg: CosmeticPositionConfig | undefined 
 // Z-index ordering for cosmetic layers. Higher = rendered on top.
 // Background sits behind the base avatar; face/hair/accessories stack above.
 // Layer scale: background < base avatar (z-10) < face/accessory < hair.
-const COSMETIC_LAYERS: Record<
+export type CosmeticLayer = "background" | "face" | "hair" | "accessory";
+
+export const COSMETIC_LAYERS: Record<
   string,
-  { z: number; position: string; layer: "background" | "face" | "hair" | "accessory" }
+  { z: number; position: string; layer: CosmeticLayer }
 > = {
   rainbow_aura: { z: 0,  position: "inset-0",                                  layer: "background" },
   glasses:      { z: 20, position: "inset-0 flex items-center justify-center", layer: "face" },
@@ -84,6 +86,34 @@ const COSMETIC_LAYERS: Record<
   hat_wizard:   { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
   crown_silver: { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
 };
+
+/** Returns the layer (hat/face/aura/etc.) for a cosmetic key. */
+export function getCosmeticLayer(key: string): CosmeticLayer {
+  return COSMETIC_LAYERS[key]?.layer ?? "accessory";
+}
+
+/**
+ * Normalize an equipped list:
+ * - drops unknown items (missing from catalog → fail-safe)
+ * - removes duplicates
+ * - keeps only ONE item per layer (last-equipped wins)
+ */
+export function normalizeEquipped(items: string[] | null | undefined): string[] {
+  const seenLayers = new Set<CosmeticLayer>();
+  const seenKeys = new Set<string>();
+  const out: string[] = [];
+  // Iterate in reverse so the LAST equipped of a given layer wins.
+  for (const key of [...(items ?? [])].reverse()) {
+    if (!key || seenKeys.has(key)) continue;
+    if (!COSMETIC_EMOJI[key] && !COSMETIC_IMAGE[key] && !BACKGROUND_TEXTURES[key]) continue;
+    const layer = getCosmeticLayer(key);
+    if (seenLayers.has(layer)) continue;
+    seenLayers.add(layer);
+    seenKeys.add(key);
+    out.unshift(key);
+  }
+  return out;
+}
 
 const SIZE_CLASS = {
   xs: "h-6 w-6 text-xs",
@@ -122,9 +152,12 @@ export const StudentAvatar = ({
    */
   positionConfigs?: Record<string, CosmeticPositionConfig | null | undefined>;
 }) => {
-  const equipped = (items ?? []).filter((k) => COSMETIC_EMOJI[k]);
-  // Pick the active background cosmetic (last one wins if multiple).
-  const activeBackgroundKey = [...equipped].reverse().find((k) => BACKGROUND_TEXTURES[k]);
+  // Constraint: one per layer, no dupes, unknown keys silently dropped.
+  const equipped = normalizeEquipped(items);
+  const [brokenAssets, setBrokenAssets] = React.useState<Set<string>>(() => new Set());
+
+  // Pick the active background cosmetic (only one allowed by normalizeEquipped).
+  const activeBackgroundKey = equipped.find((k) => BACKGROUND_TEXTURES[k]);
   const activeBackground = activeBackgroundKey ? BACKGROUND_TEXTURES[activeBackgroundKey] : null;
 
   // Foreground cosmetics only — backgrounds are rendered separately below.
@@ -168,7 +201,8 @@ export const StudentAvatar = ({
         {sorted.map((key) => {
           const cfg = COSMETIC_LAYERS[key] ?? { z: 20, position: "inset-0 flex items-center justify-center", layer: "accessory" as const };
           const img = COSMETIC_IMAGE[key];
-          if (img) {
+          // If the image asset previously failed to load, fall back to emoji.
+          if (img && !brokenAssets.has(key)) {
             // Image cosmetic — positioned dynamically from position_config
             // (DB row) with a built-in default fallback per key.
             const posCfg =
@@ -180,17 +214,27 @@ export const StudentAvatar = ({
                   alt=""
                   className="block w-full h-auto pointer-events-none select-none"
                   draggable={false}
+                  onError={() => {
+                    setBrokenAssets((prev) => {
+                      const next = new Set(prev);
+                      next.add(key);
+                      return next;
+                    });
+                  }}
                 />
               </span>
             );
           }
+          // Emoji fallback — also used when no glyph exists at all.
+          const glyph = COSMETIC_EMOJI[key];
+          if (!glyph) return null; // missing asset → render nothing rather than break UI
           return (
             <span
               key={key}
               className={cn("absolute leading-none", cfg.position)}
               style={{ zIndex: cfg.z }}
             >
-              {COSMETIC_EMOJI[key]}
+              {glyph}
             </span>
           );
         })}
