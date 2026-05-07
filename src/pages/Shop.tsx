@@ -8,6 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Star, Crown, Sparkles, ShieldCheck, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
+
+// Image overrides for cosmetic shop tiles — keeps the shop visual in sync
+// with the avatar renderer (see StudentAvatar COSMETIC_IMAGE).
+const COSMETIC_TILE_IMAGE: Record<string, string> = {
+  hat_wizard: wizardHatImg,
+};
 
 type ShopItem = {
   item_key: string;
@@ -122,7 +129,18 @@ export function Shop() {
                 return (
                   <div key={c.item_key} className="rounded-lg border border-border p-4 flex flex-col gap-3">
                     <div className="flex items-start gap-3">
-                      <div className="h-12 w-12 rounded-md bg-muted inline-flex items-center justify-center text-2xl">{c.emoji}</div>
+                      <div className="h-12 w-12 rounded-md bg-muted inline-flex items-center justify-center text-2xl overflow-hidden">
+                        {COSMETIC_TILE_IMAGE[c.item_key] ? (
+                          <img
+                            src={COSMETIC_TILE_IMAGE[c.item_key]}
+                            alt=""
+                            className="h-10 w-10 object-contain"
+                            draggable={false}
+                          />
+                        ) : (
+                          c.emoji
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium">{c.item_name}</div>
                         <div className="text-xs text-muted-foreground line-clamp-2">{c.description}</div>
