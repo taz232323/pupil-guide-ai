@@ -1,33 +1,30 @@
-# Show which students are missing assignments
+## Goal
+Let teachers view leaderboards for the classes they teach, mirroring the student experience but scoped to their own classes.
 
-Right now the teacher side surfaces missing-work *counts* in two places, but never names the students:
+## What teachers will see
 
-1. **TeacherDashboard** → class "pulse" cards show a red **Missing** number, and the **At-risk students** list says "· N missing" — neither is clickable.
-2. **TeacherAssignmentDetail** → the left student list shows a green check next to students who answered, but doesn't visibly flag students who never submitted.
+A new **Teacher Leaderboard** page at `/teacher/leaderboard`:
+- Tabs across the top: **All My Classes** + one tab per class the teacher owns.
+- Each tab shows students ranked by **Star Coins** (highest first), with rank, avatar, name, and coin total.
+- Top 3 get crown / medal / trophy icons (same visual language as the student leaderboard).
+- A small toggle on each class tab to switch the view between **Star Coins** and **Crown Coins** rankings (teachers benefit from seeing both, since Crown Coins reflect unit completion).
+- Teachers always see students' real names — anonymous mode (`leaderboard_anonymous`) is a student-side privacy setting and shouldn't hide identities from the class owner.
+- Empty states: "No classes yet" / "No students in this class yet."
 
-## Changes
+## Entry points
 
-### 1. `src/pages/TeacherAssignmentDetail.tsx`
-- Compute `missingStudents` = class members with no row in `submissions` AND no row in `assignment_answers`.
-- In the **Students** sidebar:
-  - Sort missing students to the top.
-  - Add a small red "Missing" pill (using `bg-destructive/10 text-destructive`) next to their name instead of the green check.
-  - Add a header row "Missing (N)" / "Submitted (M)" so the split is obvious.
-- Add a **"Remind missing students"** button at the top of the sidebar that inserts a `notifications` row for each missing student linking back to the assignment (reuses the existing notifications table — no schema change).
+- Add a **Leaderboard** link in the teacher navigation (sidebar / nav) alongside the other teacher pages.
+- Add a compact **Top Students** widget on the Teacher Dashboard (`/teacher`) showing the top 3 across all the teacher's classes, with a "View all" link to the new page — mirroring the student `LeaderboardWidget`.
 
-### 2. `src/pages/TeacherDashboard.tsx`
-- Make the **Missing** number on each class pulse card open a small dialog listing the missing students for that class, grouped by assignment (student name → assignment title → due date). Each row links to `/teacher/assignments/:id`.
-- In the **At-risk students** list, change the row link from `/teacher/progress` to a popover that lists *which* assignments that student is missing, with links to each.
-- Reuse already-fetched data (`assignments`, `submissions`, `class_members`, `profiles`) — no extra round-trips.
+## Technical notes
 
-### 3. Tiny shared bit
-- Add a `MissingStudentsDialog` component under `src/components/teacher/` so both the dashboard pulse card and (optionally) the assignment detail can share the list UI.
+- New page: `src/pages/TeacherLeaderboard.tsx`, registered as a route in `src/App.tsx` and protected by `ProtectedRoute` with the teacher role.
+- New widget: `src/components/TeacherLeaderboardWidget.tsx` (or generalize the existing `LeaderboardWidget` with a `mode: "student" | "teacher"` prop — preferred to avoid duplication).
+- Data: query `classes` where `teacher_id = auth.uid()`, then `class_members` for those class IDs, then batch-fetch `profiles` (id, full_name, avatar_items) and `student_coins` (star_coins, crown_coins). Existing RLS already lets teachers read all of these for their own classes — **no migration or policy changes needed**.
+- Realtime: subscribe to `student_coins` changes (same channel pattern as the student page) so awards from "Give coins" reflect immediately.
+- Add a nav entry in whatever component renders the teacher sidebar (likely `DashboardShell` or a teacher nav config).
 
 ## Out of scope
-- Email/SMS reminders (only in-app notification bell).
-- Changing the at-risk threshold logic.
-- Teacher progress page table — already has a Missing column with names visible per row.
 
-## Files
-- **Edit:** `src/pages/TeacherDashboard.tsx`, `src/pages/TeacherAssignmentDetail.tsx`
-- **Create:** `src/components/teacher/MissingStudentsDialog.tsx`
+- No changes to coin logic, RLS, or database schema.
+- No editing/awarding from the leaderboard itself (that already lives on the class roster via "Give coins").
