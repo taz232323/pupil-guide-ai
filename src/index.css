@@ -225,3 +225,21 @@ All colors MUST be HSL.
     .ripple-effect { display: none !important; }
   }
 }
+
+/* === Marketing background blobs (slow, subtle drift) === */
+@layer utilities {
+  @keyframes blob-drift-a {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(40px, -30px, 0) scale(1.08); }
+  }
+  @keyframes blob-drift-b {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(-50px, 40px, 0) scale(1.12); }
+  }
+  .animate-blob-slow   { animation: blob-drift-a 18s ease-in-out infinite; }
+  .animate-blob-slower { animation: blob-drift-b 26s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-blob-slow, .animate-blob-slower { animation: none !important; }
+  }
+}
