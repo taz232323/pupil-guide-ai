@@ -9,11 +9,21 @@ import { Star, Crown, Sparkles, ShieldCheck, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
+import glassesImg from "@/assets/cosmetics/glasses.png";
+import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
+import haloImg from "@/assets/cosmetics/halo.png";
+import robotImg from "@/assets/cosmetics/robot.png";
+import rainbowAuraImg from "@/assets/cosmetics/rainbow-aura.png";
 
 // Image overrides for cosmetic shop tiles — keeps the shop visual in sync
 // with the avatar renderer (see StudentAvatar COSMETIC_IMAGE).
 const COSMETIC_TILE_IMAGE: Record<string, string> = {
   hat_wizard: wizardHatImg,
+  glasses: glassesImg,
+  crown_silver: crownSilverImg,
+  halo: haloImg,
+  robot: robotImg,
+  rainbow_aura: rainbowAuraImg,
 };
 
 type ShopItem = {
