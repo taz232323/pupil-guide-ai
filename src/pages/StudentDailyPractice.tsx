@@ -138,8 +138,12 @@ export default function StudentDailyPractice() {
       const r: any = data;
       if (r.milestoneHit) {
         toast.success(`🎉 ${r.milestoneHit}-day streak! +${r.milestoneBonus} bonus Star Coins`);
+        const { celebrate } = await import("@/lib/confetti");
+        celebrate("big");
       } else {
         toast.success(`Earned ${r.baseCoins + r.bonusCoins} Star Coins!`);
+        const { celebrate } = await import("@/lib/confetti");
+        celebrate("small");
       }
     } catch (e: any) {
       toast.error(e.message || "Failed to submit");

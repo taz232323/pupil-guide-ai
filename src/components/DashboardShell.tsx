@@ -189,10 +189,12 @@ export const DashboardShell = ({
           {role === "student" && coins && (
             <div className="flex gap-2">
               <span className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-warning-soft px-2 py-1.5 text-xs font-semibold text-warning">
-                <Star className="h-3.5 w-3.5 fill-current" /> {coins.star}
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <span key={`s-${coins.star}`} className="inline-block animate-bounce-pop tabular-nums">{coins.star}</span>
               </span>
               <span className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-primary-soft px-2 py-1.5 text-xs font-semibold text-primary">
-                <Crown className="h-3.5 w-3.5 fill-current" /> {coins.crown}
+                <Crown className="h-3.5 w-3.5 fill-current" />
+                <span key={`c-${coins.crown}`} className="inline-block animate-bounce-pop tabular-nums">{coins.crown}</span>
               </span>
             </div>
           )}
@@ -238,10 +240,12 @@ export const DashboardShell = ({
               {role === "student" && coins && (
                 <>
                   <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning">
-                    <Star className="h-3 w-3 fill-current" />{coins.star}
+                    <Star className="h-3 w-3 fill-current" />
+                    <span key={`ms-${coins.star}`} className="inline-block animate-bounce-pop tabular-nums">{coins.star}</span>
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
-                    <Crown className="h-3 w-3 fill-current" />{coins.crown}
+                    <Crown className="h-3 w-3 fill-current" />
+                    <span key={`mc-${coins.crown}`} className="inline-block animate-bounce-pop tabular-nums">{coins.crown}</span>
                   </span>
                 </>
               )}
@@ -295,7 +299,7 @@ export const DashboardShell = ({
 
         <main
           key={pathname}
-          className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:pb-10 max-w-6xl w-full mx-auto animate-fade-in pb-[calc(170px+env(safe-area-inset-bottom))] lg:pb-10"
+          className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:pb-10 max-w-6xl w-full mx-auto animate-page-enter pb-[calc(170px+env(safe-area-inset-bottom))] lg:pb-10"
         >
           {(title || actions) && (
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">

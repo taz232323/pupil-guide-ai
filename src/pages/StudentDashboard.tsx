@@ -108,18 +108,23 @@ function notifIcon(type: string) {
   return Bell;
 }
 
-/** Circular progress ring using SVG */
+/** Circular progress ring using SVG — animates from 0 on mount/value change */
 const Ring = ({ value, size = 64, stroke = 7, label }: { value: number; size?: number; stroke?: number; label?: string }) => {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const offset = c - (value / 100) * c;
+  const [animValue, setAnimValue] = useState(0);
+  useEffect(() => {
+    const id = window.setTimeout(() => setAnimValue(value), 60);
+    return () => window.clearTimeout(id);
+  }, [value]);
+  const offset = c - (animValue / 100) * c;
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} className="stroke-secondary" fill="none" />
         <circle
           cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke}
-          className="stroke-primary transition-all duration-700"
+          className="stroke-primary transition-all duration-700 ease-out"
           fill="none" strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={offset}
         />
@@ -238,7 +243,7 @@ export default function StudentDashboard() {
 
   return (
     <DashboardShell>
-      <div className="space-y-6">
+      <div className="space-y-6 stagger-children">
         {/* Hero greeting */}
         <div className="rounded-3xl bg-gradient-hero p-6 sm:p-8 text-white shadow-elevated animate-fade-in relative overflow-hidden">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
@@ -332,7 +337,7 @@ export default function StudentDashboard() {
             </section>
 
             {/* Quick Links */}
-            <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
               {QUICK_LINKS.map(q => (
                 <Link key={q.to} to={q.to}
                   className="group relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 shadow-card transition-base hover-lift">

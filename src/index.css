@@ -160,3 +160,68 @@ All colors MUST be HSL.
   .transition-base { transition: all 0.2s ease; }
   .hover-lift { @apply transition-base hover:-translate-y-0.5 hover:shadow-elevated; }
 }
+
+/* === Motion: page, stagger, ripple, bounce, pulse-ring === */
+@layer utilities {
+  /* Subtle page transition (slide up + fade) */
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-page-enter { animation: page-enter 280ms ease-out both; }
+
+  /* Stagger children: each direct child fades + slides up in sequence */
+  .stagger-children > * {
+    opacity: 0;
+    animation: page-enter 300ms ease-out forwards;
+  }
+  .stagger-children > *:nth-child(1)  { animation-delay:  20ms; }
+  .stagger-children > *:nth-child(2)  { animation-delay:  60ms; }
+  .stagger-children > *:nth-child(3)  { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(4)  { animation-delay: 140ms; }
+  .stagger-children > *:nth-child(5)  { animation-delay: 180ms; }
+  .stagger-children > *:nth-child(6)  { animation-delay: 220ms; }
+  .stagger-children > *:nth-child(7)  { animation-delay: 260ms; }
+  .stagger-children > *:nth-child(n+8){ animation-delay: 300ms; }
+
+  /* Material-style ripple on buttons */
+  @keyframes ripple {
+    to { transform: scale(4); opacity: 0; }
+  }
+  .ripple-effect {
+    position: absolute;
+    border-radius: 9999px;
+    background-color: currentColor;
+    opacity: 0.35;
+    pointer-events: none;
+    transform: scale(0);
+    animation: ripple 600ms ease-out;
+  }
+
+  /* Pop/bounce used when a number changes (coins, stats) */
+  @keyframes bounce-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.25); }
+    70%  { transform: scale(0.94); }
+    100% { transform: scale(1); }
+  }
+  .animate-bounce-pop { animation: bounce-pop 280ms ease-out; }
+
+  /* Soft pulsing ring (e.g., notification bell) */
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.55); }
+    70%  { box-shadow: 0 0 0 8px hsl(var(--destructive) / 0); }
+    100% { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0); }
+  }
+  .animate-pulse-ring { animation: pulse-ring 1.6s ease-out infinite; }
+
+  /* Honor reduced motion preference globally */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-page-enter,
+    .animate-fade-in,
+    .animate-bounce-pop,
+    .animate-pulse-ring,
+    .stagger-children > * { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .ripple-effect { display: none !important; }
+  }
+}
