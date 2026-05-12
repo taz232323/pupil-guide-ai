@@ -158,10 +158,10 @@ export const NotificationBell = ({ className }: { className?: string }) => {
           className={cn("relative rounded-full", className)}
           aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
         >
-          <Bell className="h-5 w-5" />
+          <Bell className={cn("h-5 w-5", unreadCount > 0 && "animate-pulse text-primary")} />
           {unreadCount > 0 && (
             <span
-              className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground ring-2 ring-background"
+              className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground ring-2 ring-background animate-pulse-ring"
               aria-hidden
             >
               {unreadCount > 9 ? "9+" : unreadCount}
