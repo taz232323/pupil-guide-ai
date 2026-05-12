@@ -1,6 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
+import glassesImg from "@/assets/cosmetics/glasses.png";
+import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
+import haloImg from "@/assets/cosmetics/halo.png";
+import robotImg from "@/assets/cosmetics/robot.png";
 
 // Shared catalog mapping cosmetic item keys to their emoji glyph.
 export const COSMETIC_EMOJI: Record<string, string> = {
@@ -15,6 +19,10 @@ export const COSMETIC_EMOJI: Record<string, string> = {
 // Image-backed cosmetics override the emoji glyph with a transparent PNG/SVG.
 const COSMETIC_IMAGE: Record<string, string> = {
   hat_wizard: wizardHatImg,
+  glasses: glassesImg,
+  crown_silver: crownSilverImg,
+  halo: haloImg,
+  robot: robotImg,
 };
 
 /**
@@ -46,6 +54,10 @@ export type CosmeticPositionConfig = {
 // Per-key fallback configs for built-in image cosmetics.
 const DEFAULT_POSITION_CONFIG: Record<string, CosmeticPositionConfig> = {
   hat_wizard: { top: "-22%", left: "50%", width: "70%", scale: 1, rotation: 0, zIndex: 30 },
+  glasses:    { top: "25%",  left: "50%", width: "55%", scale: 1, rotation: 0, zIndex: 20 },
+  crown_silver:{ top: "-25%", left: "50%", width: "65%", scale: 1, rotation: 0, zIndex: 30 },
+  halo:       { top: "-40%", left: "50%", width: "60%", scale: 1, rotation: 0, zIndex: 30 },
+  robot:      { top: "10%",  left: "50%", width: "85%", scale: 1, rotation: 0, zIndex: 20 },
 };
 
 /**
