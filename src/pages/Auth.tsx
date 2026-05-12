@@ -1,17 +1,14 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { GraduationCap, Users } from "lucide-react";
+import { GraduationCap, Users, ArrowLeft, Mail, Lock, User as UserIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import grapheionLogo from "@/assets/grapheion-logo.png";
+import grapheionMark from "@/assets/grapheion-mark.png";
 
 type Role = "student" | "teacher";
 
@@ -33,13 +30,11 @@ export default function Auth() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [submitting, setSubmitting] = useState(false);
 
-  // sign up state
   const [selectedRole, setSelectedRole] = useState<Role>("student");
   const [fullName, setFullName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
 
-  // sign in state
   const [signinEmail, setSigninEmail] = useState("");
   const [signinPassword, setSigninPassword] = useState("");
 
@@ -90,53 +85,97 @@ export default function Auth() {
       return;
     }
     toast.success("Welcome back!");
-    // Auth listener will populate role; navigation happens via the redirect above.
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-coastal">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <img
-            src={grapheionLogo}
-            alt="Grapheion logo"
-            width={420}
-            height={236}
-            className="mx-auto w-full max-w-xs h-auto object-contain"
-            style={{ background: "transparent" }}
-          />
-          <p className="text-sm text-muted-foreground mt-3 italic">Knowledge Surpasses Mountains</p>
-        </div>
+    <main className="relative min-h-screen overflow-hidden bg-[#0d0f12] text-slate-100 antialiased">
+      {/* Background — matches landing page */}
+      <div aria-hidden className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(56,89,140,0.35),transparent_60%)]" />
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+          }}
+        />
+        <div className="absolute -top-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-sky-600/25 blur-3xl animate-blob-slow" />
+        <div className="absolute bottom-0 -right-32 h-[26rem] w-[26rem] rounded-full bg-indigo-600/20 blur-3xl animate-blob-slower" />
+      </div>
 
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">
-              {mode === "signin" ? "Sign in" : "Create your account"}
-            </CardTitle>
-            <CardDescription>
-              {mode === "signin" ? "Welcome back to Grapheion." : "Choose your role to get started."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      {/* Back to home */}
+      <Link
+        to="/"
+        className="absolute top-5 left-5 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" /> Home
+      </Link>
+
+      <div className="min-h-screen flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md animate-page-enter">
+          {/* Logo + tagline */}
+          <div className="text-center mb-8">
+            <img
+              src={grapheionMark}
+              alt="Grapheion"
+              width={88}
+              height={88}
+              className="mx-auto h-16 w-16 sm:h-20 sm:w-20 object-contain drop-shadow-[0_8px_30px_rgba(96,165,250,0.35)]"
+            />
+            <h1 className="mt-5 text-2xl sm:text-3xl font-bold tracking-tight">
+              <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
+                Welcome to Grapheion
+              </span>
+            </h1>
+            <p className="mt-2 text-sm text-slate-400 italic">Knowledge Surpasses Mountains</p>
+          </div>
+
+          {/* Card */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] p-6 sm:p-8">
             <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
-              <TabsList className="grid grid-cols-2 w-full mb-6">
-                <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Sign up</TabsTrigger>
+              <TabsList className="grid grid-cols-2 w-full mb-6 bg-white/5 border border-white/10">
+                <TabsTrigger
+                  value="signin"
+                  className="data-[state=active]:bg-white data-[state=active]:text-[#0d0f12] text-slate-300"
+                >
+                  Sign in
+                </TabsTrigger>
+                <TabsTrigger
+                  value="signup"
+                  className="data-[state=active]:bg-white data-[state=active]:text-[#0d0f12] text-slate-300"
+                >
+                  Sign up
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input id="signin-email" type="email" autoComplete="email"
-                      value={signinEmail} onChange={(e) => setSigninEmail(e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <Input id="signin-password" type="password" autoComplete="current-password"
-                      value={signinPassword} onChange={(e) => setSigninPassword(e.target.value)} required />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={submitting}>
+                  <Field
+                    id="signin-email"
+                    label="Email"
+                    type="email"
+                    icon={Mail}
+                    autoComplete="email"
+                    value={signinEmail}
+                    onChange={setSigninEmail}
+                  />
+                  <Field
+                    id="signin-password"
+                    label="Password"
+                    type="password"
+                    icon={Lock}
+                    autoComplete="current-password"
+                    value={signinPassword}
+                    onChange={setSigninPassword}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full bg-white text-[#0d0f12] hover:bg-slate-200 h-11"
+                    disabled={submitting}
+                  >
                     {submitting ? "Signing in..." : "Sign in"}
                   </Button>
                 </form>
@@ -145,7 +184,7 @@ export default function Auth() {
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>I am a</Label>
+                    <p className="text-xs uppercase tracking-widest text-slate-400">I am a</p>
                     <div className="grid grid-cols-2 gap-3">
                       <RoleCard
                         active={selectedRole === "student"}
@@ -162,32 +201,86 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full name</Label>
-                    <Input id="signup-name" value={fullName}
-                      onChange={(e) => setFullName(e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input id="signup-email" type="email" autoComplete="email"
-                      value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input id="signup-password" type="password" autoComplete="new-password"
-                      value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required />
-                    <p className="text-xs text-muted-foreground">Minimum 8 characters.</p>
-                  </div>
-                  <Button type="submit" className="w-full" disabled={submitting}>
+                  <Field
+                    id="signup-name"
+                    label="Full name"
+                    type="text"
+                    icon={UserIcon}
+                    value={fullName}
+                    onChange={setFullName}
+                  />
+                  <Field
+                    id="signup-email"
+                    label="Email"
+                    type="email"
+                    icon={Mail}
+                    autoComplete="email"
+                    value={signupEmail}
+                    onChange={setSignupEmail}
+                  />
+                  <Field
+                    id="signup-password"
+                    label="Password"
+                    type="password"
+                    icon={Lock}
+                    autoComplete="new-password"
+                    value={signupPassword}
+                    onChange={setSignupPassword}
+                    hint="Minimum 8 characters."
+                  />
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-white text-[#0d0f12] hover:bg-slate-200 h-11"
+                    disabled={submitting}
+                  >
                     {submitting ? "Creating account..." : "Create account"}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
+          </div>
+
+          <p className="mt-6 text-center text-xs text-slate-500">
+            By continuing you agree to our terms of service and privacy policy.
+          </p>
+        </div>
       </div>
     </main>
+  );
+}
+
+function Field({
+  id, label, type, icon: Icon, value, onChange, autoComplete, hint,
+}: {
+  id: string;
+  label: string;
+  type: string;
+  icon: typeof Mail;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete?: string;
+  hint?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-xs font-medium text-slate-300">
+        {label}
+      </label>
+      <div className="relative">
+        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+        <input
+          id={id}
+          type={type}
+          autoComplete={autoComplete}
+          required
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-11 rounded-lg bg-white/5 border border-white/10 pl-10 pr-3 text-sm text-white placeholder:text-slate-500 outline-none transition-colors focus:border-sky-400/60 focus:bg-white/[0.07] focus:ring-2 focus:ring-sky-400/20"
+        />
+      </div>
+      {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
+    </div>
   );
 }
 
@@ -199,10 +292,10 @@ function RoleCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-lg border p-4 text-sm transition-colors",
+        "flex flex-col items-center justify-center gap-2 rounded-lg border p-4 text-sm transition-all",
         active
-          ? "border-primary bg-accent text-accent-foreground"
-          : "border-border bg-background hover:bg-secondary"
+          ? "border-sky-400/50 bg-sky-400/10 text-white shadow-[0_0_0_3px_rgba(56,189,248,0.1)]"
+          : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06] hover:text-white"
       )}
     >
       {icon}
