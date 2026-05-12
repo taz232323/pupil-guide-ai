@@ -16,6 +16,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Badge } from "@/components/ui/badge";
 import { StudyBuddy } from "@/components/StudyBuddy";
 import grapheionMark from "@/assets/grapheion-mark.png";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -237,6 +238,7 @@ export const DashboardShell = ({
               <span className="font-bold text-primary">Grapheion</span>
             </Link>
             <div className="flex items-center gap-1.5">
+              <GlobalSearch />
               {role === "student" && coins && (
                 <>
                   <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning">
@@ -294,6 +296,7 @@ export const DashboardShell = ({
 
         {/* Desktop top bar */}
         <header className="hidden lg:flex sticky top-0 z-30 h-14 items-center justify-end gap-2 border-b border-border bg-card/80 backdrop-blur px-6">
+          <GlobalSearch />
           <NotificationBell />
         </header>
 
