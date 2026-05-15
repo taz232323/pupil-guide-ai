@@ -45,15 +45,15 @@ const STEPS = [
 const TESTIMONIALS = [
   {
     quote: "I actually want to do my homework now. The coins and streaks make it feel like a game and the Study Buddy explains things better than YouTube.",
-    name: "Maya R.", role: "9th-grade student", initials: "MR",
+    name: "Anonymous", role: "9th-grade student", initials: "A",
   },
   {
     quote: "Grapheion replaced four different tools for me. Grading, attendance, messaging — it's all in one beautiful place and the kids love it.",
-    name: "Mr. Patel", role: "Math teacher, Northridge HS", initials: "MP",
+    name: "Anonymous", role: "Math teacher", initials: "A",
   },
   {
     quote: "The supervised messaging and analytics give us the visibility we need without micromanaging teachers. Onboarding our staff took one afternoon.",
-    name: "Dr. Alvarez", role: "Principal, Cascade Academy", initials: "DA",
+    name: "Anonymous", role: "School principal", initials: "A",
   },
 ];
 
