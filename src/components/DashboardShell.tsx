@@ -35,9 +35,8 @@ const STUDENT_NAV: NavItem[] = [
   { to: "/student/calendar", label: "Calendar", icon: Calendar },
   { to: "/student/grades", label: "Grades", icon: Award },
   { to: "/student/leaderboard", label: "Leaderboard", shortLabel: "Ranks", icon: Trophy },
-  { to: "/student/rewards", label: "Rewards", icon: Sparkles },
+  { to: "/student/rewards", label: "Rewards & Shop", shortLabel: "Rewards", icon: Sparkles },
   { to: "/messages", label: "Messages", icon: MessageSquare },
-  { to: "/shop", label: "Shop", icon: ShoppingBag },
   { to: "/profile", label: "Profile", icon: User },
 ];
 
