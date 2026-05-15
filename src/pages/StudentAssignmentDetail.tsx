@@ -202,6 +202,7 @@ export default function StudentAssignmentDetail() {
 
   return (
     <DashboardShell title="Assignment">
+      <RewardOverlay open={!!reward} data={reward} onClose={() => setReward(null)} />
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => navigate("/student/assignments")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Back to assignments
