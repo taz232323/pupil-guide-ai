@@ -55,7 +55,7 @@ export type CosmeticPositionConfig = {
 const DEFAULT_POSITION_CONFIG: Record<string, CosmeticPositionConfig> = {
   hat_wizard: { top: "-22%", left: "50%", width: "70%", scale: 1, rotation: 0, zIndex: 30 },
   glasses:    { top: "25%",  left: "50%", width: "55%", scale: 1, rotation: 0, zIndex: 20 },
-  crown_silver:{ top: "-25%", left: "50%", width: "65%", scale: 1, rotation: 0, zIndex: 30 },
+  crown_silver:{ top: "-22%", left: "50%", width: "70%", scale: 1, rotation: 0, zIndex: 30 },
   halo:       { top: "-40%", left: "50%", width: "60%", scale: 1, rotation: 0, zIndex: 30 },
   robot:      { top: "10%",  left: "50%", width: "85%", scale: 1, rotation: 0, zIndex: 20 },
 };
