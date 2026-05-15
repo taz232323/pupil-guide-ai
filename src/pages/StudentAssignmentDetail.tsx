@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SpinnerButton } from "@/components/SpinnerButton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { RewardOverlay, type RewardData } from "@/components/RewardOverlay";
 
 type Status = "not_started" | "in_progress" | "submitted";
 type QType = "multiple_choice" | "short_answer" | "long_answer";
@@ -55,6 +56,7 @@ export default function StudentAssignmentDetail() {
   const [grade, setGrade] = useState<{ overall_score: number | null; overall_feedback: string | null; graded_at: string | null } | null>(null);
   const [link, setLink] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [reward, setReward] = useState<RewardData | null>(null);
 
   const overdueDays = useMemo(() => {
     if (!assignment?.due_date || status === "submitted") return 0;
@@ -178,7 +180,12 @@ export default function StudentAssignmentDetail() {
         );
       if (serr) { toast.error(serr.message); return; }
 
-      toast.success("Assignment submitted!");
+      setReward({
+        title: "Assignment submitted!",
+        subtitle: assignment?.title ? `“${assignment.title}” is on its way to your teacher.` : "Great work — it's on its way to your teacher.",
+        coins: 5,
+        intensity: "small",
+      });
       setStatus("submitted");
       load();
     } finally {
@@ -195,6 +202,7 @@ export default function StudentAssignmentDetail() {
 
   return (
     <DashboardShell title="Assignment">
+      <RewardOverlay open={!!reward} data={reward} onClose={() => setReward(null)} />
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => navigate("/student/assignments")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Back to assignments

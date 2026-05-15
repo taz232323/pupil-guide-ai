@@ -77,10 +77,10 @@ All colors MUST be HSL.
 
   .dark {
     /* Grapheion dark: deep charcoal canvas */
-    --background: 240 4% 7%;
+    --background: 240 6% 6%;
     --foreground: 60 20% 95%;
 
-    --card: 240 4% 11%;
+    --card: 240 5% 11%;
     --card-foreground: 60 20% 95%;
 
     --popover: 240 4% 11%;
@@ -120,11 +120,11 @@ All colors MUST be HSL.
     --input: 240 4% 18%;
     --ring: 218 22% 68%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(240 4% 7%), hsl(218 17% 18%));
-    --gradient-soft: linear-gradient(135deg, hsl(240 4% 12%), hsl(218 17% 16%));
-    --gradient-coastal: linear-gradient(180deg, hsl(240 4% 7%), hsl(240 4% 11%));
-    --shadow-card: 0 1px 2px 0 hsl(0 0% 0% / 0.3), 0 1px 3px 0 hsl(0 0% 0% / 0.25);
-    --shadow-elevated: 0 10px 30px -12px hsl(0 0% 0% / 0.55), 0 2px 6px -2px hsl(0 0% 0% / 0.3);
+    --gradient-hero: linear-gradient(135deg, hsl(240 6% 6%), hsl(218 17% 18%));
+    --gradient-soft: linear-gradient(135deg, hsl(240 5% 13%), hsl(218 17% 17%));
+    --gradient-coastal: linear-gradient(180deg, hsl(240 6% 6%), hsl(240 5% 11%));
+    --shadow-card: 0 1px 2px 0 hsl(0 0% 0% / 0.4), 0 1px 3px 0 hsl(0 0% 0% / 0.3), 0 0 0 1px hsl(218 22% 68% / 0.04);
+    --shadow-elevated: 0 14px 40px -14px hsl(0 0% 0% / 0.7), 0 2px 8px -2px hsl(0 0% 0% / 0.4), 0 0 0 1px hsl(218 22% 68% / 0.06);
     --shadow-glow: 0 0 0 4px hsl(218 22% 68% / 0.18);
 
     --sidebar-background: 240 4% 8%;
@@ -241,5 +241,52 @@ All colors MUST be HSL.
 
   @media (prefers-reduced-motion: reduce) {
     .animate-blob-slow, .animate-blob-slower { animation: none !important; }
+  }
+}
+
+/* === Reward overlay animations === */
+@layer utilities {
+  @keyframes reward-pop {
+    0%   { opacity: 0; transform: scale(0.85) translateY(12px); }
+    60%  { opacity: 1; transform: scale(1.03) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .reward-pop {
+    animation: reward-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes reward-icon-spin {
+    0%   { transform: scale(0.4) rotate(-30deg); opacity: 0; }
+    60%  { transform: scale(1.15) rotate(8deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .reward-icon { animation: reward-icon-spin 600ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both; }
+
+  .reward-stagger { opacity: 0; animation: page-enter 360ms ease-out forwards; }
+  .reward-pop .reward-stagger:nth-child(1) { animation-delay: 200ms; }
+  .reward-pop .reward-stagger:nth-child(2) { animation-delay: 280ms; }
+  .reward-pop .reward-stagger:nth-child(3) { animation-delay: 360ms; }
+  .reward-pop .reward-stagger:nth-child(4) { animation-delay: 440ms; }
+  .reward-pop .reward-stagger:nth-child(5) { animation-delay: 520ms; }
+  .reward-pop .reward-stagger:nth-child(6) { animation-delay: 600ms; }
+
+  @keyframes reward-blob-a {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(20px, 14px, 0) scale(1.15); }
+  }
+  @keyframes reward-blob-b {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(-24px, -10px, 0) scale(1.18); }
+  }
+  .reward-blob-a { animation: reward-blob-a 6s ease-in-out infinite; }
+  .reward-blob-b { animation: reward-blob-b 7s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reward-pop, .reward-icon, .reward-stagger,
+    .reward-blob-a, .reward-blob-b {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }
 }
