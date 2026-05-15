@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { Sparkles, Target, Trophy } from "lucide-react";
+import { Sparkles, Target, Trophy, ShoppingBag } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DailyLoginBox } from "@/components/DailyLoginBox";
 import { QuestCard, type QuestRow } from "@/components/QuestCard";
 import { StreakShieldPanel } from "@/components/StreakShieldPanel";
+import { Shop } from "./Shop";
 
 export default function StudentRewards() {
   const { user } = useAuth();
@@ -37,18 +39,29 @@ export default function StudentRewards() {
   const ongoing = quests.filter((q) => q.kind === "ongoing");
 
   return (
-    <DashboardShell title="Rewards & Quests">
+    <DashboardShell title="Rewards & Shop">
       <div className="space-y-6 animate-page-enter">
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight inline-flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-warning" /> Rewards & Quests
+            <Sparkles className="h-6 w-6 text-warning" /> Rewards & Shop
           </h1>
           <p className="text-sm text-muted-foreground">
-            Open your daily box, finish quests, and stockpile rare Streak Shields.
+            Open your daily box, finish quests, stockpile rare Streak Shields, and spend coins in the shop.
           </p>
         </header>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <Tabs defaultValue="rewards">
+          <TabsList>
+            <TabsTrigger value="rewards">
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Rewards
+            </TabsTrigger>
+            <TabsTrigger value="shop">
+              <ShoppingBag className="h-3.5 w-3.5 mr-1.5" /> Shop
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="rewards" className="mt-4 space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
           <DailyLoginBox />
           <StreakShieldPanel shields={shields} onChange={refresh} />
         </div>
@@ -86,6 +99,12 @@ export default function StudentRewards() {
             </div>
           )}
         </section>
+          </TabsContent>
+
+          <TabsContent value="shop" className="mt-4">
+            <Shop />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardShell>
   );
