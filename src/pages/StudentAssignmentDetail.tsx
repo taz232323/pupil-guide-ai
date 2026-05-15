@@ -13,7 +13,6 @@ import { SpinnerButton } from "@/components/SpinnerButton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { RewardOverlay, type RewardData } from "@/components/RewardOverlay";
-import { useState as useReactState } from "react";
 
 type Status = "not_started" | "in_progress" | "submitted";
 type QType = "multiple_choice" | "short_answer" | "long_answer";
