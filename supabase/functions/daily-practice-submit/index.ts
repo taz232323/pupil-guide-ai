@@ -142,6 +142,7 @@ ${JSON.stringify(
     let current = 1;
     let longest = 1;
     let milestonesAwarded: number[] = [];
+    let shieldsConsumed = 0;
     if (streak) {
       milestonesAwarded = Array.isArray(streak.milestones_awarded) ? [...streak.milestones_awarded] : [];
       if (streak.last_practice_date === today) {
@@ -149,7 +150,42 @@ ${JSON.stringify(
       } else if (streak.last_practice_date === yStr) {
         current = streak.current_streak + 1;
       } else {
-        current = 1;
+        // Try to bridge the gap with active streak shields for the missing days
+        const last = streak.last_practice_date
+          ? new Date(streak.last_practice_date + "T00:00:00Z")
+          : null;
+        const missingDates: string[] = [];
+        if (last) {
+          const cursor = new Date(last);
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+          while (cursor < todayDate) {
+            missingDates.push(cursor.toISOString().slice(0, 10));
+            cursor.setUTCDate(cursor.getUTCDate() + 1);
+          }
+        }
+        if (missingDates.length > 0) {
+          const { data: shields } = await admin
+            .from("streak_freeze_activations")
+            .select("id, shield_date")
+            .eq("student_id", user.id)
+            .eq("class_id", session.class_id)
+            .eq("consumed", false)
+            .in("shield_date", missingDates);
+          const covered = new Set((shields ?? []).map((s: any) => s.shield_date));
+          const allCovered = missingDates.every((d) => covered.has(d));
+          if (allCovered && shields && shields.length > 0) {
+            await admin
+              .from("streak_freeze_activations")
+              .update({ consumed: true, consumed_at: new Date().toISOString() })
+              .in("id", shields.map((s: any) => s.id));
+            shieldsConsumed = shields.length;
+            current = streak.current_streak + missingDates.length + 1;
+          } else {
+            current = 1;
+          }
+        } else {
+          current = 1;
+        }
       }
       longest = Math.max(streak.longest_streak || 0, current);
     }
@@ -227,6 +263,7 @@ ${JSON.stringify(
       milestoneHit,
       currentStreak: current,
       longestStreak: longest,
+      shieldsConsumed,
     });
   } catch (e) {
     console.error(e);

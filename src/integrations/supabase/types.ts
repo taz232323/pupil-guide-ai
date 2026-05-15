@@ -426,6 +426,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_login_claims: {
+        Row: {
+          claim_date: string
+          coins_amount: number
+          created_at: string
+          freezes_amount: number
+          id: string
+          reward_kind: string
+          student_id: string
+        }
+        Insert: {
+          claim_date?: string
+          coins_amount?: number
+          created_at?: string
+          freezes_amount?: number
+          id?: string
+          reward_kind: string
+          student_id: string
+        }
+        Update: {
+          claim_date?: string
+          coins_amount?: number
+          created_at?: string
+          freezes_amount?: number
+          id?: string
+          reward_kind?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       daily_practice_answers: {
         Row: {
           correct_index: number | null
@@ -896,6 +926,48 @@ export type Database = {
         }
         Relationships: []
       }
+      quests: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          goal_type: string
+          goal_value: number
+          id: string
+          kind: string
+          quest_key: string
+          reward_coins: number
+          reward_freezes: number
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          goal_type: string
+          goal_value: number
+          id?: string
+          kind: string
+          quest_key: string
+          reward_coins?: number
+          reward_freezes?: number
+          title: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          goal_type?: string
+          goal_value?: number
+          id?: string
+          kind?: string
+          quest_key?: string
+          reward_coins?: number
+          reward_freezes?: number
+          title?: string
+        }
+        Relationships: []
+      }
       shop_items: {
         Row: {
           active: boolean
@@ -977,24 +1049,87 @@ export type Database = {
         }
         Relationships: []
       }
+      streak_freeze_activations: {
+        Row: {
+          class_id: string
+          consumed: boolean
+          consumed_at: string | null
+          created_at: string
+          id: string
+          shield_date: string
+          student_id: string
+        }
+        Insert: {
+          class_id: string
+          consumed?: boolean
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          shield_date: string
+          student_id: string
+        }
+        Update: {
+          class_id?: string
+          consumed?: boolean
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          shield_date?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       student_coins: {
         Row: {
           crown_coins: number
           star_coins: number
+          streak_freezes: number
           student_id: string
           updated_at: string
         }
         Insert: {
           crown_coins?: number
           star_coins?: number
+          streak_freezes?: number
           student_id: string
           updated_at?: string
         }
         Update: {
           crown_coins?: number
           star_coins?: number
+          streak_freezes?: number
           student_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      student_quest_claims: {
+        Row: {
+          claimed_at: string
+          id: string
+          period_key: string
+          quest_key: string
+          reward_coins: number
+          reward_freezes: number
+          student_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          id?: string
+          period_key: string
+          quest_key: string
+          reward_coins?: number
+          reward_freezes?: number
+          student_id: string
+        }
+        Update: {
+          claimed_at?: string
+          id?: string
+          period_key?: string
+          quest_key?: string
+          reward_coins?: number
+          reward_freezes?: number
+          student_id?: string
         }
         Relationships: []
       }
@@ -1118,11 +1253,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_streak_shield: {
+        Args: { _class_id: string; _shield_date: string }
+        Returns: Json
+      }
       award_ai_message_coins: { Args: { _student_id: string }; Returns: number }
       can_message: {
         Args: { _class_id: string; _recipient: string; _sender: string }
         Returns: boolean
       }
+      claim_daily_login_box: { Args: never; Returns: Json }
+      claim_quest: { Args: { _quest_key: string }; Returns: Json }
       create_teacher_class: {
         Args: { _name: string; _subject: string }
         Returns: {
@@ -1148,6 +1289,22 @@ export type Database = {
       get_current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_quests_progress: {
+        Args: never
+        Returns: {
+          claimed: boolean
+          description: string
+          goal_type: string
+          goal_value: number
+          kind: string
+          period_key: string
+          progress: number
+          quest_key: string
+          reward_coins: number
+          reward_freezes: number
+          title: string
+        }[]
       }
       has_role: {
         Args: {
