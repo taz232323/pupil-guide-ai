@@ -13,12 +13,28 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { StudentAvatar, COSMETIC_EMOJI } from "@/components/StudentAvatar";
+import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
+import glassesImg from "@/assets/cosmetics/glasses.png";
+import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
+import haloImg from "@/assets/cosmetics/halo.png";
+import robotImg from "@/assets/cosmetics/robot.png";
+import rainbowAuraImg from "@/assets/cosmetics/rainbow-aura.png";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Lock, Sparkles, Check, Star } from "lucide-react";
 import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
+
+// Image overrides for avatar builder tiles — keep in sync with Shop + StudentAvatar.
+const COSMETIC_TILE_IMAGE: Record<string, string> = {
+  hat_wizard: wizardHatImg,
+  glasses: glassesImg,
+  crown_silver: crownSilverImg,
+  halo: haloImg,
+  robot: robotImg,
+  rainbow_aura: rainbowAuraImg,
+};
 
 type Category = "hair" | "face" | "outfit" | "background";
 
@@ -243,7 +259,16 @@ export default function Profile() {
                                 "relative h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center text-3xl mb-2",
                                 !isOwned && "grayscale"
                               )}>
-                                <span aria-hidden>{item.emoji ?? COSMETIC_EMOJI[item.key]}</span>
+                                {COSMETIC_TILE_IMAGE[item.key] ? (
+                                  <img
+                                    src={COSMETIC_TILE_IMAGE[item.key]}
+                                    alt=""
+                                    className="h-11 w-11 object-contain"
+                                    draggable={false}
+                                  />
+                                ) : (
+                                  <span aria-hidden>{item.emoji ?? COSMETIC_EMOJI[item.key]}</span>
+                                )}
                                 {!isOwned && (
                                   <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70 backdrop-blur-[1px]">
                                     <Lock className="h-5 w-5 text-muted-foreground" />
