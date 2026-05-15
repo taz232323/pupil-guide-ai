@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { RewardOverlay, type RewardData } from "@/components/RewardOverlay";
 
 const MIN = 5;
 
@@ -37,6 +38,7 @@ export default function StudentDailyPractice() {
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<any>(null);
+  const [reward, setReward] = useState<RewardData | null>(null);
 
   const answeredCount = useMemo(
     () =>
@@ -136,15 +138,19 @@ export default function StudentDailyPractice() {
       if ((data as any)?.error) throw new Error((data as any).error);
       setResults(data);
       const r: any = data;
-      if (r.milestoneHit) {
-        toast.success(`🎉 ${r.milestoneHit}-day streak! +${r.milestoneBonus} bonus Star Coins`);
-        const { celebrate } = await import("@/lib/confetti");
-        celebrate("big");
-      } else {
-        toast.success(`Earned ${r.baseCoins + r.bonusCoins} Star Coins!`);
-        const { celebrate } = await import("@/lib/confetti");
-        celebrate("small");
-      }
+      const pct = r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
+      setReward({
+        title: r.milestoneHit ? `${r.milestoneHit}-day streak!` : "Practice complete!",
+        subtitle: r.milestoneHit
+          ? "Milestone unlocked — keep the fire going."
+          : "Nice work — your streak grows.",
+        coins: r.baseCoins + (r.milestoneBonus ?? 0),
+        bonusCoins: r.bonusCoins,
+        streak: r.currentStreak,
+        milestone: r.milestoneHit ?? null,
+        scoreLabel: `${r.correct} / ${r.answered} correct (${pct}%)`,
+        intensity: r.milestoneHit ? "big" : "small",
+      });
     } catch (e: any) {
       toast.error(e.message || "Failed to submit");
     } finally {
@@ -154,6 +160,7 @@ export default function StudentDailyPractice() {
 
   return (
     <DashboardShell>
+      <RewardOverlay open={!!reward} data={reward} onClose={() => setReward(null)} />
       <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
