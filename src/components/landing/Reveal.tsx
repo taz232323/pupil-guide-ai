@@ -49,6 +49,24 @@ export function Reveal({
       setShown(true);
       return;
     }
+    // Walk up to the nearest ancestor that is not itself transformed.
+    // The element we're animating may start off-screen (e.g. translateX(-120%)),
+    // which would prevent IntersectionObserver from ever firing on it.
+    // Observing an untransformed ancestor ensures the trigger fires when the
+    // element's natural layout position enters the viewport.
+    let target: Element = el;
+    let p: HTMLElement | null = el.parentElement;
+    let guard = 0;
+    while (p && guard < 12) {
+      const t = window.getComputedStyle(p).transform;
+      if (!t || t === "none") {
+        target = p;
+        break;
+      }
+      p = p.parentElement;
+      guard++;
+    }
+
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -60,8 +78,16 @@ export function Reveal({
       },
       { threshold, rootMargin: "0px 0px -8% 0px" }
     );
-    io.observe(el);
-    return () => io.disconnect();
+    io.observe(target);
+
+    // Safety fallback: if IO somehow never fires (CSS quirks, JS error elsewhere,
+    // reduced-motion, etc.) reveal the element so the page is never broken.
+    const fallback = window.setTimeout(() => setShown(true), 2500);
+
+    return () => {
+      io.disconnect();
+      window.clearTimeout(fallback);
+    };
   }, [threshold, triggerOnMount]);
 
   const defaultDuration =
