@@ -8,7 +8,8 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import grapheionMark from "@/assets/grapheion-mark.png";
-import { Reveal } from "@/components/landing/Reveal";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
 const FEATURES = [
   {
@@ -85,6 +86,19 @@ export default function Index() {
     };
   }, []);
 
+  useEffect(() => {
+    AOS.init({
+      duration: 600,
+      easing: "ease-out-cubic",
+      once: true,
+      offset: 60,
+      disable: false,
+    });
+    // Refresh after the first paint so AOS picks up dynamic content sizes.
+    const t = window.setTimeout(() => AOS.refresh(), 200);
+    return () => window.clearTimeout(t);
+  }, []);
+
   if (!loading && user && role) {
     return <Navigate to={role === "teacher" ? "/teacher" : "/student"} replace />;
   }
@@ -128,12 +142,14 @@ export default function Index() {
         <AnimatedBackdrop />
 
         <div className="relative max-w-6xl mx-auto px-5 sm:px-8 text-center">
-          <Reveal triggerOnMount duration={700} delay={0}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-              New: AI Study Buddy is now in every class
-            </span>
-          </Reveal>
+          <span
+            data-aos="fade-up"
+            data-aos-duration="700"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            New: AI Study Buddy is now in every class
+          </span>
 
           <div className="mt-10 flex justify-center">
             <div
@@ -152,7 +168,11 @@ export default function Index() {
             </div>
           </div>
 
-          <Reveal as="h1" triggerOnMount duration={700} delay={0} className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]">
+          <h1
+            data-aos="fade-up"
+            data-aos-duration="700"
+            className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]"
+          >
             <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
               Knowledge Surpasses
             </span>
@@ -160,14 +180,24 @@ export default function Index() {
             <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
               Mountains.
             </span>
-          </Reveal>
+          </h1>
 
-          <Reveal as="p" triggerOnMount duration={700} delay={200} className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400">
+          <p
+            data-aos="fade-up"
+            data-aos-duration="700"
+            data-aos-delay="200"
+            className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400"
+          >
             One beautiful place for students to learn, teachers to teach, and schools to grow —
             with rewards, AI tutoring, and supervised messaging built in.
-          </Reveal>
+          </p>
 
-          <Reveal triggerOnMount duration={700} delay={400} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div
+            data-aos="fade-up"
+            data-aos-duration="700"
+            data-aos-delay="400"
+            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3"
+          >
             <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
               <Link to="/auth">
                 Get Started <ArrowRight className="h-4 w-4" />
@@ -183,7 +213,7 @@ export default function Index() {
                 <Play className="h-4 w-4" /> Watch Demo
               </a>
             </Button>
-          </Reveal>
+          </div>
 
           <div className="mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-widest text-slate-500">
             <span>Trusted by educators</span>
@@ -197,31 +227,36 @@ export default function Index() {
 
       {/* === Features === */}
       <section id="features" className="relative py-24 sm:py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 overflow-hidden">
-          <Reveal>
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div data-aos="fade-up">
             <SectionHeader
               eyebrow="What's inside"
               title="Built for everyone in the classroom"
               sub="A focused toolkit for students, teachers, and school leaders — designed to work together."
             />
-          </Reveal>
+          </div>
 
           <div className="mt-14 grid gap-5 md:grid-cols-3">
             {FEATURES.map((f, i) => {
-              const slideVariant = i === 0 ? "slide-left" : i === 2 ? "slide-right" : "slide-down";
+              const aos = i === 0 ? "fade-right" : i === 2 ? "fade-left" : "fade-down";
               return (
-              <Reveal
+              <div
                 key={f.title}
-                variant={slideVariant}
-                duration={500}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 hover:-translate-y-1 hover:border-white/20"
+                data-aos={aos}
+                data-aos-duration="500"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-transform hover:-translate-y-1 hover:border-white/20"
               >
                 <div
                   className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${f.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10`}
                 />
-                <Reveal variant="scale-in" delay={300} duration={400} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white">
+                <div
+                  data-aos="zoom-in"
+                  data-aos-duration="400"
+                  data-aos-delay="300"
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white"
+                >
                   <f.icon className="h-6 w-6" />
-                </Reveal>
+                </div>
                 <p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-400">{f.badge}</p>
                 <h3 className="mt-2 text-xl font-semibold tracking-tight">{f.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-400">{f.body}</p>
@@ -246,7 +281,7 @@ export default function Index() {
                     </>
                   )}
                 </div>
-              </Reveal>
+              </div>
               );
             })}
           </div>
@@ -255,36 +290,46 @@ export default function Index() {
 
       {/* === How it works === */}
       <section id="how" className="relative py-24 sm:py-32 border-t border-white/5 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 overflow-hidden">
-          <Reveal>
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <div data-aos="fade-up">
             <SectionHeader
               eyebrow="How it works"
               title="Up and running in three steps"
               sub="No training session required. Most teachers launch their first class the day they sign up."
             />
-          </Reveal>
+          </div>
 
           <ol className="mt-16 relative grid gap-10 md:grid-cols-3">
             {/* connecting line on desktop */}
-            <Reveal
-              variant="wipe-line"
-              duration={800}
-              delay={100}
-              className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
-            >
-              <span aria-hidden className="sr-only" />
-            </Reveal>
+            <div
+              aria-hidden
+              data-aos="zoom-in-right"
+              data-aos-duration="800"
+              data-aos-delay="100"
+              className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent origin-left"
+            />
             {STEPS.map((s, i) => (
-              <Reveal as="li" variant="slide-left" duration={500} key={s.title} delay={i * 180} className="relative text-center md:text-left">
-                <Reveal variant="scale-in" duration={400} delay={i * 180 + 200} className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative">
+              <li
+                key={s.title}
+                data-aos="fade-right"
+                data-aos-duration="500"
+                data-aos-delay={i * 180}
+                className="relative text-center md:text-left"
+              >
+                <div
+                  data-aos="zoom-in"
+                  data-aos-duration="400"
+                  data-aos-delay={i * 180 + 200}
+                  className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative"
+                >
                   <s.icon className="h-7 w-7 text-sky-300" />
                   <span className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-[#0d0f12] text-sm font-bold flex items-center justify-center ring-4 ring-[#0d0f12]">
                     {i + 1}
                   </span>
-                </Reveal>
+                </div>
                 <h3 className="mt-6 text-lg font-semibold tracking-tight">{s.title}</h3>
                 <p className="mt-2 text-sm text-slate-400 max-w-sm md:max-w-none">{s.body}</p>
-              </Reveal>
+              </li>
             ))}
           </ol>
         </div>
@@ -292,21 +337,20 @@ export default function Index() {
 
       {/* === Testimonials === */}
       <section id="love" className="relative py-24 sm:py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 overflow-hidden">
-          <Reveal>
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div data-aos="fade-up">
             <SectionHeader
               eyebrow="Loved by classrooms"
               title="Words from students, teachers, and leaders"
             />
-          </Reveal>
+          </div>
 
           <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {TESTIMONIALS.map((t, i) => (
-              <Reveal
-                as="figure"
-                variant="slide-up-solid"
-                duration={400}
+            {TESTIMONIALS.map((t) => (
+              <figure
                 key={t.role}
+                data-aos="fade-up"
+                data-aos-duration="400"
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col"
               >
                 <div className="text-sky-300/60 text-5xl leading-none font-serif select-none">"</div>
@@ -314,15 +358,20 @@ export default function Index() {
                   {t.quote}
                 </blockquote>
                 <figcaption className="mt-6 flex items-center gap-3">
-                  <Reveal as="span" variant="scale-in" duration={400} delay={250} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10">
+                  <span
+                    data-aos="zoom-in"
+                    data-aos-duration="400"
+                    data-aos-delay="250"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10"
+                  >
                     {t.initials}
-                  </Reveal>
+                  </span>
                   <div className="leading-tight">
                     <p className="text-sm font-medium text-white">{t.name}</p>
                     <p className="text-xs text-slate-400">{t.role}</p>
                   </div>
                 </figcaption>
-              </Reveal>
+              </figure>
             ))}
           </div>
         </div>
@@ -331,13 +380,22 @@ export default function Index() {
       {/* === Final CTA === */}
       <section className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="relative max-w-5xl mx-auto px-5 sm:px-8">
-          <Reveal variant="fade-only" duration={800} className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center">
+          <div
+            data-aos="fade"
+            data-aos-duration="800"
+            className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center"
+          >
             <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
             <div className="absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
 
-            <Reveal variant="scale-in" duration={400} delay={300} className="relative mx-auto inline-block">
+            <div
+              data-aos="zoom-in"
+              data-aos-duration="400"
+              data-aos-delay="300"
+              className="relative mx-auto inline-block"
+            >
               <Mountain className="h-10 w-10 text-sky-300" />
-            </Reveal>
+            </div>
             <h2 className="relative mt-6 text-3xl sm:text-5xl font-bold tracking-tight">
               Start climbing today.
             </h2>
@@ -355,7 +413,7 @@ export default function Index() {
                 </Link>
               </Button>
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
