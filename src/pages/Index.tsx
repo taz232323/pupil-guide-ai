@@ -270,10 +270,9 @@ export default function Index() {
               variant="wipe-line"
               duration={800}
               delay={100}
-              aria-hidden
               className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
             >
-              <></>
+              <span aria-hidden className="sr-only" />
             </Reveal>
             {STEPS.map((s, i) => (
               <Reveal as="li" variant="slide-left" duration={500} key={s.title} delay={i * 180} className="relative text-center md:text-left">
