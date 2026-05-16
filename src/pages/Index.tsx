@@ -147,6 +147,7 @@ export default function Index() {
           <span
             data-aos="fade-up"
             data-aos-duration="900"
+            data-aos-anchor-placement="top-bottom"
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-300" />
@@ -173,6 +174,7 @@ export default function Index() {
           <h1
             data-aos="fade-up"
             data-aos-duration="900"
+            data-aos-anchor-placement="top-bottom"
             className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]"
           >
             <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
@@ -188,6 +190,7 @@ export default function Index() {
             data-aos="fade-up"
             data-aos-duration="900"
             data-aos-delay="250"
+            data-aos-anchor-placement="top-bottom"
             className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400"
           >
             One beautiful place for students to learn, teachers to teach, and schools to grow —
@@ -198,6 +201,7 @@ export default function Index() {
             data-aos="fade-up"
             data-aos-duration="900"
             data-aos-delay="500"
+            data-aos-anchor-placement="top-bottom"
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3"
           >
             <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
