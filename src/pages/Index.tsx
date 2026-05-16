@@ -90,7 +90,7 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0f12] text-slate-100 antialiased selection:bg-sky-400/30">
+    <div className="min-h-screen overflow-x-hidden bg-[#0d0f12] text-slate-100 antialiased selection:bg-sky-400/30">
       {/* === Top nav === */}
       <header
         className={[
@@ -127,17 +127,19 @@ export default function Index() {
       <section id="top" className="relative isolate overflow-hidden pt-32 pb-24 sm:pt-40 sm:pb-32">
         <AnimatedBackdrop />
 
-        <div className="relative max-w-5xl mx-auto px-5 sm:px-8 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            New: AI Study Buddy is now in every class
-          </span>
+        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 text-center">
+          <Reveal triggerOnMount duration={700} delay={0}>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              New: AI Study Buddy is now in every class
+            </span>
+          </Reveal>
 
           <div className="mt-10 flex justify-center">
             <div
-              className="relative"
+              className="relative w-full"
               style={{
-                transform: `translate3d(0, ${scrollY * 0.4}px, 0)`,
+                transform: `translate3d(0, ${scrollY * 0.5}px, 0)`,
                 willChange: "transform",
               }}
             >
@@ -145,14 +147,12 @@ export default function Index() {
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                width={180}
-                height={180}
-                className="h-32 w-32 sm:h-44 sm:w-44 object-contain drop-shadow-[0_8px_30px_rgba(96,165,250,0.35)]"
+                className="mx-auto w-full max-w-[420px] sm:max-w-[640px] lg:max-w-[820px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
               />
             </div>
           </div>
 
-          <Reveal as="h1" className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]" delay={100}>
+          <Reveal as="h1" triggerOnMount duration={700} delay={0} className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]">
             <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
               Knowledge Surpasses
             </span>
@@ -162,12 +162,12 @@ export default function Index() {
             </span>
           </Reveal>
 
-          <Reveal as="p" className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400" delay={200}>
+          <Reveal as="p" triggerOnMount duration={700} delay={200} className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400">
             One beautiful place for students to learn, teachers to teach, and schools to grow —
             with rewards, AI tutoring, and supervised messaging built in.
           </Reveal>
 
-          <Reveal className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3" delay={300}>
+          <Reveal triggerOnMount duration={700} delay={400} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
               <Link to="/auth">
                 Get Started <ArrowRight className="h-4 w-4" />
@@ -197,7 +197,7 @@ export default function Index() {
 
       {/* === Features === */}
       <section id="features" className="relative py-24 sm:py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 overflow-hidden">
           <Reveal>
             <SectionHeader
               eyebrow="What's inside"
@@ -207,17 +207,19 @@ export default function Index() {
           </Reveal>
 
           <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {FEATURES.map((f, i) => (
+            {FEATURES.map((f, i) => {
+              const slideVariant = i === 0 ? "slide-left" : i === 2 ? "slide-right" : "slide-down";
+              return (
               <Reveal
                 key={f.title}
-                delay={i * 150}
+                variant={slideVariant}
+                duration={500}
                 className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 hover:-translate-y-1 hover:border-white/20"
-                style={{ transitionProperty: "transform, opacity, border-color" }}
               >
                 <div
                   className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${f.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10`}
                 />
-                <Reveal variant="scale-in" delay={i * 150 + 150} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white">
+                <Reveal variant="scale-in" delay={300} duration={400} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white">
                   <f.icon className="h-6 w-6" />
                 </Reveal>
                 <p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-400">{f.badge}</p>
@@ -245,14 +247,15 @@ export default function Index() {
                   )}
                 </div>
               </Reveal>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* === How it works === */}
       <section id="how" className="relative py-24 sm:py-32 border-t border-white/5 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 overflow-hidden">
           <Reveal>
             <SectionHeader
               eyebrow="How it works"
@@ -263,13 +266,17 @@ export default function Index() {
 
           <ol className="mt-16 relative grid gap-10 md:grid-cols-3">
             {/* connecting line on desktop */}
-            <div
-              aria-hidden
+            <Reveal
+              variant="wipe-line"
+              duration={800}
+              delay={100}
               className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
-            />
+            >
+              <span aria-hidden className="sr-only" />
+            </Reveal>
             {STEPS.map((s, i) => (
-              <Reveal as="li" variant="wipe" key={s.title} delay={i * 150} className="relative text-center md:text-left">
-                <Reveal variant="scale-in" delay={i * 150 + 100} className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative">
+              <Reveal as="li" variant="slide-left" duration={500} key={s.title} delay={i * 180} className="relative text-center md:text-left">
+                <Reveal variant="scale-in" duration={400} delay={i * 180 + 200} className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative">
                   <s.icon className="h-7 w-7 text-sky-300" />
                   <span className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-[#0d0f12] text-sm font-bold flex items-center justify-center ring-4 ring-[#0d0f12]">
                     {i + 1}
@@ -285,7 +292,7 @@ export default function Index() {
 
       {/* === Testimonials === */}
       <section id="love" className="relative py-24 sm:py-32 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 overflow-hidden">
           <Reveal>
             <SectionHeader
               eyebrow="Loved by classrooms"
@@ -297,8 +304,9 @@ export default function Index() {
             {TESTIMONIALS.map((t, i) => (
               <Reveal
                 as="figure"
+                variant="slide-up-solid"
+                duration={400}
                 key={t.role}
-                delay={i * 150}
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col"
               >
                 <div className="text-sky-300/60 text-5xl leading-none font-serif select-none">"</div>
@@ -306,7 +314,7 @@ export default function Index() {
                   {t.quote}
                 </blockquote>
                 <figcaption className="mt-6 flex items-center gap-3">
-                  <Reveal as="span" variant="scale-in" delay={i * 150 + 200} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10">
+                  <Reveal as="span" variant="scale-in" duration={400} delay={250} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10">
                     {t.initials}
                   </Reveal>
                   <div className="leading-tight">
@@ -323,11 +331,11 @@ export default function Index() {
       {/* === Final CTA === */}
       <section className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="relative max-w-5xl mx-auto px-5 sm:px-8">
-          <Reveal className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center">
+          <Reveal variant="fade-only" duration={800} className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center">
             <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
             <div className="absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
 
-            <Reveal variant="scale-in" delay={150} className="relative mx-auto inline-block">
+            <Reveal variant="scale-in" duration={400} delay={300} className="relative mx-auto inline-block">
               <Mountain className="h-10 w-10 text-sky-300" />
             </Reveal>
             <h2 className="relative mt-6 text-3xl sm:text-5xl font-bold tracking-tight">
