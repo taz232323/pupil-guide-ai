@@ -244,6 +244,7 @@ export default function Index() {
                 key={f.title}
                 data-aos={aos}
                 data-aos-duration="700"
+                data-aos-delay={i * 250}
                 className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-transform hover:-translate-y-1 hover:border-white/20"
               >
                 <div
@@ -253,6 +254,7 @@ export default function Index() {
                   data-aos="zoom-in"
                   data-aos-duration="600"
                   data-aos-delay="500"
+                  data-aos-easing="ease-out-back"
                   className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white"
                 >
                   <f.icon className="h-6 w-6" />
@@ -320,6 +322,7 @@ export default function Index() {
                   data-aos="zoom-in"
                   data-aos-duration="600"
                   data-aos-delay={i * 250 + 250}
+                  data-aos-easing="ease-out-back"
                   className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative"
                 >
                   <s.icon className="h-7 w-7 text-sky-300" />
@@ -351,6 +354,7 @@ export default function Index() {
                 key={t.role}
                 data-aos="fade-up"
                 data-aos-duration="600"
+                data-aos-delay={TESTIMONIALS.indexOf(t) * 250}
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col"
               >
                 <div className="text-sky-300/60 text-5xl leading-none font-serif select-none">"</div>
@@ -362,6 +366,7 @@ export default function Index() {
                     data-aos="zoom-in"
                     data-aos-duration="600"
                     data-aos-delay="250"
+                    data-aos-easing="ease-out-back"
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10"
                   >
                     {t.initials}
@@ -392,6 +397,7 @@ export default function Index() {
               data-aos="zoom-in"
               data-aos-duration="600"
               data-aos-delay="500"
+              data-aos-easing="ease-out-back"
               className="relative mx-auto inline-block"
             >
               <Mountain className="h-10 w-10 text-sky-300" />
