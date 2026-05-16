@@ -8,6 +8,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import grapheionMark from "@/assets/grapheion-mark.png";
+import { Reveal } from "@/components/landing/Reveal";
 
 const FEATURES = [
   {
@@ -67,10 +68,15 @@ const NAV = [
 export default function Index() {
   const { user, role, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 8);
+      setScrollY(y);
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
@@ -128,7 +134,13 @@ export default function Index() {
           </span>
 
           <div className="mt-10 flex justify-center">
-            <div className="relative">
+            <div
+              className="relative"
+              style={{
+                transform: `translate3d(0, ${scrollY * 0.4}px, 0)`,
+                willChange: "transform",
+              }}
+            >
               <div className="absolute inset-0 -z-10 blur-3xl opacity-60 bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent rounded-full" />
               <img
                 src={grapheionMark}
@@ -140,7 +152,7 @@ export default function Index() {
             </div>
           </div>
 
-          <h1 className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]">
+          <Reveal as="h1" className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]" delay={100}>
             <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
               Knowledge Surpasses
             </span>
@@ -148,14 +160,14 @@ export default function Index() {
             <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
               Mountains.
             </span>
-          </h1>
+          </Reveal>
 
-          <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400">
+          <Reveal as="p" className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400" delay={200}>
             One beautiful place for students to learn, teachers to teach, and schools to grow —
             with rewards, AI tutoring, and supervised messaging built in.
-          </p>
+          </Reveal>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Reveal className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3" delay={300}>
             <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
               <Link to="/auth">
                 Get Started <ArrowRight className="h-4 w-4" />
@@ -171,7 +183,7 @@ export default function Index() {
                 <Play className="h-4 w-4" /> Watch Demo
               </a>
             </Button>
-          </div>
+          </Reveal>
 
           <div className="mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-widest text-slate-500">
             <span>Trusted by educators</span>
@@ -186,24 +198,28 @@ export default function Index() {
       {/* === Features === */}
       <section id="features" className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <SectionHeader
-            eyebrow="What's inside"
-            title="Built for everyone in the classroom"
-            sub="A focused toolkit for students, teachers, and school leaders — designed to work together."
-          />
+          <Reveal>
+            <SectionHeader
+              eyebrow="What's inside"
+              title="Built for everyone in the classroom"
+              sub="A focused toolkit for students, teachers, and school leaders — designed to work together."
+            />
+          </Reveal>
 
           <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {FEATURES.map((f) => (
-              <div
+            {FEATURES.map((f, i) => (
+              <Reveal
                 key={f.title}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-all duration-300 hover:-translate-y-1 hover:border-white/20"
+                delay={i * 150}
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 hover:-translate-y-1 hover:border-white/20"
+                style={{ transitionProperty: "transform, opacity, border-color" }}
               >
                 <div
                   className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${f.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10`}
                 />
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white">
+                <Reveal variant="scale-in" delay={i * 150 + 150} className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white">
                   <f.icon className="h-6 w-6" />
-                </div>
+                </Reveal>
                 <p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-400">{f.badge}</p>
                 <h3 className="mt-2 text-xl font-semibold tracking-tight">{f.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-400">{f.body}</p>
@@ -228,7 +244,7 @@ export default function Index() {
                     </>
                   )}
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -237,11 +253,13 @@ export default function Index() {
       {/* === How it works === */}
       <section id="how" className="relative py-24 sm:py-32 border-t border-white/5 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
-          <SectionHeader
-            eyebrow="How it works"
-            title="Up and running in three steps"
-            sub="No training session required. Most teachers launch their first class the day they sign up."
-          />
+          <Reveal>
+            <SectionHeader
+              eyebrow="How it works"
+              title="Up and running in three steps"
+              sub="No training session required. Most teachers launch their first class the day they sign up."
+            />
+          </Reveal>
 
           <ol className="mt-16 relative grid gap-10 md:grid-cols-3">
             {/* connecting line on desktop */}
@@ -250,16 +268,16 @@ export default function Index() {
               className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
             />
             {STEPS.map((s, i) => (
-              <li key={s.title} className="relative text-center md:text-left">
-                <div className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative">
+              <Reveal as="li" variant="wipe" key={s.title} delay={i * 150} className="relative text-center md:text-left">
+                <Reveal variant="scale-in" delay={i * 150 + 100} className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative">
                   <s.icon className="h-7 w-7 text-sky-300" />
                   <span className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-[#0d0f12] text-sm font-bold flex items-center justify-center ring-4 ring-[#0d0f12]">
                     {i + 1}
                   </span>
-                </div>
+                </Reveal>
                 <h3 className="mt-6 text-lg font-semibold tracking-tight">{s.title}</h3>
                 <p className="mt-2 text-sm text-slate-400 max-w-sm md:max-w-none">{s.body}</p>
-              </li>
+              </Reveal>
             ))}
           </ol>
         </div>
@@ -268,15 +286,19 @@ export default function Index() {
       {/* === Testimonials === */}
       <section id="love" className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <SectionHeader
-            eyebrow="Loved by classrooms"
-            title="Words from students, teachers, and leaders"
-          />
+          <Reveal>
+            <SectionHeader
+              eyebrow="Loved by classrooms"
+              title="Words from students, teachers, and leaders"
+            />
+          </Reveal>
 
           <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <figure
-                key={t.name}
+            {TESTIMONIALS.map((t, i) => (
+              <Reveal
+                as="figure"
+                key={t.role}
+                delay={i * 150}
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col"
               >
                 <div className="text-sky-300/60 text-5xl leading-none font-serif select-none">"</div>
@@ -284,15 +306,15 @@ export default function Index() {
                   {t.quote}
                 </blockquote>
                 <figcaption className="mt-6 flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10">
+                  <Reveal as="span" variant="scale-in" delay={i * 150 + 200} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10">
                     {t.initials}
-                  </span>
+                  </Reveal>
                   <div className="leading-tight">
                     <p className="text-sm font-medium text-white">{t.name}</p>
                     <p className="text-xs text-slate-400">{t.role}</p>
                   </div>
                 </figcaption>
-              </figure>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -301,11 +323,13 @@ export default function Index() {
       {/* === Final CTA === */}
       <section className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="relative max-w-5xl mx-auto px-5 sm:px-8">
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center">
+          <Reveal className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center">
             <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
             <div className="absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
 
-            <Mountain className="relative mx-auto h-10 w-10 text-sky-300" />
+            <Reveal variant="scale-in" delay={150} className="relative mx-auto inline-block">
+              <Mountain className="h-10 w-10 text-sky-300" />
+            </Reveal>
             <h2 className="relative mt-6 text-3xl sm:text-5xl font-bold tracking-tight">
               Start climbing today.
             </h2>
@@ -323,7 +347,7 @@ export default function Index() {
                 </Link>
               </Button>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
