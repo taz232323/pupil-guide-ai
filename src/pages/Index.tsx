@@ -88,7 +88,7 @@ export default function Index() {
 
   useEffect(() => {
     AOS.init({
-      duration: 600,
+      duration: 900,
       easing: "ease-out-cubic",
       once: true,
       offset: 60,
@@ -144,7 +144,7 @@ export default function Index() {
         <div className="relative max-w-6xl mx-auto px-5 sm:px-8 text-center">
           <span
             data-aos="fade-up"
-            data-aos-duration="700"
+            data-aos-duration="900"
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-300" />
@@ -155,7 +155,7 @@ export default function Index() {
             <div
               className="relative w-full"
               style={{
-                transform: `translate3d(0, ${scrollY * 0.5}px, 0)`,
+                transform: `translate3d(0, ${scrollY * 0.8}px, 0)`,
                 willChange: "transform",
               }}
             >
@@ -170,7 +170,7 @@ export default function Index() {
 
           <h1
             data-aos="fade-up"
-            data-aos-duration="700"
+            data-aos-duration="900"
             className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]"
           >
             <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
@@ -184,8 +184,8 @@ export default function Index() {
 
           <p
             data-aos="fade-up"
-            data-aos-duration="700"
-            data-aos-delay="200"
+            data-aos-duration="900"
+            data-aos-delay="250"
             className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400"
           >
             One beautiful place for students to learn, teachers to teach, and schools to grow —
@@ -194,8 +194,8 @@ export default function Index() {
 
           <div
             data-aos="fade-up"
-            data-aos-duration="700"
-            data-aos-delay="400"
+            data-aos-duration="900"
+            data-aos-delay="500"
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3"
           >
             <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
@@ -243,7 +243,7 @@ export default function Index() {
               <div
                 key={f.title}
                 data-aos={aos}
-                data-aos-duration="500"
+                data-aos-duration="700"
                 className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-transform hover:-translate-y-1 hover:border-white/20"
               >
                 <div
@@ -251,8 +251,8 @@ export default function Index() {
                 />
                 <div
                   data-aos="zoom-in"
-                  data-aos-duration="400"
-                  data-aos-delay="300"
+                  data-aos-duration="600"
+                  data-aos-delay="500"
                   className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white"
                 >
                   <f.icon className="h-6 w-6" />
@@ -304,7 +304,7 @@ export default function Index() {
             <div
               aria-hidden
               data-aos="zoom-in-right"
-              data-aos-duration="800"
+              data-aos-duration="900"
               data-aos-delay="100"
               className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent origin-left"
             />
@@ -312,14 +312,14 @@ export default function Index() {
               <li
                 key={s.title}
                 data-aos="fade-right"
-                data-aos-duration="500"
-                data-aos-delay={i * 180}
+                data-aos-duration="700"
+                data-aos-delay={i * 250}
                 className="relative text-center md:text-left"
               >
                 <div
                   data-aos="zoom-in"
-                  data-aos-duration="400"
-                  data-aos-delay={i * 180 + 200}
+                  data-aos-duration="600"
+                  data-aos-delay={i * 250 + 250}
                   className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative"
                 >
                   <s.icon className="h-7 w-7 text-sky-300" />
@@ -350,7 +350,7 @@ export default function Index() {
               <figure
                 key={t.role}
                 data-aos="fade-up"
-                data-aos-duration="400"
+                data-aos-duration="600"
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col"
               >
                 <div className="text-sky-300/60 text-5xl leading-none font-serif select-none">"</div>
@@ -360,7 +360,7 @@ export default function Index() {
                 <figcaption className="mt-6 flex items-center gap-3">
                   <span
                     data-aos="zoom-in"
-                    data-aos-duration="400"
+                    data-aos-duration="600"
                     data-aos-delay="250"
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10"
                   >
@@ -382,7 +382,7 @@ export default function Index() {
         <div className="relative max-w-5xl mx-auto px-5 sm:px-8">
           <div
             data-aos="fade"
-            data-aos-duration="800"
+            data-aos-duration="900"
             className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center"
           >
             <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
@@ -390,8 +390,8 @@ export default function Index() {
 
             <div
               data-aos="zoom-in"
-              data-aos-duration="400"
-              data-aos-delay="300"
+              data-aos-duration="600"
+              data-aos-delay="500"
               className="relative mx-auto inline-block"
             >
               <Mountain className="h-10 w-10 text-sky-300" />
