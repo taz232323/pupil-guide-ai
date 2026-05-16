@@ -91,7 +91,7 @@ export default function Index() {
       duration: 900,
       easing: "ease-out-cubic",
       once: true,
-      offset: 60,
+      offset: 200,
       disable: false,
     });
     // Refresh after the first paint so AOS picks up dynamic content sizes.
