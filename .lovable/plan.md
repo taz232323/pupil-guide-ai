@@ -1,30 +1,21 @@
-## Goal
-Let teachers view leaderboards for the classes they teach, mirroring the student experience but scoped to their own classes.
+## Problem
 
-## What teachers will see
+Animations currently trigger when the **top** of the element reaches the **bottom** of the viewport (`anchorPlacement: "top-bottom"`), and the global `offset: 300` shifts that trigger another 300px earlier. So the element starts animating while it's still off-screen — by the time you scroll to it, the 900ms animation is mostly done and you only catch the tail end.
 
-A new **Teacher Leaderboard** page at `/teacher/leaderboard`:
-- Tabs across the top: **All My Classes** + one tab per class the teacher owns.
-- Each tab shows students ranked by **Star Coins** (highest first), with rank, avatar, name, and coin total.
-- Top 3 get crown / medal / trophy icons (same visual language as the student leaderboard).
-- A small toggle on each class tab to switch the view between **Star Coins** and **Crown Coins** rankings (teachers benefit from seeing both, since Crown Coins reflect unit completion).
-- Teachers always see students' real names — anonymous mode (`leaderboard_anonymous`) is a student-side privacy setting and shouldn't hide identities from the class owner.
-- Empty states: "No classes yet" / "No students in this class yet."
+## Fix
 
-## Entry points
+Change the trigger point so the animation starts when the element is actually entering the viewport, not before.
 
-- Add a **Leaderboard** link in the teacher navigation (sidebar / nav) alongside the other teacher pages.
-- Add a compact **Top Students** widget on the Teacher Dashboard (`/teacher`) showing the top 3 across all the teacher's classes, with a "View all" link to the new page — mirroring the student `LeaderboardWidget`.
+1. In `src/pages/Index.tsx` `AOS.init({...})`:
+   - `anchorPlacement: "top-bottom"` → `"center-bottom"` (waits until the element's center reaches the bottom of the viewport — i.e. roughly when its top edge is already on screen).
+   - `offset: 300` → `0` (no extra early trigger; the anchor alone decides the moment).
+   - Keep `duration: 900`, `easing: "ease-in-out"`, `once: true`, `mirror: false`.
 
-## Technical notes
+2. Update every `data-aos-anchor-placement="top-bottom"` attribute on the page to `data-aos-anchor-placement="center-bottom"` so per-element overrides match the new global behavior. Affected elements: hero badge, h1, paragraph, CTA row, all Features section nodes, How It Works section nodes (including the connecting line and each step + icon), Testimonials section nodes, and the final CTA card + mountain icon.
 
-- New page: `src/pages/TeacherLeaderboard.tsx`, registered as a route in `src/App.tsx` and protected by `ProtectedRoute` with the teacher role.
-- New widget: `src/components/TeacherLeaderboardWidget.tsx` (or generalize the existing `LeaderboardWidget` with a `mode: "student" | "teacher"` prop — preferred to avoid duplication).
-- Data: query `classes` where `teacher_id = auth.uid()`, then `class_members` for those class IDs, then batch-fetch `profiles` (id, full_name, avatar_items) and `student_coins` (star_coins, crown_coins). Existing RLS already lets teachers read all of these for their own classes — **no migration or policy changes needed**.
-- Realtime: subscribe to `student_coins` changes (same channel pattern as the student page) so awards from "Give coins" reflect immediately.
-- Add a nav entry in whatever component renders the teacher sidebar (likely `DashboardShell` or a teacher nav config).
+3. Leave the hero mountain parallax (`translate3d` driven by `scrollY`) alone — it isn't an AOS animation.
 
-## Out of scope
+## Expected result
 
-- No changes to coin logic, RLS, or database schema.
-- No editing/awarding from the leaderboard itself (that already lives on the class roster via "Give coins").
+- On initial page load (no scroll): nothing has animated; every element sits in its pre-animation state.
+- As the user scrolls, each element begins its 900ms animation right as it crosses into the visible area, so the full motion is seen.
