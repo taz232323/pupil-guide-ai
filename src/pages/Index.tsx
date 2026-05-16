@@ -89,9 +89,11 @@ export default function Index() {
   useEffect(() => {
     AOS.init({
       duration: 900,
-      easing: "ease-out-cubic",
+      easing: "ease-in-out",
       once: true,
-      offset: 200,
+      mirror: false,
+      offset: 300,
+      anchorPlacement: "top-bottom",
       disable: false,
     });
     // Refresh after the first paint so AOS picks up dynamic content sizes.
