@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { StudentAvatar, COSMETIC_EMOJI } from "@/components/StudentAvatar";
+import { StudentAvatar, COSMETIC_EMOJI, type AvatarLayers, type AvatarLayerFilters } from "@/components/StudentAvatar";
 import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
 import glassesImg from "@/assets/cosmetics/glasses.png";
 import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
@@ -34,38 +34,90 @@ import { useTheme } from "@/hooks/useTheme";
 // Image overrides for avatar builder tiles — keep in sync with Shop + StudentAvatar.
 const COSMETIC_TILE_IMAGE: Record<string, string> = {
   hat_wizard: wizardHatImg,
-  glasses: glassesImg,
-  crown_silver: crownSilverImg,
   halo: haloImg,
+  crown_silver: crownSilverImg,
+  glasses: glassesImg,
   robot: robotImg,
   rainbow_aura: rainbowAuraImg,
 };
 
-type Category = "hair" | "face" | "outfit" | "background";
+/* ------------------------------------------------------------------ *
+ *  AVATAR BUILDER CATALOG
+ *  All parts share ONE base character frame so they always align.
+ *  Cosmetics use the existing item ownership system (shop_purchases).
+ *  Base parts (skin/hair-style/shirt-color) are unlocked by default.
+ * ------------------------------------------------------------------ */
 
-type CosmeticItem = {
-  key: string;
-  name: string;
-  cost: number;
-  emoji: string;
-  category: Category;
+type BuilderCategory = "skin" | "hair" | "clothing" | "headwear";
+
+const CATEGORY_LABEL: Record<BuilderCategory, string> = {
+  skin: "Skin",
+  hair: "Hair",
+  clothing: "Clothing",
+  headwear: "Headwear",
 };
 
-const ITEMS: CosmeticItem[] = [
-  { key: "hat_wizard",   name: "Wizard Hat",   cost: 10,  emoji: "🧙",  category: "hair" },
-  { key: "halo",         name: "Halo",         cost: 40,  emoji: "😇",  category: "hair" },
-  { key: "crown_silver", name: "Silver Crown", cost: 25,  emoji: "👑",  category: "hair" },
-  { key: "glasses",      name: "Cool Shades",  cost: 15,  emoji: "🕶️", category: "face" },
-  { key: "robot",        name: "Robot Face",   cost: 60,  emoji: "🤖",  category: "face" },
-  { key: "rainbow_aura", name: "Rainbow Aura", cost: 100, emoji: "🌈",  category: "background" },
+type BuilderOption = {
+  key: string;             // unique key stored in avatar_items
+  name: string;
+  category: BuilderCategory;
+  /** If set, requires ownership via shop_purchases. Otherwise free. */
+  cost?: number;
+  /** Swatch color shown in the picker tile. */
+  swatch?: string;
+  /** Optional thumbnail image. */
+  thumb?: string;
+  /** CSS filter applied to its layer when equipped (for tint variants). */
+  filter?: string;
+  /** Which avatar layer this option drives. */
+  layer: "body" | "hair" | "shirt" | "hat" | "accessory" | "background";
+  /** Layer image override (only used when this option swaps the asset). */
+  image?: string;
+};
+
+const BUILDER: BuilderOption[] = [
+  // --- Skin tones (filter the base body) ---
+  { key: "skin_light",  name: "Light",  category: "skin", swatch: "#f1c9a4", layer: "body" },
+  { key: "skin_tan",    name: "Tan",    category: "skin", swatch: "#c89271", layer: "body", filter: "hue-rotate(-8deg) saturate(1.15) brightness(0.88)" },
+  { key: "skin_brown",  name: "Brown",  category: "skin", swatch: "#8a5a3b", layer: "body", filter: "hue-rotate(-12deg) saturate(1.2) brightness(0.7)" },
+  { key: "skin_deep",   name: "Deep",   category: "skin", swatch: "#5a3922", layer: "body", filter: "hue-rotate(-14deg) saturate(1.25) brightness(0.5)" },
+  // --- Hair styles / colors (filter the hair layer) ---
+  { key: "hair_brown",  name: "Brown",  category: "hair", swatch: "#5a3a22", layer: "hair", image: avatarHairImg },
+  { key: "hair_black",  name: "Black",  category: "hair", swatch: "#1a1410", layer: "hair", image: avatarHairImg, filter: "brightness(0.45) saturate(0.6)" },
+  { key: "hair_blonde", name: "Blonde", category: "hair", swatch: "#d9b367", layer: "hair", image: avatarHairImg, filter: "hue-rotate(20deg) saturate(1.3) brightness(1.55)" },
+  { key: "hair_red",    name: "Red",    category: "hair", swatch: "#a43c1e", layer: "hair", image: avatarHairImg, filter: "hue-rotate(-25deg) saturate(2) brightness(1.05)" },
+  // --- Clothing colors (filter the shirt layer) ---
+  { key: "shirt_purple",name: "Purple", category: "clothing", swatch: "#6d3bd1", layer: "shirt", image: avatarShirtImg },
+  { key: "shirt_blue",  name: "Blue",   category: "clothing", swatch: "#2e6fe0", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(35deg) saturate(1.2)" },
+  { key: "shirt_green", name: "Green",  category: "clothing", swatch: "#2f8c52", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(110deg) saturate(1.15)" },
+  { key: "shirt_red",   name: "Red",    category: "clothing", swatch: "#c83b3b", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(-90deg) saturate(1.4)" },
+  // --- Headwear (real cosmetic items — require ownership) ---
+  { key: "hat_wizard",  name: "Wizard Hat", category: "headwear", cost: 10, layer: "hat", image: avatarHatImg, thumb: wizardHatImg },
+  { key: "halo",        name: "Halo",       category: "headwear", cost: 40, layer: "hat", image: haloImg,      thumb: haloImg },
 ];
 
-const CATEGORY_LABEL: Record<Category, string> = {
-  hair: "Hair",
-  face: "Face",
-  outfit: "Outfit",
-  background: "Background",
+const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
+
+// Defaults applied when the user has nothing selected for a category.
+const DEFAULT_SELECTION: Record<BuilderCategory, string> = {
+  skin: "skin_light",
+  hair: "hair_brown",
+  clothing: "shirt_purple",
+  headwear: "", // optional — no default headwear
 };
+
+/** Pick the equipped key for a given category from the avatar_items array. */
+function pickForCategory(items: string[], category: BuilderCategory): string {
+  const found = items.find((k) => OPTION_BY_KEY[k]?.category === category);
+  return found ?? DEFAULT_SELECTION[category] ?? "";
+}
+
+/** Replace any existing item in the same category with the new selection. */
+function applySelection(items: string[], optionKey: string): string[] {
+  const opt = OPTION_BY_KEY[optionKey];
+  if (!opt) return items;
+  return [...items.filter((k) => OPTION_BY_KEY[k]?.category !== opt.category), optionKey];
+}
 
 export default function Profile() {
   const { user, role } = useAuth();
