@@ -245,6 +245,8 @@ export const StudentAvatar = ({
    * still render above using the legacy COSMETIC_LAYERS system.
    */
   layers?: AvatarLayers;
+  /** Optional per-layer CSS filter strings (e.g. tinting skin/hair/shirt). */
+  layerFilters?: AvatarLayerFilters;
 }) => {
   // Constraint: one per layer, no dupes, unknown keys silently dropped.
   const equipped = normalizeEquipped(items);
