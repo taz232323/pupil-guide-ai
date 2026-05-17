@@ -99,6 +99,45 @@ export const COSMETIC_LAYERS: Record<
   crown_silver: { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
 };
 
+/**
+ * Layered 2D avatar system — each part is rendered as an independent
+ * transparent image layer absolutely positioned inside the avatar frame.
+ * Z-index ordering goes background → body → shirt → eyes → hair → accessory → hat.
+ * Pass a partial map; missing layers are simply skipped so cosmetics can be
+ * swapped dynamically without reloading the page.
+ */
+export type AvatarLayerKey =
+  | "background"
+  | "body"
+  | "shirt"
+  | "eyes"
+  | "hair"
+  | "accessory"
+  | "hat";
+
+export type AvatarLayers = Partial<Record<AvatarLayerKey, string | null | undefined>>;
+
+export const AVATAR_LAYER_Z: Record<AvatarLayerKey, number> = {
+  background: 0,
+  body: 10,
+  shirt: 20,
+  eyes: 30,
+  hair: 40,
+  accessory: 50,
+  hat: 60,
+};
+
+// Render order matches z-index; explicit list keeps DOM order stable.
+const LAYER_ORDER: AvatarLayerKey[] = [
+  "background",
+  "body",
+  "shirt",
+  "eyes",
+  "hair",
+  "accessory",
+  "hat",
+];
+
 /** Returns the layer (hat/face/aura/etc.) for a cosmetic key. */
 export function getCosmeticLayer(key: string): CosmeticLayer {
   return COSMETIC_LAYERS[key]?.layer ?? "accessory";
@@ -177,6 +216,15 @@ export const StudentAvatar = ({
    * Cosmetics still layer above it using the existing z-index system.
    */
   baseImage?: string | null;
+  /**
+   * Multi-layer character system. Each provided URL is rendered as its own
+   * absolutely-positioned transparent layer (background, body, shirt, eyes,
+   * hair, accessory, hat). Layers scale proportionally with the avatar size
+   * and stack via AVATAR_LAYER_Z. When provided, this takes precedence over
+   * `baseImage` for the body slot but cosmetic items (hats, glasses, auras)
+   * still render above using the legacy COSMETIC_LAYERS system.
+   */
+  layers?: AvatarLayers;
 }) => {
   // Constraint: one per layer, no dupes, unknown keys silently dropped.
   const equipped = normalizeEquipped(items);
@@ -224,7 +272,28 @@ export const StudentAvatar = ({
           activeBackground?.ring
         )}
       >
-        {baseImage ? (
+        {layers && Object.values(layers).some(Boolean) ? (
+          // Layered character: each part renders as its own absolute layer.
+          // The container is position:relative (this <span>), layers stack
+          // by z-index and all scale proportionally via inset-0.
+          <span className="relative block h-full w-full">
+            {LAYER_ORDER.map((key) => {
+              const src = layers[key];
+              if (!src) return null;
+              return (
+                <img
+                  key={key}
+                  src={src}
+                  alt=""
+                  data-avatar-layer={key}
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-contain object-bottom select-none pointer-events-none"
+                  style={{ zIndex: AVATAR_LAYER_Z[key] }}
+                />
+              );
+            })}
+          </span>
+        ) : baseImage ? (
           <img
             src={baseImage}
             alt=""
