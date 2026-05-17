@@ -138,6 +138,25 @@ const LAYER_ORDER: AvatarLayerKey[] = [
   "hat",
 ];
 
+/**
+ * Per-layer geometry. All layers share the same square frame; these values
+ * normalize their position/size against that frame so cosmetics from different
+ * art passes still line up on one base character. Heights are % of frame.
+ */
+export const AVATAR_LAYER_STYLE: Record<AvatarLayerKey, React.CSSProperties> = {
+  background: { inset: 0 },
+  body:       { inset: 0 },
+  shirt:      { inset: 0 },
+  eyes:       { inset: 0 },
+  hair:       { top: "-2%", left: 0, right: 0, height: "100%" },
+  accessory:  { inset: 0 },
+  // Headwear sits on top of the head — small, anchored to the top of the frame.
+  hat:        { top: "-8%", left: "50%", width: "55%", height: "55%", transform: "translateX(-50%)" },
+};
+
+/** Optional per-layer CSS filter (used to tint skin / hair / shirt). */
+export type AvatarLayerFilters = Partial<Record<AvatarLayerKey, string>>;
+
 /** Returns the layer (hat/face/aura/etc.) for a cosmetic key. */
 export function getCosmeticLayer(key: string): CosmeticLayer {
   return COSMETIC_LAYERS[key]?.layer ?? "accessory";
@@ -195,6 +214,7 @@ export const StudentAvatar = ({
   frame = "card",
   baseImage,
   layers,
+  layerFilters,
 }: {
   name?: string | null;
   items?: string[] | null;
@@ -226,6 +246,8 @@ export const StudentAvatar = ({
    * still render above using the legacy COSMETIC_LAYERS system.
    */
   layers?: AvatarLayers;
+  /** Optional per-layer CSS filter strings (e.g. tinting skin/hair/shirt). */
+  layerFilters?: AvatarLayerFilters;
 }) => {
   // Constraint: one per layer, no dupes, unknown keys silently dropped.
   const equipped = normalizeEquipped(items);
@@ -281,6 +303,8 @@ export const StudentAvatar = ({
             {LAYER_ORDER.map((key) => {
               const src = layers[key];
               if (!src) return null;
+              const geom = AVATAR_LAYER_STYLE[key];
+              const filter = layerFilters?.[key];
               return (
                 <img
                   key={key}
@@ -288,8 +312,14 @@ export const StudentAvatar = ({
                   alt=""
                   data-avatar-layer={key}
                   draggable={false}
-                  className="absolute inset-0 h-full w-full object-contain object-bottom select-none pointer-events-none"
-                  style={{ zIndex: AVATAR_LAYER_Z[key] }}
+                  className="absolute object-contain object-bottom select-none pointer-events-none"
+                  style={{
+                    ...geom,
+                    zIndex: AVATAR_LAYER_Z[key],
+                    filter,
+                    width: geom.width ?? "100%",
+                    height: geom.height ?? "100%",
+                  }}
                 />
               );
             })}

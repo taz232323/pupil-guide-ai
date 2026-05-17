@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { StudentAvatar, COSMETIC_EMOJI } from "@/components/StudentAvatar";
+import { StudentAvatar, COSMETIC_EMOJI, type AvatarLayers, type AvatarLayerFilters } from "@/components/StudentAvatar";
 import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
 import glassesImg from "@/assets/cosmetics/glasses.png";
 import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
@@ -34,38 +34,90 @@ import { useTheme } from "@/hooks/useTheme";
 // Image overrides for avatar builder tiles — keep in sync with Shop + StudentAvatar.
 const COSMETIC_TILE_IMAGE: Record<string, string> = {
   hat_wizard: wizardHatImg,
-  glasses: glassesImg,
-  crown_silver: crownSilverImg,
   halo: haloImg,
+  crown_silver: crownSilverImg,
+  glasses: glassesImg,
   robot: robotImg,
   rainbow_aura: rainbowAuraImg,
 };
 
-type Category = "hair" | "face" | "outfit" | "background";
+/* ------------------------------------------------------------------ *
+ *  AVATAR BUILDER CATALOG
+ *  All parts share ONE base character frame so they always align.
+ *  Cosmetics use the existing item ownership system (shop_purchases).
+ *  Base parts (skin/hair-style/shirt-color) are unlocked by default.
+ * ------------------------------------------------------------------ */
 
-type CosmeticItem = {
-  key: string;
-  name: string;
-  cost: number;
-  emoji: string;
-  category: Category;
+type BuilderCategory = "skin" | "hair" | "clothing" | "headwear";
+
+const CATEGORY_LABEL: Record<BuilderCategory, string> = {
+  skin: "Skin",
+  hair: "Hair",
+  clothing: "Clothing",
+  headwear: "Headwear",
 };
 
-const ITEMS: CosmeticItem[] = [
-  { key: "hat_wizard",   name: "Wizard Hat",   cost: 10,  emoji: "🧙",  category: "hair" },
-  { key: "halo",         name: "Halo",         cost: 40,  emoji: "😇",  category: "hair" },
-  { key: "crown_silver", name: "Silver Crown", cost: 25,  emoji: "👑",  category: "hair" },
-  { key: "glasses",      name: "Cool Shades",  cost: 15,  emoji: "🕶️", category: "face" },
-  { key: "robot",        name: "Robot Face",   cost: 60,  emoji: "🤖",  category: "face" },
-  { key: "rainbow_aura", name: "Rainbow Aura", cost: 100, emoji: "🌈",  category: "background" },
+type BuilderOption = {
+  key: string;             // unique key stored in avatar_items
+  name: string;
+  category: BuilderCategory;
+  /** If set, requires ownership via shop_purchases. Otherwise free. */
+  cost?: number;
+  /** Swatch color shown in the picker tile. */
+  swatch?: string;
+  /** Optional thumbnail image. */
+  thumb?: string;
+  /** CSS filter applied to its layer when equipped (for tint variants). */
+  filter?: string;
+  /** Which avatar layer this option drives. */
+  layer: "body" | "hair" | "shirt" | "hat" | "accessory" | "background";
+  /** Layer image override (only used when this option swaps the asset). */
+  image?: string;
+};
+
+const BUILDER: BuilderOption[] = [
+  // --- Skin tones (filter the base body) ---
+  { key: "skin_light",  name: "Light",  category: "skin", swatch: "#f1c9a4", layer: "body" },
+  { key: "skin_tan",    name: "Tan",    category: "skin", swatch: "#c89271", layer: "body", filter: "hue-rotate(-8deg) saturate(1.15) brightness(0.88)" },
+  { key: "skin_brown",  name: "Brown",  category: "skin", swatch: "#8a5a3b", layer: "body", filter: "hue-rotate(-12deg) saturate(1.2) brightness(0.7)" },
+  { key: "skin_deep",   name: "Deep",   category: "skin", swatch: "#5a3922", layer: "body", filter: "hue-rotate(-14deg) saturate(1.25) brightness(0.5)" },
+  // --- Hair styles / colors (filter the hair layer) ---
+  { key: "hair_brown",  name: "Brown",  category: "hair", swatch: "#5a3a22", layer: "hair", image: avatarHairImg },
+  { key: "hair_black",  name: "Black",  category: "hair", swatch: "#1a1410", layer: "hair", image: avatarHairImg, filter: "brightness(0.45) saturate(0.6)" },
+  { key: "hair_blonde", name: "Blonde", category: "hair", swatch: "#d9b367", layer: "hair", image: avatarHairImg, filter: "hue-rotate(20deg) saturate(1.3) brightness(1.55)" },
+  { key: "hair_red",    name: "Red",    category: "hair", swatch: "#a43c1e", layer: "hair", image: avatarHairImg, filter: "hue-rotate(-25deg) saturate(2) brightness(1.05)" },
+  // --- Clothing colors (filter the shirt layer) ---
+  { key: "shirt_purple",name: "Purple", category: "clothing", swatch: "#6d3bd1", layer: "shirt", image: avatarShirtImg },
+  { key: "shirt_blue",  name: "Blue",   category: "clothing", swatch: "#2e6fe0", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(35deg) saturate(1.2)" },
+  { key: "shirt_green", name: "Green",  category: "clothing", swatch: "#2f8c52", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(110deg) saturate(1.15)" },
+  { key: "shirt_red",   name: "Red",    category: "clothing", swatch: "#c83b3b", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(-90deg) saturate(1.4)" },
+  // --- Headwear (real cosmetic items — require ownership) ---
+  { key: "hat_wizard",  name: "Wizard Hat", category: "headwear", cost: 10, layer: "hat", image: avatarHatImg, thumb: wizardHatImg },
+  { key: "halo",        name: "Halo",       category: "headwear", cost: 40, layer: "hat", image: haloImg,      thumb: haloImg },
 ];
 
-const CATEGORY_LABEL: Record<Category, string> = {
-  hair: "Hair",
-  face: "Face",
-  outfit: "Outfit",
-  background: "Background",
+const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
+
+// Defaults applied when the user has nothing selected for a category.
+const DEFAULT_SELECTION: Record<BuilderCategory, string> = {
+  skin: "skin_light",
+  hair: "hair_brown",
+  clothing: "shirt_purple",
+  headwear: "", // optional — no default headwear
 };
+
+/** Pick the equipped key for a given category from the avatar_items array. */
+function pickForCategory(items: string[], category: BuilderCategory): string {
+  const found = items.find((k) => OPTION_BY_KEY[k]?.category === category);
+  return found ?? DEFAULT_SELECTION[category] ?? "";
+}
+
+/** Replace any existing item in the same category with the new selection. */
+function applySelection(items: string[], optionKey: string): string[] {
+  const opt = OPTION_BY_KEY[optionKey];
+  if (!opt) return items;
+  return [...items.filter((k) => OPTION_BY_KEY[k]?.category !== opt.category), optionKey];
+}
 
 export default function Profile() {
   const { user, role } = useAuth();
@@ -110,9 +162,36 @@ export default function Profile() {
     })();
   }, [user]);
 
-  const toggle = (key: string) => {
-    if (!owned.has(key)) return;
-    setEquipped((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
+  /** Equip an option, enforcing one-per-category. Cosmetic items must be owned. */
+  const selectOption = (optionKey: string) => {
+    const opt = OPTION_BY_KEY[optionKey];
+    if (!opt) return;
+    if (opt.cost && !owned.has(optionKey)) return;
+    setEquipped((prev) => applySelection(prev, optionKey));
+  };
+
+  /** Unequip the current item in a category (only meaningful for headwear). */
+  const clearCategory = (category: BuilderCategory) => {
+    setEquipped((prev) => prev.filter((k) => OPTION_BY_KEY[k]?.category !== category));
+  };
+
+  // Resolved selections drive the live avatar layers.
+  const selSkin     = pickForCategory(equipped, "skin");
+  const selHair     = pickForCategory(equipped, "hair");
+  const selClothing = pickForCategory(equipped, "clothing");
+  const selHeadwear = pickForCategory(equipped, "headwear");
+
+  const avatarLayers: AvatarLayers = {
+    background: avatarAuraImg,
+    body: avatarBodyImg,
+    hair: OPTION_BY_KEY[selHair]?.image ?? avatarHairImg,
+    shirt: OPTION_BY_KEY[selClothing]?.image ?? avatarShirtImg,
+    hat: selHeadwear ? OPTION_BY_KEY[selHeadwear]?.image : undefined,
+  };
+  const layerFilters: AvatarLayerFilters = {
+    body: OPTION_BY_KEY[selSkin]?.filter,
+    hair: OPTION_BY_KEY[selHair]?.filter,
+    shirt: OPTION_BY_KEY[selClothing]?.filter,
   };
 
   const dirty =
@@ -169,13 +248,8 @@ export default function Profile() {
                 items={equipped}
                 size="xl"
                 frame="card"
-                layers={{
-                  background: avatarAuraImg,
-                  body: avatarBodyImg,
-                  shirt: avatarShirtImg,
-                  hair: avatarHairImg,
-                  hat: equipped.includes("hat_wizard") ? avatarHatImg : undefined,
-                }}
+                layers={avatarLayers}
+                layerFilters={layerFilters}
                 className="relative h-44 w-44 sm:h-48 sm:w-48 text-6xl ring-1 ring-border/60 shadow-[0_20px_50px_-20px_hsl(var(--primary)/0.55)]"
               />
               {/* Faux ground shadow for game-card depth */}
@@ -244,87 +318,100 @@ export default function Profile() {
             <CardDescription>Pick items by category. Locked items show their unlock cost.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="hair">
+            <Tabs defaultValue="skin">
               <TabsList className="grid grid-cols-4 w-full">
-                {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => (
+                {(Object.keys(CATEGORY_LABEL) as BuilderCategory[]).map((c) => (
                   <TabsTrigger key={c} value={c}>{CATEGORY_LABEL[c]}</TabsTrigger>
                 ))}
               </TabsList>
-              {(Object.keys(CATEGORY_LABEL) as Category[]).map((cat) => {
-                const catItems = ITEMS.filter((i) => i.category === cat);
+              {(Object.keys(CATEGORY_LABEL) as BuilderCategory[]).map((cat) => {
+                const catItems = BUILDER.filter((o) => o.category === cat);
+                const activeKey = pickForCategory(equipped, cat);
                 return (
                   <TabsContent key={cat} value={cat} className="mt-5">
                     {loading ? (
                       <p className="text-sm text-muted-foreground">Loading...</p>
-                    ) : catItems.length === 0 ? (
-                      <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-                        No {CATEGORY_LABEL[cat].toLowerCase()} items yet — check back soon!
-                      </div>
                     ) : (
-                      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
-                        {catItems.map((item) => {
-                          const isOwned = owned.has(item.key);
-                          const isOn = equipped.includes(item.key);
-                          return (
+                      <>
+                        {/* Mobile: horizontal scroll. Desktop: grid. */}
+                        <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
+                          {cat === "headwear" && (
                             <button
                               type="button"
-                              key={item.key}
-                              onClick={() => toggle(item.key)}
-                              disabled={!isOwned}
+                              onClick={() => clearCategory("headwear")}
                               className={cn(
-                                "group relative flex flex-col items-center rounded-xl border bg-card p-4 transition-all text-center",
-                                isOwned && !isOn && "hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5",
-                                isOn && "border-primary ring-2 ring-primary/20 bg-primary/5",
-                                !isOwned && "opacity-90 cursor-not-allowed"
+                                "snap-start shrink-0 sm:shrink min-w-[7rem] sm:min-w-0 flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
+                                !activeKey && "border-primary ring-2 ring-primary/20 bg-primary/5",
+                                activeKey && "hover:border-primary/40 hover:-translate-y-0.5"
                               )}
                             >
-                              {isOn && (
-                                <span className="absolute top-2 right-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                  <Check className="h-3 w-3" />
-                                </span>
-                              )}
-                              <div className={cn(
-                                "relative h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center text-3xl mb-2",
-                                !isOwned && "grayscale"
-                              )}>
-                                {COSMETIC_TILE_IMAGE[item.key] ? (
-                                  <img
-                                    src={COSMETIC_TILE_IMAGE[item.key]}
-                                    alt=""
-                                    className="h-11 w-11 object-contain"
-                                    draggable={false}
-                                  />
-                                ) : (
-                                  <span aria-hidden>{item.emoji ?? COSMETIC_EMOJI[item.key]}</span>
-                                )}
-                                {!isOwned && (
-                                  <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70 backdrop-blur-[1px]">
-                                    <Lock className="h-5 w-5 text-muted-foreground" />
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-sm font-medium leading-tight">{item.name}</span>
-                              <div className="mt-2">
-                                {isOwned ? (
-                                  <Badge variant={isOn ? "default" : "secondary"} className="text-[10px]">
-                                    {isOn ? "Equipped" : "Owned"}
-                                  </Badge>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                                    <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
-                                    {item.cost}
-                                  </span>
-                                )}
-                              </div>
+                              <div className="h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center text-2xl mb-2">∅</div>
+                              <span className="text-sm font-medium leading-tight">None</span>
                             </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {!loading && catItems.some((i) => !owned.has(i.key)) && (
-                      <p className="mt-4 text-xs text-muted-foreground text-center">
-                        Earn star coins by completing assignments, then unlock items in the Shop.
-                      </p>
+                          )}
+                          {catItems.map((opt) => {
+                            const requiresOwnership = !!opt.cost;
+                            const isOwned = !requiresOwnership || owned.has(opt.key);
+                            const isOn = activeKey === opt.key;
+                            return (
+                              <button
+                                type="button"
+                                key={opt.key}
+                                onClick={() => selectOption(opt.key)}
+                                disabled={!isOwned}
+                                className={cn(
+                                  "snap-start shrink-0 sm:shrink min-w-[7rem] sm:min-w-0 group relative flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
+                                  isOwned && !isOn && "hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5",
+                                  isOn && "border-primary ring-2 ring-primary/20 bg-primary/5",
+                                  !isOwned && "opacity-90 cursor-not-allowed"
+                                )}
+                              >
+                                {isOn && (
+                                  <span className="absolute top-2 right-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                    <Check className="h-3 w-3" />
+                                  </span>
+                                )}
+                                <div className={cn(
+                                  "relative h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center overflow-hidden mb-2",
+                                  !isOwned && "grayscale"
+                                )}>
+                                  {opt.thumb ? (
+                                    <img src={opt.thumb} alt="" className="h-11 w-11 object-contain" draggable={false} />
+                                  ) : opt.swatch ? (
+                                    <span
+                                      aria-hidden
+                                      className="block h-9 w-9 rounded-full border border-border/60 shadow-inner"
+                                      style={{ background: opt.swatch }}
+                                    />
+                                  ) : null}
+                                  {!isOwned && (
+                                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70 backdrop-blur-[1px]">
+                                      <Lock className="h-5 w-5 text-muted-foreground" />
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-sm font-medium leading-tight">{opt.name}</span>
+                                <div className="mt-2 min-h-[18px]">
+                                  {requiresOwnership && !isOwned && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                                      {opt.cost}
+                                    </span>
+                                  )}
+                                  {isOn && (
+                                    <Badge variant="default" className="text-[10px]">Equipped</Badge>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {cat === "headwear" && catItems.some((o) => o.cost && !owned.has(o.key)) && (
+                          <p className="mt-4 text-xs text-muted-foreground text-center">
+                            Earn star coins by completing assignments, then unlock items in the Shop.
+                          </p>
+                        )}
+                      </>
                     )}
                   </TabsContent>
                 );
