@@ -15,6 +15,7 @@ import {
 import {
   StudentAvatar,
   AVATAR_THUMBNAILS,
+  DEFAULT_AVATAR_STATE,
   avatarStateFromItems,
   avatarStateToItems,
   clearAvatarCategory,
@@ -84,6 +85,8 @@ const BUILDER: BuilderOption[] = [
 
 const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
 
+const BUILDER_CATEGORIES: BuilderCategory[] = ["skinTone", "hair", "clothing", "headwear", "accessory", "aura"];
+
 export default function Profile() {
   const { user, role } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -91,8 +94,8 @@ export default function Profile() {
   const [originalName, setOriginalName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [owned, setOwned] = useState<Set<string>>(new Set());
-  const [equipped, setEquipped] = useState<string[]>([]);
-  const [originalEquipped, setOriginalEquipped] = useState<string[]>([]);
+  const [previewAvatar, setPreviewAvatar] = useState<AvatarState>(DEFAULT_AVATAR_STATE);
+  const [savedAvatar, setSavedAvatar] = useState<AvatarState>(DEFAULT_AVATAR_STATE);
   const [coins, setCoins] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
