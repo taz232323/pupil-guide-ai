@@ -14,13 +14,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   StudentAvatar,
-  AVATAR_THUMBNAILS,
   DEFAULT_AVATAR_STATE,
   avatarStateFromItems,
   avatarStateToItems,
   clearAvatarCategory,
   sameAvatarState,
   updateAvatarState,
+  getAvatarDataUri,
+  AVATAR_THUMBNAILS,
   type AvatarCategory,
   type AvatarState,
 } from "@/components/StudentAvatar";
@@ -42,8 +43,11 @@ type BuilderCategory = AvatarCategory;
 
 const CATEGORY_LABEL: Record<BuilderCategory, string> = {
   skinTone: "Skin",
-  hair: "Hair",
+  hairStyle: "Hair",
+  hairColor: "Hair color",
+  eyes: "Eyes",
   clothing: "Clothing",
+  clothesColor: "Clothes color",
   headwear: "Headwear",
   accessory: "Accessory",
   aura: "Aura",
@@ -62,30 +66,71 @@ type BuilderOption = {
 };
 
 const BUILDER: BuilderOption[] = [
-  { key: "skin_light", name: "Light", category: "skinTone", swatch: "#f1c9a4", thumb: AVATAR_THUMBNAILS.skin_light },
-  { key: "skin_tan", name: "Tan", category: "skinTone", swatch: "#c89271", thumb: AVATAR_THUMBNAILS.skin_tan },
-  { key: "skin_brown", name: "Brown", category: "skinTone", swatch: "#8a5a3b", thumb: AVATAR_THUMBNAILS.skin_brown },
-  { key: "skin_deep", name: "Deep", category: "skinTone", swatch: "#5a3922", thumb: AVATAR_THUMBNAILS.skin_deep },
-  { key: "hair_brown", name: "Brown", category: "hair", swatch: "#5a3a22", thumb: AVATAR_THUMBNAILS.hair_brown },
-  { key: "hair_black", name: "Black", category: "hair", swatch: "#1a1410", thumb: AVATAR_THUMBNAILS.hair_black },
-  { key: "hair_blonde", name: "Blonde", category: "hair", swatch: "#d9b367", thumb: AVATAR_THUMBNAILS.hair_blonde },
-  { key: "hair_red", name: "Red", category: "hair", swatch: "#a43c1e", thumb: AVATAR_THUMBNAILS.hair_red },
-  { key: "shirt_purple", name: "Purple", category: "clothing", swatch: "#6d3bd1", thumb: AVATAR_THUMBNAILS.shirt_purple },
-  { key: "shirt_blue", name: "Blue", category: "clothing", swatch: "#2e6fe0", thumb: AVATAR_THUMBNAILS.shirt_blue },
-  { key: "shirt_green", name: "Green", category: "clothing", swatch: "#2f8c52", thumb: AVATAR_THUMBNAILS.shirt_green },
-  { key: "shirt_red", name: "Red", category: "clothing", swatch: "#c83b3b", thumb: AVATAR_THUMBNAILS.shirt_red },
+  // Skin
+  { key: "skin_light", name: "Light", category: "skinTone", swatch: "#ffdbb4" },
+  { key: "skin_tan",   name: "Tan",   category: "skinTone", swatch: "#edb98a" },
+  { key: "skin_brown", name: "Brown", category: "skinTone", swatch: "#d08b5b" },
+  { key: "skin_deep",  name: "Deep",  category: "skinTone", swatch: "#614335" },
+  // Hair styles (preview rendered live)
+  { key: "hairstyle_short",  name: "Short",  category: "hairStyle" },
+  { key: "hairstyle_long",   name: "Long",   category: "hairStyle" },
+  { key: "hairstyle_curly",  name: "Curly",  category: "hairStyle" },
+  { key: "hairstyle_bun",    name: "Bun",    category: "hairStyle" },
+  { key: "hairstyle_buzz",   name: "Buzz",   category: "hairStyle" },
+  { key: "hairstyle_dreads", name: "Dreads", category: "hairStyle" },
+  { key: "hairstyle_big",    name: "Big",    category: "hairStyle" },
+  // Hair color
+  { key: "hair_brown",  name: "Brown",  category: "hairColor", swatch: "#724133" },
+  { key: "hair_black",  name: "Black",  category: "hairColor", swatch: "#2c1b18" },
+  { key: "hair_blonde", name: "Blonde", category: "hairColor", swatch: "#b58143" },
+  { key: "hair_red",    name: "Red",    category: "hairColor", swatch: "#c93305" },
+  // Eyes
+  { key: "eyes_default", name: "Default", category: "eyes" },
+  { key: "eyes_happy",   name: "Happy",   category: "eyes" },
+  { key: "eyes_wink",    name: "Wink",    category: "eyes" },
+  { key: "eyes_squint",  name: "Squint",  category: "eyes" },
+  { key: "eyes_hearts",  name: "Hearts",  category: "eyes" },
+  // Clothing styles
+  { key: "clothes_hoodie",  name: "Hoodie",  category: "clothing" },
+  { key: "clothes_blazer",  name: "Blazer",  category: "clothing" },
+  { key: "clothes_shirt",   name: "T-shirt", category: "clothing" },
+  { key: "clothes_vneck",   name: "V-neck",  category: "clothing" },
+  { key: "clothes_overall", name: "Overall", category: "clothing" },
+  { key: "clothes_collar",  name: "Sweater", category: "clothing" },
+  // Clothes color
+  { key: "clothes_purple", name: "Purple", category: "clothesColor", swatch: "#6d3bd1" },
+  { key: "clothes_blue",   name: "Blue",   category: "clothesColor", swatch: "#5199e4" },
+  { key: "clothes_green",  name: "Green",  category: "clothesColor", swatch: "#7ad9a1" },
+  { key: "clothes_red",    name: "Red",    category: "clothesColor", swatch: "#ff5c5c" },
+  { key: "clothes_black",  name: "Black",  category: "clothesColor", swatch: "#262e33" },
+  { key: "clothes_white",  name: "White",  category: "clothesColor", swatch: "#ffffff" },
+  // Headwear cosmetics (require purchase)
   { key: "hat_wizard", name: "Wizard Hat", category: "headwear", cost: 10, thumb: AVATAR_THUMBNAILS.hat_wizard },
   { key: "halo", name: "Halo", category: "headwear", cost: 40, thumb: AVATAR_THUMBNAILS.halo },
   { key: "crown_silver", name: "Silver Crown", category: "headwear", cost: 25, thumb: AVATAR_THUMBNAILS.crown_silver },
-  { key: "glasses", name: "Glasses", category: "accessory", cost: 15, thumb: AVATAR_THUMBNAILS.glasses },
-  { key: "robot", name: "Robot Face", category: "accessory", cost: 60, thumb: AVATAR_THUMBNAILS.robot },
-  { key: "aura_magic", name: "Magic", category: "aura", thumb: AVATAR_THUMBNAILS.aura_magic },
+  // Accessories (DiceBear-rendered glasses)
+  { key: "glasses",       name: "Glasses",    category: "accessory" },
+  { key: "sunglasses",    name: "Sunglasses", category: "accessory", cost: 15 },
+  { key: "round_glasses", name: "Round",      category: "accessory" },
+  { key: "wayfarers",     name: "Wayfarers",  category: "accessory", cost: 20 },
+  // Aura backgrounds
+  { key: "aura_magic",   name: "Magic",   category: "aura", thumb: AVATAR_THUMBNAILS.aura_magic },
   { key: "rainbow_aura", name: "Rainbow", category: "aura", cost: 100, thumb: AVATAR_THUMBNAILS.rainbow_aura },
 ];
 
 const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
 
-const BUILDER_CATEGORIES: BuilderCategory[] = ["skinTone", "hair", "clothing", "headwear", "accessory", "aura"];
+const BUILDER_CATEGORIES: BuilderCategory[] = [
+  "skinTone",
+  "hairStyle",
+  "hairColor",
+  "eyes",
+  "clothing",
+  "clothesColor",
+  "headwear",
+  "accessory",
+  "aura",
+];
 
 export default function Profile() {
   const { user, role } = useAuth();
