@@ -1,10 +1,24 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
-import glassesImg from "@/assets/cosmetics/glasses.png";
-import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
-import haloImg from "@/assets/cosmetics/halo.png";
-import robotImg from "@/assets/cosmetics/robot.png";
+import magicAuraImg from "@/assets/avatar/layers/aura-magic.svg";
+import rainbowAuraImg from "@/assets/avatar/layers/aura-rainbow.svg";
+import bodySkinLightImg from "@/assets/avatar/layers/body-skin-light.svg";
+import bodySkinTanImg from "@/assets/avatar/layers/body-skin-tan.svg";
+import bodySkinBrownImg from "@/assets/avatar/layers/body-skin-brown.svg";
+import bodySkinDeepImg from "@/assets/avatar/layers/body-skin-deep.svg";
+import hairBrownImg from "@/assets/avatar/layers/hair-brown.svg";
+import hairBlackImg from "@/assets/avatar/layers/hair-black.svg";
+import hairBlondeImg from "@/assets/avatar/layers/hair-blonde.svg";
+import hairRedImg from "@/assets/avatar/layers/hair-red.svg";
+import shirtPurpleImg from "@/assets/avatar/layers/shirt-purple.svg";
+import shirtBlueImg from "@/assets/avatar/layers/shirt-blue.svg";
+import shirtGreenImg from "@/assets/avatar/layers/shirt-green.svg";
+import shirtRedImg from "@/assets/avatar/layers/shirt-red.svg";
+import headwearWizardImg from "@/assets/avatar/layers/headwear-wizard.svg";
+import headwearHaloImg from "@/assets/avatar/layers/headwear-halo.svg";
+import headwearCrownSilverImg from "@/assets/avatar/layers/headwear-crown-silver.svg";
+import accessoryGlassesImg from "@/assets/avatar/layers/accessory-glasses.svg";
+import accessoryRobotImg from "@/assets/avatar/layers/accessory-robot.svg";
 
 // Shared catalog mapping cosmetic item keys to their emoji glyph.
 export const COSMETIC_EMOJI: Record<string, string> = {
@@ -16,179 +30,181 @@ export const COSMETIC_EMOJI: Record<string, string> = {
   rainbow_aura: "🌈",
 };
 
-// Image-backed cosmetics override the emoji glyph with a transparent PNG/SVG.
-const COSMETIC_IMAGE: Record<string, string> = {
-  hat_wizard: wizardHatImg,
-  glasses: glassesImg,
-  crown_silver: crownSilverImg,
-  halo: haloImg,
-  robot: robotImg,
+export type AvatarState = {
+  skinTone: string;
+  hair: string;
+  clothing: string;
+  headwear: string;
+  accessory: string;
+  aura: string;
 };
 
-/**
- * Background / aura cosmetics. These render BEHIND the avatar circle,
- * clipped to a circle so they never overflow the avatar container.
- * Add new entries here (or load from DB) to swap textures later.
- */
-const BACKGROUND_TEXTURES: Record<string, { background: string; ring?: string }> = {
-  rainbow_aura: {
-    background:
-      "conic-gradient(from 0deg, #ff5b8a, #ffb648, #ffe156, #5be0a0, #4ec3ff, #a779ff, #ff5b8a)",
-    ring: "ring-2 ring-offset-1 ring-offset-background ring-pink-400",
-  },
-  // Example future textures — uncomment / extend as needed:
-  // galaxy_aura: { background: "radial-gradient(circle at 30% 30%, #6a5cff, #1a0033 70%)" },
-  // gold_aura:   { background: "radial-gradient(circle, #ffe27a, #b8860b)" },
+export const DEFAULT_AVATAR_STATE: AvatarState = {
+  skinTone: "skin_light",
+  hair: "hair_brown",
+  clothing: "shirt_purple",
+  headwear: "",
+  accessory: "",
+  aura: "aura_magic",
 };
 
-// Default position_config used when the DB row doesn't provide one.
-export type CosmeticPositionConfig = {
-  top?: string | number;
-  left?: string | number;
-  scale?: number;
-  rotation?: number; // degrees
-  width?: string | number; // % of avatar width
-  zIndex?: number;
+export type AvatarCategory = keyof AvatarState;
+
+export const AVATAR_ITEM_CATEGORY: Record<string, AvatarCategory> = {
+  skin_light: "skinTone",
+  skin_tan: "skinTone",
+  skin_brown: "skinTone",
+  skin_deep: "skinTone",
+  hair_brown: "hair",
+  hair_black: "hair",
+  hair_blonde: "hair",
+  hair_red: "hair",
+  shirt_purple: "clothing",
+  shirt_blue: "clothing",
+  shirt_green: "clothing",
+  shirt_red: "clothing",
+  hat_wizard: "headwear",
+  halo: "headwear",
+  crown_silver: "headwear",
+  glasses: "accessory",
+  robot: "accessory",
+  aura_magic: "aura",
+  rainbow_aura: "aura",
 };
 
-// Per-key fallback configs for built-in image cosmetics.
-const DEFAULT_POSITION_CONFIG: Record<string, CosmeticPositionConfig> = {
-  hat_wizard: { top: "-22%", left: "50%", width: "70%", scale: 1, rotation: 0, zIndex: 30 },
-  glasses:    { top: "25%",  left: "50%", width: "55%", scale: 1, rotation: 0, zIndex: 20 },
-  crown_silver:{ top: "-22%", left: "50%", width: "70%", scale: 1, rotation: 0, zIndex: 30 },
-  halo:       { top: "-40%", left: "50%", width: "60%", scale: 1, rotation: 0, zIndex: 30 },
-  robot:      { top: "10%",  left: "50%", width: "85%", scale: 1, rotation: 0, zIndex: 20 },
-};
-
-/**
- * Render a cosmetic image positioned via a position_config object
- * (typically loaded from the `cosmetics.position_config` JSON column).
- * Supports: top, left, scale, rotation, width, zIndex.
- */
-export function cosmeticStyleFromConfig(cfg: CosmeticPositionConfig | undefined | null): React.CSSProperties {
-  const c = cfg ?? {};
-  const scale = c.scale ?? 1;
-  const rotation = c.rotation ?? 0;
-  return {
-    position: "absolute",
-    top: c.top ?? "-20%",
-    left: c.left ?? "50%",
-    width: c.width ?? "70%",
-    zIndex: c.zIndex ?? 20,
-    // Combine centering + scale + rotation
-    transform: `translateX(-50%) scale(${scale}) rotate(${rotation}deg)`,
-    transformOrigin: "center center",
-    pointerEvents: "none",
-  };
+export function avatarStateFromItems(items: string[] | null | undefined): AvatarState {
+  const state: AvatarState = { ...DEFAULT_AVATAR_STATE };
+  for (const key of items ?? []) {
+    const category = AVATAR_ITEM_CATEGORY[key];
+    if (!category) continue;
+    state[category] = key;
+  }
+  return state;
 }
 
-// Z-index ordering for cosmetic layers. Higher = rendered on top.
-// Background sits behind the base avatar; face/hair/accessories stack above.
-// Layer scale: background < base avatar (z-10) < face/accessory < hair.
-export type CosmeticLayer = "background" | "face" | "hair" | "accessory";
+export function avatarStateToItems(state: AvatarState): string[] {
+  return [state.skinTone, state.hair, state.clothing, state.headwear, state.accessory, state.aura]
+    .filter(Boolean);
+}
 
-export const COSMETIC_LAYERS: Record<
-  string,
-  { z: number; position: string; layer: CosmeticLayer }
-> = {
-  rainbow_aura: { z: 0,  position: "inset-0",                                  layer: "background" },
-  glasses:      { z: 20, position: "inset-0 flex items-center justify-center", layer: "face" },
-  robot:        { z: 20, position: "inset-0 flex items-center justify-center", layer: "face" },
-  halo:         { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
-  hat_wizard:   { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
-  crown_silver: { z: 30, position: "-top-3 left-1/2 -translate-x-1/2",         layer: "hair" },
-};
+export function updateAvatarState(state: AvatarState, key: string): AvatarState {
+  const category = AVATAR_ITEM_CATEGORY[key];
+  if (!category) return state;
+  return { ...state, [category]: key };
+}
 
-/**
- * Layered 2D avatar system — each part is rendered as an independent
- * transparent image layer absolutely positioned inside the avatar frame.
- * Z-index ordering goes background → body → shirt → eyes → hair → accessory → hat.
- * Pass a partial map; missing layers are simply skipped so cosmetics can be
- * swapped dynamically without reloading the page.
- */
+export function clearAvatarCategory(state: AvatarState, category: AvatarCategory): AvatarState {
+  if (category === "skinTone" || category === "hair" || category === "clothing" || category === "aura") {
+    return { ...state, [category]: DEFAULT_AVATAR_STATE[category] };
+  }
+  return { ...state, [category]: "" };
+}
+
+export function sameAvatarState(a: AvatarState, b: AvatarState): boolean {
+  return avatarStateToItems(a).join("|") === avatarStateToItems(b).join("|");
+}
+
 export type AvatarLayerKey =
   | "background"
   | "body"
   | "shirt"
-  | "eyes"
   | "hair"
   | "accessory"
   | "hat";
 
 export type AvatarLayers = Partial<Record<AvatarLayerKey, string | null | undefined>>;
 
+export type AvatarLayerGeometry = {
+  x?: number;
+  y?: number;
+  scale?: number;
+  zIndex?: number;
+};
+
+export type AvatarLayerGeometryMap = Partial<Record<AvatarLayerKey, AvatarLayerGeometry>>;
+
 export const AVATAR_LAYER_Z: Record<AvatarLayerKey, number> = {
   background: 0,
   body: 10,
   shirt: 20,
-  eyes: 30,
-  hair: 40,
-  accessory: 50,
-  hat: 60,
+  hair: 30,
+  accessory: 40,
+  hat: 50,
 };
 
-// Render order matches z-index; explicit list keeps DOM order stable.
-const LAYER_ORDER: AvatarLayerKey[] = [
-  "background",
-  "body",
-  "shirt",
-  "eyes",
-  "hair",
-  "accessory",
-  "hat",
-];
+const LAYER_ORDER: AvatarLayerKey[] = ["background", "body", "shirt", "hair", "accessory", "hat"];
 
-/**
- * Per-layer geometry. All layers share the same square frame; these values
- * normalize their position/size against that frame so cosmetics from different
- * art passes still line up on one base character. Heights are % of frame.
- */
-export const AVATAR_LAYER_STYLE: Record<AvatarLayerKey, React.CSSProperties> = {
-  background: { inset: 0 },
-  body:       { inset: 0 },
-  shirt:      { inset: 0 },
-  eyes:       { inset: 0 },
-  hair:       { top: "-2%", left: 0, right: 0, height: "100%" },
-  accessory:  { inset: 0 },
-  // Headwear sits on top of the head — small, anchored to the top of the frame.
-  hat:        { top: "-8%", left: "50%", width: "55%", height: "55%", transform: "translateX(-50%)" },
+export const DEFAULT_AVATAR_GEOMETRY: Record<AvatarLayerKey, Required<AvatarLayerGeometry>> = {
+  background: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.background },
+  body: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.body },
+  shirt: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.shirt },
+  hair: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.hair },
+  accessory: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.accessory },
+  hat: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.hat },
 };
 
-/** Optional per-layer CSS filter (used to tint skin / hair / shirt). */
-export type AvatarLayerFilters = Partial<Record<AvatarLayerKey, string>>;
+const AVATAR_ASSETS: Record<string, { layer: AvatarLayerKey; src: string; geometry?: AvatarLayerGeometry }> = {
+  aura_magic: { layer: "background", src: magicAuraImg },
+  rainbow_aura: { layer: "background", src: rainbowAuraImg },
+  skin_light: { layer: "body", src: bodySkinLightImg },
+  skin_tan: { layer: "body", src: bodySkinTanImg },
+  skin_brown: { layer: "body", src: bodySkinBrownImg },
+  skin_deep: { layer: "body", src: bodySkinDeepImg },
+  hair_brown: { layer: "hair", src: hairBrownImg },
+  hair_black: { layer: "hair", src: hairBlackImg },
+  hair_blonde: { layer: "hair", src: hairBlondeImg },
+  hair_red: { layer: "hair", src: hairRedImg },
+  shirt_purple: { layer: "shirt", src: shirtPurpleImg },
+  shirt_blue: { layer: "shirt", src: shirtBlueImg },
+  shirt_green: { layer: "shirt", src: shirtGreenImg },
+  shirt_red: { layer: "shirt", src: shirtRedImg },
+  hat_wizard: { layer: "hat", src: headwearWizardImg },
+  halo: { layer: "hat", src: headwearHaloImg },
+  crown_silver: { layer: "hat", src: headwearCrownSilverImg },
+  glasses: { layer: "accessory", src: accessoryGlassesImg },
+  robot: { layer: "accessory", src: accessoryRobotImg },
+};
 
-/** Returns the layer (hat/face/aura/etc.) for a cosmetic key. */
-export function getCosmeticLayer(key: string): CosmeticLayer {
-  return COSMETIC_LAYERS[key]?.layer ?? "accessory";
+export const AVATAR_THUMBNAILS: Record<string, string> = Object.fromEntries(
+  Object.entries(AVATAR_ASSETS).map(([key, value]) => [key, value.src])
+);
+
+function layersFromState(state: AvatarState): AvatarLayers {
+  const layers: AvatarLayers = {};
+  for (const key of avatarStateToItems(state)) {
+    const asset = AVATAR_ASSETS[key];
+    if (asset) layers[asset.layer] = asset.src;
+  }
+  return layers;
 }
 
-/**
- * Normalize an equipped list:
- * - drops unknown items (missing from catalog → fail-safe)
- * - removes duplicates
- * - keeps only ONE item per layer (last-equipped wins)
- */
-export function normalizeEquipped(items: string[] | null | undefined): string[] {
-  const seenLayers = new Set<CosmeticLayer>();
-  const seenKeys = new Set<string>();
-  const out: string[] = [];
-  // Iterate in reverse so the LAST equipped of a given layer wins.
-  for (const key of [...(items ?? [])].reverse()) {
-    if (!key || seenKeys.has(key)) continue;
-    if (!COSMETIC_EMOJI[key] && !COSMETIC_IMAGE[key] && !BACKGROUND_TEXTURES[key]) continue;
-    const layer = getCosmeticLayer(key);
-    if (seenLayers.has(layer)) continue;
-    seenLayers.add(layer);
-    seenKeys.add(key);
-    out.unshift(key);
+function geometryFromState(state: AvatarState): AvatarLayerGeometryMap {
+  const geometry: AvatarLayerGeometryMap = {};
+  for (const key of avatarStateToItems(state)) {
+    const asset = AVATAR_ASSETS[key];
+    if (asset?.geometry) geometry[asset.layer] = asset.geometry;
   }
-  return out;
+  return geometry;
+}
+
+// Legacy DB cosmetic configs are intentionally normalized into the shared canvas.
+export type CosmeticPositionConfig = {
+  x?: number;
+  y?: number;
+  scale?: number;
+  zIndex?: number;
+};
+
+export type AvatarLayerFilters = Partial<Record<AvatarLayerKey, string>>;
+
+export function normalizeEquipped(items: string[] | null | undefined): string[] {
+  return avatarStateToItems(avatarStateFromItems(items));
 }
 
 const SIZE_CLASS = {
-  xs: "h-6 w-6 text-xs",
-  sm: "h-8 w-8 text-sm",
-  md: "h-12 w-12 text-lg",
+  xs: "h-8 w-8 text-xs",
+  sm: "h-10 w-10 text-sm",
+  md: "h-14 w-14 text-lg",
   lg: "h-24 w-24 text-3xl",
   xl: "h-40 w-40 text-5xl",
 };
@@ -205,62 +221,48 @@ function initials(name?: string | null) {
     .join("") || "?";
 }
 
+function layerStyle(key: AvatarLayerKey, geometry?: AvatarLayerGeometryMap): React.CSSProperties {
+  const base = DEFAULT_AVATAR_GEOMETRY[key];
+  const custom = geometry?.[key];
+  const x = custom?.x ?? base.x;
+  const y = custom?.y ?? base.y;
+  const scale = Math.min(Math.max(custom?.scale ?? base.scale, 0.2), 1.15);
+  return {
+    inset: 0,
+    zIndex: custom?.zIndex ?? base.zIndex,
+    transform: `translate(${x}%, ${y}%) scale(${scale})`,
+    transformOrigin: "50% 50%",
+  };
+}
+
 export const StudentAvatar = ({
   name,
   items = [],
+  avatarState,
   size = "sm",
   className,
-  positionConfigs,
   frame = "card",
   baseImage,
   layers,
   layerFilters,
+  layerGeometry,
 }: {
   name?: string | null;
   items?: string[] | null;
+  avatarState?: AvatarState;
   size?: AvatarSize;
   className?: string;
-  /**
-   * Optional map of cosmetic key -> position_config loaded from the DB.
-   * Overrides the built-in defaults so different hats/glasses can be
-   * positioned without code changes.
-   */
   positionConfigs?: Record<string, CosmeticPositionConfig | null | undefined>;
-  /**
-   * Visual container shape. "card" (default) renders a game-style rounded
-   * square frame with soft depth so full-body character art is not clipped
-   * into a circle. "circle" preserves the legacy circular mask.
-   */
   frame?: "card" | "circle";
-  /**
-   * Optional transparent PNG/SVG character art rendered as the base avatar.
-   * Cosmetics still layer above it using the existing z-index system.
-   */
   baseImage?: string | null;
-  /**
-   * Multi-layer character system. Each provided URL is rendered as its own
-   * absolutely-positioned transparent layer (background, body, shirt, eyes,
-   * hair, accessory, hat). Layers scale proportionally with the avatar size
-   * and stack via AVATAR_LAYER_Z. When provided, this takes precedence over
-   * `baseImage` for the body slot but cosmetic items (hats, glasses, auras)
-   * still render above using the legacy COSMETIC_LAYERS system.
-   */
   layers?: AvatarLayers;
-  /** Optional per-layer CSS filter strings (e.g. tinting skin/hair/shirt). */
   layerFilters?: AvatarLayerFilters;
+  layerGeometry?: AvatarLayerGeometryMap;
 }) => {
-  // Constraint: one per layer, no dupes, unknown keys silently dropped.
-  const equipped = normalizeEquipped(items);
-  const [brokenAssets, setBrokenAssets] = React.useState<Set<string>>(() => new Set());
-
-  // Pick the active background cosmetic (only one allowed by normalizeEquipped).
-  const activeBackgroundKey = equipped.find((k) => BACKGROUND_TEXTURES[k]);
-  const activeBackground = activeBackgroundKey ? BACKGROUND_TEXTURES[activeBackgroundKey] : null;
-
-  // Foreground cosmetics only — backgrounds are rendered separately below.
-  const sorted = [...equipped]
-    .filter((k) => !BACKGROUND_TEXTURES[k])
-    .sort((a, b) => (COSMETIC_LAYERS[a]?.z ?? 10) - (COSMETIC_LAYERS[b]?.z ?? 10));
+  const resolvedState = avatarState ?? avatarStateFromItems(items);
+  const resolvedLayers = layers ?? layersFromState(resolvedState);
+  const resolvedGeometry = layerGeometry ?? geometryFromState(resolvedState);
+  const hasLayers = Object.values(resolvedLayers).some(Boolean);
 
   const shapeClass = frame === "circle" ? "rounded-full" : "rounded-2xl";
   const frameDecor =
@@ -270,41 +272,21 @@ export const StudentAvatar = ({
 
   return (
     <span
-      className={cn(
-        "relative inline-flex shrink-0 align-middle",
-        SIZE_CLASS[size],
-        className
-      )}
+      className={cn("relative inline-flex shrink-0 align-middle", SIZE_CLASS[size], className)}
       aria-label={name ?? "Avatar"}
     >
-      {/* Background / aura layer — behind the avatar, clipped to a circle */}
-      {activeBackground && (
-        <span
-          aria-hidden
-          className={cn("absolute inset-0 overflow-hidden pointer-events-none", shapeClass)}
-          style={{ zIndex: 0, background: activeBackground.background }}
-        />
-      )}
-
-      {/* Base avatar — bottom layer */}
       <span
         className={cn(
-          "relative z-10 inline-flex h-full w-full items-center justify-center overflow-hidden text-secondary-foreground font-medium",
+          "relative inline-flex h-full w-full items-center justify-center overflow-hidden text-secondary-foreground font-medium",
           shapeClass,
-          frameDecor,
-          activeBackground?.ring
+          frameDecor
         )}
       >
-        {layers && Object.values(layers).some(Boolean) ? (
-          // Layered character: each part renders as its own absolute layer.
-          // The container is position:relative (this <span>), layers stack
-          // by z-index and all scale proportionally via inset-0.
-          <span className="relative block h-full w-full">
+        {hasLayers ? (
+          <span className="relative block aspect-square h-full w-full overflow-hidden">
             {LAYER_ORDER.map((key) => {
-              const src = layers[key];
+              const src = resolvedLayers[key];
               if (!src) return null;
-              const geom = AVATAR_LAYER_STYLE[key];
-              const filter = layerFilters?.[key];
               return (
                 <img
                   key={key}
@@ -312,13 +294,10 @@ export const StudentAvatar = ({
                   alt=""
                   data-avatar-layer={key}
                   draggable={false}
-                  className="absolute object-contain object-bottom select-none pointer-events-none"
+                  className="absolute h-full w-full object-contain object-center select-none pointer-events-none"
                   style={{
-                    ...geom,
-                    zIndex: AVATAR_LAYER_Z[key],
-                    filter,
-                    width: geom.width ?? "100%",
-                    height: geom.height ?? "100%",
+                    ...layerStyle(key, resolvedGeometry),
+                    filter: layerFilters?.[key],
                   }}
                 />
               );
@@ -328,59 +307,12 @@ export const StudentAvatar = ({
           <img
             src={baseImage}
             alt=""
-            className="h-full w-full object-contain object-bottom select-none pointer-events-none"
+            className="h-full w-full object-contain object-center select-none pointer-events-none"
             draggable={false}
           />
         ) : (
           initials(name)
         )}
-      </span>
-
-      {/* Cosmetic overlay container — does not affect layout size */}
-      <span
-        className="pointer-events-none absolute inset-0"
-        aria-hidden
-      >
-        {sorted.map((key) => {
-          const cfg = COSMETIC_LAYERS[key] ?? { z: 20, position: "inset-0 flex items-center justify-center", layer: "accessory" as const };
-          const img = COSMETIC_IMAGE[key];
-          // If the image asset previously failed to load, fall back to emoji.
-          if (img && !brokenAssets.has(key)) {
-            // Image cosmetic — positioned dynamically from position_config
-            // (DB row) with a built-in default fallback per key.
-            const posCfg =
-              positionConfigs?.[key] ?? DEFAULT_POSITION_CONFIG[key] ?? { zIndex: cfg.z };
-            return (
-              <span key={key} style={cosmeticStyleFromConfig(posCfg)}>
-                <img
-                  src={img}
-                  alt=""
-                  className="block w-full h-auto pointer-events-none select-none"
-                  draggable={false}
-                  onError={() => {
-                    setBrokenAssets((prev) => {
-                      const next = new Set(prev);
-                      next.add(key);
-                      return next;
-                    });
-                  }}
-                />
-              </span>
-            );
-          }
-          // Emoji fallback — also used when no glyph exists at all.
-          const glyph = COSMETIC_EMOJI[key];
-          if (!glyph) return null; // missing asset → render nothing rather than break UI
-          return (
-            <span
-              key={key}
-              className={cn("absolute leading-none", cfg.position)}
-              style={{ zIndex: cfg.z }}
-            >
-              {glyph}
-            </span>
-          );
-        })}
       </span>
     </span>
   );
