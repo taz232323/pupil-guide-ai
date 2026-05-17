@@ -1,26 +1,140 @@
 import * as React from "react";
+import { createAvatar } from "@dicebear/core";
+import { avataaars } from "@dicebear/collection";
 import { cn } from "@/lib/utils";
 import magicAuraImg from "@/assets/avatar/layers/aura-magic.svg";
 import rainbowAuraImg from "@/assets/avatar/layers/aura-rainbow.svg";
-import bodySkinLightImg from "@/assets/avatar/layers/body-skin-light.svg";
-import bodySkinTanImg from "@/assets/avatar/layers/body-skin-tan.svg";
-import bodySkinBrownImg from "@/assets/avatar/layers/body-skin-brown.svg";
-import bodySkinDeepImg from "@/assets/avatar/layers/body-skin-deep.svg";
-import hairBrownImg from "@/assets/avatar/layers/hair-brown.svg";
-import hairBlackImg from "@/assets/avatar/layers/hair-black.svg";
-import hairBlondeImg from "@/assets/avatar/layers/hair-blonde.svg";
-import hairRedImg from "@/assets/avatar/layers/hair-red.svg";
-import shirtPurpleImg from "@/assets/avatar/layers/shirt-purple.svg";
-import shirtBlueImg from "@/assets/avatar/layers/shirt-blue.svg";
-import shirtGreenImg from "@/assets/avatar/layers/shirt-green.svg";
-import shirtRedImg from "@/assets/avatar/layers/shirt-red.svg";
 import headwearWizardImg from "@/assets/avatar/layers/headwear-wizard.svg";
 import headwearHaloImg from "@/assets/avatar/layers/headwear-halo.svg";
 import headwearCrownSilverImg from "@/assets/avatar/layers/headwear-crown-silver.svg";
-import accessoryGlassesImg from "@/assets/avatar/layers/accessory-glasses.svg";
-import accessoryRobotImg from "@/assets/avatar/layers/accessory-robot.svg";
 
-// Shared catalog mapping cosmetic item keys to their emoji glyph.
+/* ------------------------------------------------------------------ *
+ *  Avatar state model (DiceBear Avataaars + Grapheion cosmetics)
+ * ------------------------------------------------------------------ */
+
+export type AvatarState = {
+  skinTone: string;
+  hairStyle: string;
+  hairColor: string;
+  eyes: string;
+  clothing: string;
+  clothesColor: string;
+  /** Cosmetic overlay headwear (wizard hat, halo, crown). Empty = none. */
+  headwear: string;
+  /** DiceBear accessory (glasses/sunglasses). Empty = none. */
+  accessory: string;
+  /** Background aura. */
+  aura: string;
+};
+
+export type AvatarCategory = keyof AvatarState;
+
+export const DEFAULT_AVATAR_STATE: AvatarState = {
+  skinTone: "skin_light",
+  hairStyle: "hairstyle_short",
+  hairColor: "hair_brown",
+  eyes: "eyes_default",
+  clothing: "clothes_hoodie",
+  clothesColor: "clothes_purple",
+  headwear: "",
+  accessory: "",
+  aura: "aura_magic",
+};
+
+/* ---------- DiceBear option mappings ---------- */
+
+const SKIN_HEX: Record<string, string> = {
+  skin_light: "ffdbb4",
+  skin_tan: "edb98a",
+  skin_brown: "d08b5b",
+  skin_deep: "614335",
+};
+
+const HAIR_HEX: Record<string, string> = {
+  hair_brown: "724133",
+  hair_black: "2c1b18",
+  hair_blonde: "b58143",
+  hair_red: "c93305",
+};
+
+const HAIR_TOP: Record<string, string> = {
+  hairstyle_short: "shortHairShortFlat",
+  hairstyle_long: "longButNotTooLong",
+  hairstyle_curly: "curly",
+  hairstyle_bun: "bun",
+  hairstyle_buzz: "shortHairShortRound",
+  hairstyle_dreads: "dreads",
+  hairstyle_big: "bigHair",
+};
+
+const EYES_MAP: Record<string, string> = {
+  eyes_default: "default",
+  eyes_happy: "happy",
+  eyes_wink: "wink",
+  eyes_squint: "squint",
+  eyes_hearts: "hearts",
+};
+
+const CLOTHING_MAP: Record<string, string> = {
+  clothes_hoodie: "hoodie",
+  clothes_blazer: "blazerAndShirt",
+  clothes_shirt: "shirtCrewNeck",
+  clothes_vneck: "shirtVNeck",
+  clothes_overall: "overall",
+  clothes_collar: "collarAndSweater",
+};
+
+const CLOTHES_HEX: Record<string, string> = {
+  clothes_purple: "6d3bd1",
+  clothes_blue: "5199e4",
+  clothes_green: "a7ffc4",
+  clothes_red: "ff5c5c",
+  clothes_black: "262e33",
+  clothes_white: "ffffff",
+  // legacy keys
+  shirt_purple: "6d3bd1",
+  shirt_blue: "5199e4",
+  shirt_green: "a7ffc4",
+  shirt_red: "ff5c5c",
+};
+
+const DICEBEAR_ACCESSORIES: Record<string, string> = {
+  glasses: "prescription02",
+  sunglasses: "sunglasses",
+  wayfarers: "wayfarers",
+  round_glasses: "round",
+};
+
+/* Cosmetic overlay assets (rendered on top of dicebear svg). */
+const HEADWEAR_OVERLAY: Record<
+  string,
+  { src: string; top: string; widthPct: number }
+> = {
+  hat_wizard: { src: headwearWizardImg, top: "-18%", widthPct: 62 },
+  halo: { src: headwearHaloImg, top: "-6%", widthPct: 58 },
+  crown_silver: { src: headwearCrownSilverImg, top: "-4%", widthPct: 52 },
+};
+
+const AURA_OVERLAY: Record<string, string> = {
+  aura_magic: magicAuraImg,
+  rainbow_aura: rainbowAuraImg,
+};
+
+/* Reverse category lookup for legacy items[] arrays. */
+export const AVATAR_ITEM_CATEGORY: Record<string, AvatarCategory> = {};
+for (const k of Object.keys(SKIN_HEX)) AVATAR_ITEM_CATEGORY[k] = "skinTone";
+for (const k of Object.keys(HAIR_HEX)) AVATAR_ITEM_CATEGORY[k] = "hairColor";
+for (const k of Object.keys(HAIR_TOP)) AVATAR_ITEM_CATEGORY[k] = "hairStyle";
+for (const k of Object.keys(EYES_MAP)) AVATAR_ITEM_CATEGORY[k] = "eyes";
+for (const k of Object.keys(CLOTHING_MAP)) AVATAR_ITEM_CATEGORY[k] = "clothing";
+for (const k of Object.keys(CLOTHES_HEX)) AVATAR_ITEM_CATEGORY[k] = "clothesColor";
+for (const k of Object.keys(DICEBEAR_ACCESSORIES)) AVATAR_ITEM_CATEGORY[k] = "accessory";
+for (const k of Object.keys(HEADWEAR_OVERLAY)) AVATAR_ITEM_CATEGORY[k] = "headwear";
+for (const k of Object.keys(AURA_OVERLAY)) AVATAR_ITEM_CATEGORY[k] = "aura";
+// extra accessory keys preserved for legacy
+AVATAR_ITEM_CATEGORY["robot"] = "accessory";
+
+/* Legacy emoji catalog (still referenced by Shop). */
 export const COSMETIC_EMOJI: Record<string, string> = {
   hat_wizard: "🧙",
   glasses: "🕶️",
@@ -30,47 +144,7 @@ export const COSMETIC_EMOJI: Record<string, string> = {
   rainbow_aura: "🌈",
 };
 
-export type AvatarState = {
-  skinTone: string;
-  hair: string;
-  clothing: string;
-  headwear: string;
-  accessory: string;
-  aura: string;
-};
-
-export const DEFAULT_AVATAR_STATE: AvatarState = {
-  skinTone: "skin_light",
-  hair: "hair_brown",
-  clothing: "shirt_purple",
-  headwear: "",
-  accessory: "",
-  aura: "aura_magic",
-};
-
-export type AvatarCategory = keyof AvatarState;
-
-export const AVATAR_ITEM_CATEGORY: Record<string, AvatarCategory> = {
-  skin_light: "skinTone",
-  skin_tan: "skinTone",
-  skin_brown: "skinTone",
-  skin_deep: "skinTone",
-  hair_brown: "hair",
-  hair_black: "hair",
-  hair_blonde: "hair",
-  hair_red: "hair",
-  shirt_purple: "clothing",
-  shirt_blue: "clothing",
-  shirt_green: "clothing",
-  shirt_red: "clothing",
-  hat_wizard: "headwear",
-  halo: "headwear",
-  crown_silver: "headwear",
-  glasses: "accessory",
-  robot: "accessory",
-  aura_magic: "aura",
-  rainbow_aura: "aura",
-};
+/* ---------- State helpers ---------- */
 
 export function avatarStateFromItems(items: string[] | null | undefined): AvatarState {
   const state: AvatarState = { ...DEFAULT_AVATAR_STATE };
@@ -83,8 +157,17 @@ export function avatarStateFromItems(items: string[] | null | undefined): Avatar
 }
 
 export function avatarStateToItems(state: AvatarState): string[] {
-  return [state.skinTone, state.hair, state.clothing, state.headwear, state.accessory, state.aura]
-    .filter(Boolean);
+  return [
+    state.skinTone,
+    state.hairStyle,
+    state.hairColor,
+    state.eyes,
+    state.clothing,
+    state.clothesColor,
+    state.headwear,
+    state.accessory,
+    state.aura,
+  ].filter(Boolean);
 }
 
 export function updateAvatarState(state: AvatarState, key: string): AvatarState {
@@ -94,112 +177,75 @@ export function updateAvatarState(state: AvatarState, key: string): AvatarState 
 }
 
 export function clearAvatarCategory(state: AvatarState, category: AvatarCategory): AvatarState {
-  if (category === "skinTone" || category === "hair" || category === "clothing" || category === "aura") {
-    return { ...state, [category]: DEFAULT_AVATAR_STATE[category] };
+  // Optional-only categories truly clear; others fall back to defaults.
+  if (category === "headwear" || category === "accessory") {
+    return { ...state, [category]: "" };
   }
-  return { ...state, [category]: "" };
+  return { ...state, [category]: DEFAULT_AVATAR_STATE[category] };
 }
 
 export function sameAvatarState(a: AvatarState, b: AvatarState): boolean {
   return avatarStateToItems(a).join("|") === avatarStateToItems(b).join("|");
 }
 
-export type AvatarLayerKey =
-  | "background"
-  | "body"
-  | "shirt"
-  | "hair"
-  | "accessory"
-  | "hat";
-
-export type AvatarLayers = Partial<Record<AvatarLayerKey, string | null | undefined>>;
-
-export type AvatarLayerGeometry = {
-  x?: number;
-  y?: number;
-  scale?: number;
-  zIndex?: number;
-};
-
-export type AvatarLayerGeometryMap = Partial<Record<AvatarLayerKey, AvatarLayerGeometry>>;
-
-export const AVATAR_LAYER_Z: Record<AvatarLayerKey, number> = {
-  background: 0,
-  body: 10,
-  shirt: 20,
-  hair: 30,
-  accessory: 40,
-  hat: 50,
-};
-
-const LAYER_ORDER: AvatarLayerKey[] = ["background", "body", "shirt", "hair", "accessory", "hat"];
-
-export const DEFAULT_AVATAR_GEOMETRY: Record<AvatarLayerKey, Required<AvatarLayerGeometry>> = {
-  background: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.background },
-  body: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.body },
-  shirt: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.shirt },
-  hair: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.hair },
-  accessory: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.accessory },
-  hat: { x: 0, y: 0, scale: 1, zIndex: AVATAR_LAYER_Z.hat },
-};
-
-const AVATAR_ASSETS: Record<string, { layer: AvatarLayerKey; src: string; geometry?: AvatarLayerGeometry }> = {
-  aura_magic: { layer: "background", src: magicAuraImg },
-  rainbow_aura: { layer: "background", src: rainbowAuraImg },
-  skin_light: { layer: "body", src: bodySkinLightImg },
-  skin_tan: { layer: "body", src: bodySkinTanImg },
-  skin_brown: { layer: "body", src: bodySkinBrownImg },
-  skin_deep: { layer: "body", src: bodySkinDeepImg },
-  hair_brown: { layer: "hair", src: hairBrownImg },
-  hair_black: { layer: "hair", src: hairBlackImg },
-  hair_blonde: { layer: "hair", src: hairBlondeImg },
-  hair_red: { layer: "hair", src: hairRedImg },
-  shirt_purple: { layer: "shirt", src: shirtPurpleImg },
-  shirt_blue: { layer: "shirt", src: shirtBlueImg },
-  shirt_green: { layer: "shirt", src: shirtGreenImg },
-  shirt_red: { layer: "shirt", src: shirtRedImg },
-  hat_wizard: { layer: "hat", src: headwearWizardImg },
-  halo: { layer: "hat", src: headwearHaloImg },
-  crown_silver: { layer: "hat", src: headwearCrownSilverImg },
-  glasses: { layer: "accessory", src: accessoryGlassesImg },
-  robot: { layer: "accessory", src: accessoryRobotImg },
-};
-
-export const AVATAR_THUMBNAILS: Record<string, string> = Object.fromEntries(
-  Object.entries(AVATAR_ASSETS).map(([key, value]) => [key, value.src])
-);
-
-function layersFromState(state: AvatarState): AvatarLayers {
-  const layers: AvatarLayers = {};
-  for (const key of avatarStateToItems(state)) {
-    const asset = AVATAR_ASSETS[key];
-    if (asset) layers[asset.layer] = asset.src;
-  }
-  return layers;
-}
-
-function geometryFromState(state: AvatarState): AvatarLayerGeometryMap {
-  const geometry: AvatarLayerGeometryMap = {};
-  for (const key of avatarStateToItems(state)) {
-    const asset = AVATAR_ASSETS[key];
-    if (asset?.geometry) geometry[asset.layer] = asset.geometry;
-  }
-  return geometry;
-}
-
-// Legacy DB cosmetic configs are intentionally normalized into the shared canvas.
-export type CosmeticPositionConfig = {
-  x?: number;
-  y?: number;
-  scale?: number;
-  zIndex?: number;
-};
-
-export type AvatarLayerFilters = Partial<Record<AvatarLayerKey, string>>;
-
 export function normalizeEquipped(items: string[] | null | undefined): string[] {
   return avatarStateToItems(avatarStateFromItems(items));
 }
+
+/* ---------- DiceBear renderer ---------- */
+
+type DicebearOpts = {
+  state: AvatarState;
+  seed: string;
+  withAccessory: boolean;
+  /** Hide hair (used when wizard hat covers the head). */
+  hideHair?: boolean;
+};
+
+function buildDicebearOptions({ state, seed, withAccessory, hideHair }: DicebearOpts) {
+  const skin = SKIN_HEX[state.skinTone] ?? SKIN_HEX.skin_light;
+  const hairColorHex = HAIR_HEX[state.hairColor] ?? HAIR_HEX.hair_brown;
+  const top = HAIR_TOP[state.hairStyle] ?? HAIR_TOP.hairstyle_short;
+  const eyes = EYES_MAP[state.eyes] ?? "default";
+  const clothing = CLOTHING_MAP[state.clothing] ?? "hoodie";
+  const clothesHex = CLOTHES_HEX[state.clothesColor] ?? "6d3bd1";
+  const accessory = withAccessory ? DICEBEAR_ACCESSORIES[state.accessory] : undefined;
+  return {
+    seed,
+    skinColor: [skin],
+    top: hideHair ? (["shortHairShortFlat"] as string[]) : [top],
+    topProbability: hideHair ? 0 : 100,
+    hairColor: [hairColorHex],
+    eyes: [eyes] as string[],
+    clothing: [clothing] as string[],
+    clothesColor: [clothesHex],
+    accessories: accessory ? [accessory] : undefined,
+    accessoriesProbability: accessory ? 100 : 0,
+    facialHairProbability: 0,
+    backgroundColor: ["transparent"],
+  };
+}
+
+/** Public: returns an SVG data URI for an avatar state. Memoize at call sites. */
+export function getAvatarDataUri(state: AvatarState, seed = "grapheion"): string {
+  const opts = buildDicebearOptions({
+    state,
+    seed,
+    withAccessory: !!state.accessory && state.accessory !== "robot",
+  });
+  return createAvatar(avataaars, opts as any).toDataUri();
+}
+
+/* AVATAR_THUMBNAILS kept for backwards compat (Profile uses it for legacy keys). */
+export const AVATAR_THUMBNAILS: Record<string, string> = {
+  hat_wizard: headwearWizardImg,
+  halo: headwearHaloImg,
+  crown_silver: headwearCrownSilverImg,
+  aura_magic: magicAuraImg,
+  rainbow_aura: rainbowAuraImg,
+};
+
+/* ---------- Component ---------- */
 
 const SIZE_CLASS = {
   xs: "h-8 w-8 text-xs",
@@ -211,29 +257,18 @@ const SIZE_CLASS = {
 
 export type AvatarSize = keyof typeof SIZE_CLASS;
 
-function initials(name?: string | null) {
-  if (!name) return "?";
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("") || "?";
-}
-
-function layerStyle(key: AvatarLayerKey, geometry?: AvatarLayerGeometryMap): React.CSSProperties {
-  const base = DEFAULT_AVATAR_GEOMETRY[key];
-  const custom = geometry?.[key];
-  const x = custom?.x ?? base.x;
-  const y = custom?.y ?? base.y;
-  const scale = Math.min(Math.max(custom?.scale ?? base.scale, 0.2), 1.15);
-  return {
-    inset: 0,
-    zIndex: custom?.zIndex ?? base.zIndex,
-    transform: `translate(${x}%, ${y}%) scale(${scale})`,
-    transformOrigin: "50% 50%",
-  };
-}
+/* Backwards-compat exports referenced elsewhere */
+export type CosmeticPositionConfig = {
+  x?: number;
+  y?: number;
+  scale?: number;
+  zIndex?: number;
+};
+export type AvatarLayerKey = "background" | "body" | "accessory" | "hat";
+export type AvatarLayers = Partial<Record<AvatarLayerKey, string | null | undefined>>;
+export type AvatarLayerFilters = Partial<Record<AvatarLayerKey, string>>;
+export type AvatarLayerGeometry = CosmeticPositionConfig;
+export type AvatarLayerGeometryMap = Partial<Record<AvatarLayerKey, AvatarLayerGeometry>>;
 
 export const StudentAvatar = ({
   name,
@@ -242,10 +277,6 @@ export const StudentAvatar = ({
   size = "sm",
   className,
   frame = "card",
-  baseImage,
-  layers,
-  layerFilters,
-  layerGeometry,
 }: {
   name?: string | null;
   items?: string[] | null;
@@ -254,15 +285,39 @@ export const StudentAvatar = ({
   className?: string;
   positionConfigs?: Record<string, CosmeticPositionConfig | null | undefined>;
   frame?: "card" | "circle";
-  baseImage?: string | null;
-  layers?: AvatarLayers;
-  layerFilters?: AvatarLayerFilters;
-  layerGeometry?: AvatarLayerGeometryMap;
 }) => {
-  const resolvedState = avatarState ?? avatarStateFromItems(items);
-  const resolvedLayers = layers ?? layersFromState(resolvedState);
-  const resolvedGeometry = layerGeometry ?? geometryFromState(resolvedState);
-  const hasLayers = Object.values(resolvedLayers).some(Boolean);
+  const state = avatarState ?? avatarStateFromItems(items);
+  const seed = (name && name.trim()) || "grapheion";
+
+  // Wizard hat covers hair fully; halo/crown sit above hair so keep hair visible.
+  const hideHair = state.headwear === "hat_wizard";
+  const dataUri = React.useMemo(
+    () => getAvatarDataUri({ ...state, headwear: "" }, seed) /* hat rendered as overlay */
+      // We re-derive with hideHair semantics via a custom call below; keep simple here.
+      ,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      seed,
+      state.skinTone,
+      state.hairStyle,
+      state.hairColor,
+      state.eyes,
+      state.clothing,
+      state.clothesColor,
+      state.accessory,
+    ]
+  );
+
+  const hatDataUri = React.useMemo(() => {
+    if (!hideHair) return dataUri;
+    return createAvatar(
+      avataaars,
+      buildDicebearOptions({ state, seed, withAccessory: !!state.accessory, hideHair: true }) as any
+    ).toDataUri();
+  }, [hideHair, dataUri, state, seed]);
+
+  const auraSrc = AURA_OVERLAY[state.aura];
+  const headwear = HEADWEAR_OVERLAY[state.headwear];
 
   const shapeClass = frame === "circle" ? "rounded-full" : "rounded-2xl";
   const frameDecor =
@@ -277,41 +332,43 @@ export const StudentAvatar = ({
     >
       <span
         className={cn(
-          "relative inline-flex h-full w-full items-center justify-center overflow-hidden text-secondary-foreground font-medium",
+          "relative inline-flex h-full w-full items-center justify-center text-secondary-foreground font-medium overflow-hidden",
           shapeClass,
           frameDecor
         )}
       >
-        {hasLayers ? (
-          <span className="relative block aspect-square h-full w-full overflow-hidden">
-            {LAYER_ORDER.map((key) => {
-              const src = resolvedLayers[key];
-              if (!src) return null;
-              return (
-                <img
-                  key={key}
-                  src={src}
-                  alt=""
-                  data-avatar-layer={key}
-                  draggable={false}
-                  className="absolute h-full w-full object-contain object-center select-none pointer-events-none"
-                  style={{
-                    ...layerStyle(key, resolvedGeometry),
-                    filter: layerFilters?.[key],
-                  }}
-                />
-              );
-            })}
-          </span>
-        ) : baseImage ? (
+        {/* Aura background */}
+        {auraSrc && (
           <img
-            src={baseImage}
+            src={auraSrc}
             alt=""
-            className="h-full w-full object-contain object-center select-none pointer-events-none"
             draggable={false}
+            className="absolute inset-0 h-full w-full object-cover opacity-70 pointer-events-none select-none"
+            style={{ zIndex: 0 }}
           />
-        ) : (
-          initials(name)
+        )}
+        {/* DiceBear character */}
+        <img
+          src={hideHair ? hatDataUri : dataUri}
+          alt=""
+          draggable={false}
+          className="relative h-full w-full object-contain object-bottom select-none pointer-events-none"
+          style={{ zIndex: 10 }}
+        />
+        {/* Cosmetic headwear overlay */}
+        {headwear && (
+          <img
+            src={headwear.src}
+            alt=""
+            draggable={false}
+            className="absolute left-1/2 -translate-x-1/2 select-none pointer-events-none"
+            style={{
+              top: headwear.top,
+              width: `${headwear.widthPct}%`,
+              zIndex: 30,
+              filter: "drop-shadow(0 2px 4px hsl(0 0% 0% / 0.25))",
+            }}
+          />
         )}
       </span>
     </span>
