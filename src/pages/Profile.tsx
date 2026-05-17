@@ -157,6 +157,7 @@ export default function Profile() {
     setConfirmOpen(false);
     if (error) { toast.error(error.message); return; }
     setSavedAvatar(previewAvatar);
+    window.dispatchEvent(new CustomEvent("profile:updated", { detail: { userId: user.id } }));
     toast.success("Avatar saved");
   };
 
