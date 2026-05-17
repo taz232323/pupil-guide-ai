@@ -214,6 +214,7 @@ export const StudentAvatar = ({
   frame = "card",
   baseImage,
   layers,
+  layerFilters,
 }: {
   name?: string | null;
   items?: string[] | null;
