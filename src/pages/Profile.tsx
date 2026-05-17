@@ -149,15 +149,31 @@ export default function Profile() {
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         {/* Live preview */}
         <Card className="overflow-hidden">
-          <div className="relative bg-gradient-to-br from-primary/15 via-primary/5 to-secondary/20 px-6 pt-10 pb-8 flex flex-col items-center">
-            <div className="absolute inset-0 opacity-40 pointer-events-none"
-              style={{ backgroundImage: "radial-gradient(circle at 20% 20%, hsl(var(--primary)/0.2), transparent 50%), radial-gradient(circle at 80% 80%, hsl(var(--secondary)/0.25), transparent 50%)" }}
+          <div className="relative bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/30 px-6 pt-10 pb-8 flex flex-col items-center">
+            <div className="absolute inset-0 opacity-50 pointer-events-none"
+              style={{ backgroundImage: "radial-gradient(circle at 20% 20%, hsl(var(--primary)/0.25), transparent 55%), radial-gradient(circle at 80% 80%, hsl(var(--secondary)/0.3), transparent 55%)" }}
             />
             <div className="relative">
-              <StudentAvatar name={name || "You"} items={equipped} size="lg" className="h-32 w-32 text-5xl ring-4 ring-background shadow-xl" />
+              {/* Soft glow pedestal behind the character card */}
+              <div
+                aria-hidden
+                className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-primary/30 via-transparent to-secondary/40 blur-xl opacity-70"
+              />
+              <StudentAvatar
+                name={name || "You"}
+                items={equipped}
+                size="xl"
+                frame="card"
+                className="relative h-44 w-44 sm:h-48 sm:w-48 text-6xl ring-1 ring-border/60 shadow-[0_20px_50px_-20px_hsl(var(--primary)/0.55)]"
+              />
+              {/* Faux ground shadow for game-card depth */}
+              <div
+                aria-hidden
+                className="mx-auto mt-2 h-2 w-32 rounded-full bg-foreground/20 blur-md"
+              />
             </div>
-            <p className="relative mt-4 text-lg font-semibold">{name || "Unnamed student"}</p>
-            <p className="relative text-xs text-muted-foreground mt-0.5">Live preview</p>
+            <p className="relative mt-3 text-lg font-semibold tracking-tight">{name || "Unnamed student"}</p>
+            <p className="relative text-xs text-muted-foreground mt-0.5 uppercase tracking-[0.18em]">Character preview</p>
           </div>
           <CardContent className="space-y-4 pt-5">
             <div className="space-y-2">

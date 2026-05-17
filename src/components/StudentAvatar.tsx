@@ -132,6 +132,7 @@ const SIZE_CLASS = {
   sm: "h-8 w-8 text-sm",
   md: "h-12 w-12 text-lg",
   lg: "h-24 w-24 text-3xl",
+  xl: "h-40 w-40 text-5xl",
 };
 
 export type AvatarSize = keyof typeof SIZE_CLASS;
@@ -152,6 +153,8 @@ export const StudentAvatar = ({
   size = "sm",
   className,
   positionConfigs,
+  frame = "card",
+  baseImage,
 }: {
   name?: string | null;
   items?: string[] | null;
@@ -163,6 +166,17 @@ export const StudentAvatar = ({
    * positioned without code changes.
    */
   positionConfigs?: Record<string, CosmeticPositionConfig | null | undefined>;
+  /**
+   * Visual container shape. "card" (default) renders a game-style rounded
+   * square frame with soft depth so full-body character art is not clipped
+   * into a circle. "circle" preserves the legacy circular mask.
+   */
+  frame?: "card" | "circle";
+  /**
+   * Optional transparent PNG/SVG character art rendered as the base avatar.
+   * Cosmetics still layer above it using the existing z-index system.
+   */
+  baseImage?: string | null;
 }) => {
   // Constraint: one per layer, no dupes, unknown keys silently dropped.
   const equipped = normalizeEquipped(items);
@@ -177,6 +191,12 @@ export const StudentAvatar = ({
     .filter((k) => !BACKGROUND_TEXTURES[k])
     .sort((a, b) => (COSMETIC_LAYERS[a]?.z ?? 10) - (COSMETIC_LAYERS[b]?.z ?? 10));
 
+  const shapeClass = frame === "circle" ? "rounded-full" : "rounded-2xl";
+  const frameDecor =
+    frame === "card"
+      ? "border border-border/60 shadow-[0_6px_18px_-8px_hsl(var(--foreground)/0.35),inset_0_1px_0_hsl(var(--background)/0.6)] bg-gradient-to-b from-secondary/70 to-secondary"
+      : "bg-secondary";
+
   return (
     <span
       className={cn(
@@ -190,7 +210,7 @@ export const StudentAvatar = ({
       {activeBackground && (
         <span
           aria-hidden
-          className="absolute inset-0 rounded-full overflow-hidden pointer-events-none"
+          className={cn("absolute inset-0 overflow-hidden pointer-events-none", shapeClass)}
           style={{ zIndex: 0, background: activeBackground.background }}
         />
       )}
@@ -198,11 +218,22 @@ export const StudentAvatar = ({
       {/* Base avatar — bottom layer */}
       <span
         className={cn(
-          "relative z-10 inline-flex h-full w-full items-center justify-center rounded-full bg-secondary text-secondary-foreground font-medium",
+          "relative z-10 inline-flex h-full w-full items-center justify-center overflow-hidden text-secondary-foreground font-medium",
+          shapeClass,
+          frameDecor,
           activeBackground?.ring
         )}
       >
-        {initials(name)}
+        {baseImage ? (
+          <img
+            src={baseImage}
+            alt=""
+            className="h-full w-full object-contain object-bottom select-none pointer-events-none"
+            draggable={false}
+          />
+        ) : (
+          initials(name)
+        )}
       </span>
 
       {/* Cosmetic overlay container — does not affect layout size */}
