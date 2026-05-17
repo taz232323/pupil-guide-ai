@@ -117,9 +117,9 @@ export default function Profile() {
       ]);
       setName(prof?.full_name ?? "");
       setOriginalName(prof?.full_name ?? "");
-      const eq = (prof?.avatar_items ?? []) as string[];
-      setEquipped(eq);
-      setOriginalEquipped(eq);
+      const loadedAvatar = avatarStateFromItems((prof?.avatar_items ?? []) as string[]);
+      setPreviewAvatar(loadedAvatar);
+      setSavedAvatar(loadedAvatar);
       setInappOn((prof as any)?.inapp_reminders_enabled !== false);
       setEmailOn((prof as any)?.email_reminders_enabled !== false);
       setLbUsername((prof as any)?.leaderboard_username ?? "");
@@ -135,47 +135,28 @@ export default function Profile() {
     const opt = OPTION_BY_KEY[optionKey];
     if (!opt) return;
     if (opt.cost && !owned.has(optionKey)) return;
-    setEquipped((prev) => applySelection(prev, optionKey));
+    setPreviewAvatar((prev) => updateAvatarState(prev, optionKey));
   };
 
   /** Unequip the current item in a category (only meaningful for headwear). */
   const clearCategory = (category: BuilderCategory) => {
-    setEquipped((prev) => prev.filter((k) => OPTION_BY_KEY[k]?.category !== category));
+    setPreviewAvatar((prev) => clearAvatarCategory(prev, category));
   };
 
-  // Resolved selections drive the live avatar layers.
-  const selSkin     = pickForCategory(equipped, "skin");
-  const selHair     = pickForCategory(equipped, "hair");
-  const selClothing = pickForCategory(equipped, "clothing");
-  const selHeadwear = pickForCategory(equipped, "headwear");
-
-  const avatarLayers: AvatarLayers = {
-    background: avatarAuraImg,
-    body: avatarBodyImg,
-    hair: OPTION_BY_KEY[selHair]?.image ?? avatarHairImg,
-    shirt: OPTION_BY_KEY[selClothing]?.image ?? avatarShirtImg,
-    hat: selHeadwear ? OPTION_BY_KEY[selHeadwear]?.image : undefined,
-  };
-  const layerFilters: AvatarLayerFilters = {
-    body: OPTION_BY_KEY[selSkin]?.filter,
-    hair: OPTION_BY_KEY[selHair]?.filter,
-    shirt: OPTION_BY_KEY[selClothing]?.filter,
-  };
-
-  const dirty =
-    equipped.length !== originalEquipped.length ||
-    equipped.some((k) => !originalEquipped.includes(k));
+  const previewItems = avatarStateToItems(previewAvatar);
+  const dirty = !sameAvatarState(previewAvatar, savedAvatar);
 
   const save = async () => {
     if (!user) return;
+    const avatarItems = avatarStateToItems(previewAvatar);
     setSaving(true);
     const { error } = await supabase.from("profiles")
-      .update({ avatar_items: equipped })
+      .update({ avatar_items: avatarItems })
       .eq("id", user.id);
     setSaving(false);
     setConfirmOpen(false);
     if (error) { toast.error(error.message); return; }
-    setOriginalEquipped(equipped);
+    setSavedAvatar(previewAvatar);
     toast.success("Avatar saved");
   };
 
