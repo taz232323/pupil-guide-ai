@@ -106,8 +106,8 @@ Deno.serve(async (req) => {
       module_items: items.map((m: any) => m.title),
     };
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!apiKey) return json({ error: "GEMINI_API_KEY not configured" }, 500);
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) return json({ error: "LOVABLE_API_KEY not configured" }, 500);
 
     const prompt = `You are creating a short daily practice quiz for a student in the class "${cls.name}" (${cls.subject}).
 Use the following class context to ground your questions in topics the student has actually studied:
@@ -131,24 +131,30 @@ Return ONLY valid JSON matching this schema, no prose, no markdown:
   ]
 }`;
 
-    const geminiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
-        }),
+    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
-    );
-    if (!geminiResp.ok) {
-      const t = await geminiResp.text();
-      console.error("Gemini error:", geminiResp.status, t);
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: "You generate practice quizzes. Always return valid JSON only." },
+          { role: "user", content: prompt },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!aiResp.ok) {
+      const t = await aiResp.text();
+      console.error("AI gateway error:", aiResp.status, t);
+      if (aiResp.status === 429) return json({ error: "Rate limit exceeded, please retry shortly" }, 429);
+      if (aiResp.status === 402) return json({ error: "AI credits exhausted. Add credits in workspace settings." }, 402);
       return json({ error: "Failed to generate questions" }, 500);
     }
-    const gj = await geminiResp.json();
-    const text = gj?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    const gj = await aiResp.json();
+    const text = gj?.choices?.[0]?.message?.content || "{}";
     let parsed: any;
     try { parsed = JSON.parse(text); } catch { parsed = { questions: [] }; }
     const qs = Array.isArray(parsed.questions) ? parsed.questions : [];
