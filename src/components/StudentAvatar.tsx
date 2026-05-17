@@ -303,6 +303,8 @@ export const StudentAvatar = ({
             {LAYER_ORDER.map((key) => {
               const src = layers[key];
               if (!src) return null;
+              const geom = AVATAR_LAYER_STYLE[key];
+              const filter = layerFilters?.[key];
               return (
                 <img
                   key={key}
@@ -310,8 +312,14 @@ export const StudentAvatar = ({
                   alt=""
                   data-avatar-layer={key}
                   draggable={false}
-                  className="absolute inset-0 h-full w-full object-contain object-bottom select-none pointer-events-none"
-                  style={{ zIndex: AVATAR_LAYER_Z[key] }}
+                  className="absolute object-contain object-bottom select-none pointer-events-none"
+                  style={{
+                    ...geom,
+                    zIndex: AVATAR_LAYER_Z[key],
+                    filter,
+                    width: geom.width ?? "100%",
+                    height: geom.height ?? "100%",
+                  }}
                 />
               );
             })}
