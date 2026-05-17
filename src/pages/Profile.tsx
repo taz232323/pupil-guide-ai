@@ -328,10 +328,10 @@ export default function Profile() {
                       <>
                         {/* Mobile: horizontal scroll. Desktop: grid. */}
                         <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
-                          {cat === "headwear" && (
+                          {(cat === "headwear" || cat === "accessory") && (
                             <button
                               type="button"
-                              onClick={() => clearCategory("headwear")}
+                              onClick={() => clearCategory(cat)}
                               className={cn(
                                 "snap-start shrink-0 sm:shrink min-w-[7rem] sm:min-w-0 flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
                                 !activeKey && "border-primary ring-2 ring-primary/20 bg-primary/5",
@@ -346,6 +346,10 @@ export default function Profile() {
                             const requiresOwnership = !!opt.cost;
                             const isOwned = !requiresOwnership || owned.has(opt.key);
                             const isOn = activeKey === opt.key;
+                            // Live mini preview: render current avatar but with this option applied.
+                            const livePreview = !opt.thumb && !opt.swatch
+                              ? getAvatarDataUri(updateAvatarState({ ...previewAvatar, headwear: "" }, opt.key), name || "you")
+                              : null;
                             return (
                               <button
                                 type="button"
@@ -365,10 +369,12 @@ export default function Profile() {
                                   </span>
                                 )}
                                 <div className={cn(
-                                  "relative h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center overflow-hidden mb-2",
+                                  "relative h-14 w-14 rounded-xl bg-muted/60 flex items-center justify-center overflow-hidden mb-2",
                                   !isOwned && "grayscale"
                                 )}>
-                                  {opt.thumb ? (
+                                  {livePreview ? (
+                                    <img src={livePreview} alt="" className="h-full w-full object-contain" draggable={false} />
+                                  ) : opt.thumb ? (
                                     <img src={opt.thumb} alt="" className="h-11 w-11 object-contain" draggable={false} />
                                   ) : opt.swatch ? (
                                     <span
@@ -378,7 +384,7 @@ export default function Profile() {
                                     />
                                   ) : null}
                                   {!isOwned && (
-                                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70 backdrop-blur-[1px]">
+                                    <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/70 backdrop-blur-[1px]">
                                       <Lock className="h-5 w-5 text-muted-foreground" />
                                     </span>
                                   )}
