@@ -162,9 +162,36 @@ export default function Profile() {
     })();
   }, [user]);
 
-  const toggle = (key: string) => {
-    if (!owned.has(key)) return;
-    setEquipped((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
+  /** Equip an option, enforcing one-per-category. Cosmetic items must be owned. */
+  const selectOption = (optionKey: string) => {
+    const opt = OPTION_BY_KEY[optionKey];
+    if (!opt) return;
+    if (opt.cost && !owned.has(optionKey)) return;
+    setEquipped((prev) => applySelection(prev, optionKey));
+  };
+
+  /** Unequip the current item in a category (only meaningful for headwear). */
+  const clearCategory = (category: BuilderCategory) => {
+    setEquipped((prev) => prev.filter((k) => OPTION_BY_KEY[k]?.category !== category));
+  };
+
+  // Resolved selections drive the live avatar layers.
+  const selSkin     = pickForCategory(equipped, "skin");
+  const selHair     = pickForCategory(equipped, "hair");
+  const selClothing = pickForCategory(equipped, "clothing");
+  const selHeadwear = pickForCategory(equipped, "headwear");
+
+  const avatarLayers: AvatarLayers = {
+    background: avatarAuraImg,
+    body: avatarBodyImg,
+    hair: OPTION_BY_KEY[selHair]?.image ?? avatarHairImg,
+    shirt: OPTION_BY_KEY[selClothing]?.image ?? avatarShirtImg,
+    hat: selHeadwear ? OPTION_BY_KEY[selHeadwear]?.image : undefined,
+  };
+  const layerFilters: AvatarLayerFilters = {
+    body: OPTION_BY_KEY[selSkin]?.filter,
+    hair: OPTION_BY_KEY[selHair]?.filter,
+    shirt: OPTION_BY_KEY[selClothing]?.filter,
   };
 
   const dirty =
@@ -221,13 +248,8 @@ export default function Profile() {
                 items={equipped}
                 size="xl"
                 frame="card"
-                layers={{
-                  background: avatarAuraImg,
-                  body: avatarBodyImg,
-                  shirt: avatarShirtImg,
-                  hair: avatarHairImg,
-                  hat: equipped.includes("hat_wizard") ? avatarHatImg : undefined,
-                }}
+                layers={avatarLayers}
+                layerFilters={layerFilters}
                 className="relative h-44 w-44 sm:h-48 sm:w-48 text-6xl ring-1 ring-border/60 shadow-[0_20px_50px_-20px_hsl(var(--primary)/0.55)]"
               />
               {/* Faux ground shadow for game-card depth */}
