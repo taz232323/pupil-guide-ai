@@ -19,6 +19,11 @@ import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
 import haloImg from "@/assets/cosmetics/halo.png";
 import robotImg from "@/assets/cosmetics/robot.png";
 import rainbowAuraImg from "@/assets/cosmetics/rainbow-aura.png";
+import avatarBodyImg from "@/assets/avatar/base-body.png";
+import avatarHairImg from "@/assets/avatar/hair-default.png";
+import avatarShirtImg from "@/assets/avatar/shirt-hoodie-purple.png";
+import avatarHatImg from "@/assets/avatar/hat-wizard-fantasy.png";
+import avatarAuraImg from "@/assets/avatar/aura-magic.png";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Lock, Sparkles, Check, Star } from "lucide-react";
@@ -164,6 +169,13 @@ export default function Profile() {
                 items={equipped}
                 size="xl"
                 frame="card"
+                layers={{
+                  background: avatarAuraImg,
+                  body: avatarBodyImg,
+                  shirt: avatarShirtImg,
+                  hair: avatarHairImg,
+                  hat: equipped.includes("hat_wizard") ? avatarHatImg : undefined,
+                }}
                 className="relative h-44 w-44 sm:h-48 sm:w-48 text-6xl ring-1 ring-border/60 shadow-[0_20px_50px_-20px_hsl(var(--primary)/0.55)]"
               />
               {/* Faux ground shadow for game-card depth */}
