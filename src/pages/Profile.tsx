@@ -318,87 +318,100 @@ export default function Profile() {
             <CardDescription>Pick items by category. Locked items show their unlock cost.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="hair">
+            <Tabs defaultValue="skin">
               <TabsList className="grid grid-cols-4 w-full">
-                {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => (
+                {(Object.keys(CATEGORY_LABEL) as BuilderCategory[]).map((c) => (
                   <TabsTrigger key={c} value={c}>{CATEGORY_LABEL[c]}</TabsTrigger>
                 ))}
               </TabsList>
-              {(Object.keys(CATEGORY_LABEL) as Category[]).map((cat) => {
-                const catItems = ITEMS.filter((i) => i.category === cat);
+              {(Object.keys(CATEGORY_LABEL) as BuilderCategory[]).map((cat) => {
+                const catItems = BUILDER.filter((o) => o.category === cat);
+                const activeKey = pickForCategory(equipped, cat);
                 return (
                   <TabsContent key={cat} value={cat} className="mt-5">
                     {loading ? (
                       <p className="text-sm text-muted-foreground">Loading...</p>
-                    ) : catItems.length === 0 ? (
-                      <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-                        No {CATEGORY_LABEL[cat].toLowerCase()} items yet — check back soon!
-                      </div>
                     ) : (
-                      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
-                        {catItems.map((item) => {
-                          const isOwned = owned.has(item.key);
-                          const isOn = equipped.includes(item.key);
-                          return (
+                      <>
+                        {/* Mobile: horizontal scroll. Desktop: grid. */}
+                        <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
+                          {cat === "headwear" && (
                             <button
                               type="button"
-                              key={item.key}
-                              onClick={() => toggle(item.key)}
-                              disabled={!isOwned}
+                              onClick={() => clearCategory("headwear")}
                               className={cn(
-                                "group relative flex flex-col items-center rounded-xl border bg-card p-4 transition-all text-center",
-                                isOwned && !isOn && "hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5",
-                                isOn && "border-primary ring-2 ring-primary/20 bg-primary/5",
-                                !isOwned && "opacity-90 cursor-not-allowed"
+                                "snap-start shrink-0 sm:shrink min-w-[7rem] sm:min-w-0 flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
+                                !activeKey && "border-primary ring-2 ring-primary/20 bg-primary/5",
+                                activeKey && "hover:border-primary/40 hover:-translate-y-0.5"
                               )}
                             >
-                              {isOn && (
-                                <span className="absolute top-2 right-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                  <Check className="h-3 w-3" />
-                                </span>
-                              )}
-                              <div className={cn(
-                                "relative h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center text-3xl mb-2",
-                                !isOwned && "grayscale"
-                              )}>
-                                {COSMETIC_TILE_IMAGE[item.key] ? (
-                                  <img
-                                    src={COSMETIC_TILE_IMAGE[item.key]}
-                                    alt=""
-                                    className="h-11 w-11 object-contain"
-                                    draggable={false}
-                                  />
-                                ) : (
-                                  <span aria-hidden>{item.emoji ?? COSMETIC_EMOJI[item.key]}</span>
-                                )}
-                                {!isOwned && (
-                                  <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70 backdrop-blur-[1px]">
-                                    <Lock className="h-5 w-5 text-muted-foreground" />
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-sm font-medium leading-tight">{item.name}</span>
-                              <div className="mt-2">
-                                {isOwned ? (
-                                  <Badge variant={isOn ? "default" : "secondary"} className="text-[10px]">
-                                    {isOn ? "Equipped" : "Owned"}
-                                  </Badge>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                                    <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
-                                    {item.cost}
-                                  </span>
-                                )}
-                              </div>
+                              <div className="h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center text-2xl mb-2">∅</div>
+                              <span className="text-sm font-medium leading-tight">None</span>
                             </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {!loading && catItems.some((i) => !owned.has(i.key)) && (
-                      <p className="mt-4 text-xs text-muted-foreground text-center">
-                        Earn star coins by completing assignments, then unlock items in the Shop.
-                      </p>
+                          )}
+                          {catItems.map((opt) => {
+                            const requiresOwnership = !!opt.cost;
+                            const isOwned = !requiresOwnership || owned.has(opt.key);
+                            const isOn = activeKey === opt.key;
+                            return (
+                              <button
+                                type="button"
+                                key={opt.key}
+                                onClick={() => selectOption(opt.key)}
+                                disabled={!isOwned}
+                                className={cn(
+                                  "snap-start shrink-0 sm:shrink min-w-[7rem] sm:min-w-0 group relative flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
+                                  isOwned && !isOn && "hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5",
+                                  isOn && "border-primary ring-2 ring-primary/20 bg-primary/5",
+                                  !isOwned && "opacity-90 cursor-not-allowed"
+                                )}
+                              >
+                                {isOn && (
+                                  <span className="absolute top-2 right-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                    <Check className="h-3 w-3" />
+                                  </span>
+                                )}
+                                <div className={cn(
+                                  "relative h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center overflow-hidden mb-2",
+                                  !isOwned && "grayscale"
+                                )}>
+                                  {opt.thumb ? (
+                                    <img src={opt.thumb} alt="" className="h-11 w-11 object-contain" draggable={false} />
+                                  ) : opt.swatch ? (
+                                    <span
+                                      aria-hidden
+                                      className="block h-9 w-9 rounded-full border border-border/60 shadow-inner"
+                                      style={{ background: opt.swatch }}
+                                    />
+                                  ) : null}
+                                  {!isOwned && (
+                                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70 backdrop-blur-[1px]">
+                                      <Lock className="h-5 w-5 text-muted-foreground" />
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-sm font-medium leading-tight">{opt.name}</span>
+                                <div className="mt-2 min-h-[18px]">
+                                  {requiresOwnership && !isOwned && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                                      {opt.cost}
+                                    </span>
+                                  )}
+                                  {isOn && (
+                                    <Badge variant="default" className="text-[10px]">Equipped</Badge>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {cat === "headwear" && catItems.some((o) => o.cost && !owned.has(o.key)) && (
+                          <p className="mt-4 text-xs text-muted-foreground text-center">
+                            Earn star coins by completing assignments, then unlock items in the Shop.
+                          </p>
+                        )}
+                      </>
                     )}
                   </TabsContent>
                 );
