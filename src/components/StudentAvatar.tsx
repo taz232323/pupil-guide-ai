@@ -138,6 +138,25 @@ const LAYER_ORDER: AvatarLayerKey[] = [
   "hat",
 ];
 
+/**
+ * Per-layer geometry. All layers share the same square frame; these values
+ * normalize their position/size against that frame so cosmetics from different
+ * art passes still line up on one base character. Heights are % of frame.
+ */
+export const AVATAR_LAYER_STYLE: Record<AvatarLayerKey, React.CSSProperties> = {
+  background: { inset: 0 },
+  body:       { inset: 0 },
+  shirt:      { inset: 0 },
+  eyes:       { inset: 0 },
+  hair:       { top: "-2%", left: 0, right: 0, height: "100%" },
+  accessory:  { inset: 0 },
+  // Headwear sits on top of the head — small, anchored to the top of the frame.
+  hat:        { top: "-8%", left: "50%", width: "55%", height: "55%", transform: "translateX(-50%)" },
+};
+
+/** Optional per-layer CSS filter (used to tint skin / hair / shirt). */
+export type AvatarLayerFilters = Partial<Record<AvatarLayerKey, string>>;
+
 /** Returns the layer (hat/face/aura/etc.) for a cosmetic key. */
 export function getCosmeticLayer(key: string): CosmeticLayer {
   return COSMETIC_LAYERS[key]?.layer ?? "accessory";
