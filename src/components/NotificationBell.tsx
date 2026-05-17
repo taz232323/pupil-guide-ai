@@ -174,7 +174,11 @@ export const NotificationBell = ({ className }: { className?: string }) => {
           <div>
             <p className="text-sm font-semibold">Notifications</p>
             <p className="text-xs text-muted-foreground">
-              {unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up"}
+              {unreadCount > 0
+                ? `${unreadCount} unread`
+                : items.length > 0
+                  ? "Recent notifications"
+                  : "You're all caught up"}
             </p>
           </div>
         </div>

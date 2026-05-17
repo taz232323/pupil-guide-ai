@@ -53,7 +53,7 @@ export function StudentClasses() {
       setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { load();   }, [user]);
 
   return (
     <div className="space-y-4">

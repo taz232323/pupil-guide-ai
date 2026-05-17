@@ -48,11 +48,14 @@ export function TeacherPrivilegeRequests() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { load();   }, [user]);
 
   const resolve = async (id: string, status: "approved" | "denied") => {
     setBusyId(id);
-    const { error } = await supabase.from("shop_purchases").update({ status }).eq("id", id);
+    const { error } = await supabase.rpc("resolve_shop_purchase", {
+      _purchase_id: id,
+      _status: status,
+    });
     setBusyId(null);
     if (error) { toast.error(error.message); return; }
     toast.success(status === "approved" ? "Approved" : "Denied & refunded");

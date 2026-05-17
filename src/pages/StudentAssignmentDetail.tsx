@@ -115,20 +115,21 @@ export default function StudentAssignmentDetail() {
     const rows = questions
       .filter((q) => answers[q.id])
       .map((q) => ({
-        assignment_id: id,
         question_id: q.id,
-        student_id: user.id,
         selected_index: answers[q.id].selected_index ?? null,
         text_response: answers[q.id].text_response ?? null,
       }));
     if (rows.length) {
-      await supabase.from("assignment_answers").upsert(rows, { onConflict: "question_id,student_id" });
+      const { error } = await supabase.rpc("save_assignment_progress", {
+        _assignment_id: id,
+        _answers: rows,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
     }
     if (status === "not_started") {
-      await supabase.from("assignment_status_records").upsert(
-        { assignment_id: id, student_id: user.id, status: "in_progress" },
-        { onConflict: "assignment_id,student_id" }
-      );
       setStatus("in_progress");
     }
   };
@@ -140,24 +141,16 @@ export default function StudentAssignmentDetail() {
     try {
       // 1. Save all answers
       const rows = questions.map((q) => ({
-        assignment_id: id,
         question_id: q.id,
-        student_id: user.id,
         selected_index: answers[q.id]?.selected_index ?? null,
         text_response: answers[q.id]?.text_response ?? null,
       }));
-      if (rows.length) {
-        const { error: aerr } = await supabase
-          .from("assignment_answers")
-          .upsert(rows, { onConflict: "question_id,student_id" });
-        if (aerr) { toast.error(aerr.message); return; }
-      }
 
       // 2. Optional file/link
-      let payload: { file_path?: string; link_url?: string } = {};
+      const payload: { file_path?: string; link_url?: string } = {};
       if (file) {
         if (file.size > 20 * 1024 * 1024) { toast.error("Max 20MB"); return; }
-        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const safe = file.name.replace(/[^\w.-]+/g, "_");
         const path = `${id}/${user.id}/${Date.now()}_${safe}`;
         const { error: upErr } = await supabase.storage.from("submissions").upload(path, file, { upsert: true });
         if (upErr) { toast.error(upErr.message); return; }
@@ -172,12 +165,12 @@ export default function StudentAssignmentDetail() {
       }
 
       // 3. Submission row (always create one to mark as submitted)
-      const { error: serr } = await supabase
-        .from("submissions")
-        .upsert(
-          { assignment_id: id, student_id: user.id, ...payload },
-          { onConflict: "assignment_id,student_id" }
-        );
+      const { error: serr } = await supabase.rpc("submit_assignment", {
+        _assignment_id: id,
+        _answers: rows,
+        _file_path: payload.file_path ?? null,
+        _link_url: payload.link_url ?? null,
+      });
       if (serr) { toast.error(serr.message); return; }
 
       setReward({

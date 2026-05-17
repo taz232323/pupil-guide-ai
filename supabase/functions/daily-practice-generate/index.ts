@@ -1,9 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("APP_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const MAX_QUESTIONS_PER_SESSION = 20;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function clip(value: unknown, max = 160) {
+  return String(value ?? "").slice(0, max);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -24,10 +31,26 @@ Deno.serve(async (req) => {
     const user = userData?.user;
     if (!user) return json({ error: "Unauthorized" }, 401);
 
-    const body = await req.json().catch(() => ({}));
+    const bodyText = await req.text();
+    if (bodyText.length > 4096) return json({ error: "Request body too large" }, 413);
+    let body: any = {};
+    try {
+      body = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      return json({ error: "Invalid JSON body" }, 400);
+    }
     const classId: string = body.classId;
-    const batchSize: number = Math.min(Math.max(Number(body.batchSize) || 5, 1), 10);
+    const requestedBatchSize: number = Math.min(Math.max(Number(body.batchSize) || 5, 1), 10);
     if (!classId) return json({ error: "classId required" }, 400);
+    if (!UUID_RE.test(classId)) return json({ error: "Invalid classId" }, 400);
+
+    const { data: allowed, error: rateErr } = await admin.rpc("check_edge_rate_limit", {
+      _bucket_key: `daily-practice-generate:${user.id}`,
+      _limit: 30,
+      _window_seconds: 3600,
+    });
+    if (rateErr) return json({ error: "Rate limit check failed" }, 500);
+    if (!allowed) return json({ error: "Rate limit exceeded, please retry later" }, 429);
 
     // Verify class & enrollment & enabled
     const { data: cls, error: clsErr } = await admin
@@ -94,16 +117,22 @@ Deno.serve(async (req) => {
     const { count: existingCount } = await admin
       .from("daily_practice_answers")
       .select("id", { count: "exact", head: true })
-      .eq("session_id", session.id);
+      .eq("session_id", session.id)
+      .eq("student_id", user.id);
     const startPos = existingCount || 0;
+    const remaining = MAX_QUESTIONS_PER_SESSION - startPos;
+    if (remaining <= 0) {
+      return json({ error: "Daily practice question limit reached for this session" }, 400);
+    }
+    const batchSize = Math.min(requestedBatchSize, remaining);
 
     // Build context for Gemini
     const context = {
-      class: { name: cls.name, subject: cls.subject, syllabus: cls.syllabus || "" },
-      units: Array.from(new Set((assignments || []).map((a: any) => a.unit_tag).filter(Boolean))),
-      assignments: (assignments || []).map((a: any) => a.title),
-      modules: (modules || []).map((m: any) => m.title),
-      module_items: items.map((m: any) => m.title),
+      class: { name: clip(cls.name), subject: clip(cls.subject), syllabus: clip(cls.syllabus || "", 1500) },
+      units: Array.from(new Set((assignments || []).map((a: any) => clip(a.unit_tag, 80)).filter(Boolean))),
+      assignments: (assignments || []).map((a: any) => clip(a.title, 120)),
+      modules: (modules || []).map((m: any) => clip(m.title, 120)),
+      module_items: items.map((m: any) => clip(m.title, 120)),
     };
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -157,7 +186,7 @@ Return ONLY valid JSON matching this schema, no prose, no markdown:
     const text = gj?.choices?.[0]?.message?.content || "{}";
     let parsed: any;
     try { parsed = JSON.parse(text); } catch { parsed = { questions: [] }; }
-    const qs = Array.isArray(parsed.questions) ? parsed.questions : [];
+    const qs = Array.isArray(parsed.questions) ? parsed.questions.slice(0, batchSize) : [];
     if (qs.length === 0) return json({ error: "No questions generated" }, 500);
 
     const rows = qs.map((q: any, i: number) => {

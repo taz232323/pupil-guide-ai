@@ -177,36 +177,31 @@ export default function TeacherAssignmentDetail() {
     } finally { setSavingQs(false); }
   };
 
-  const updateAnswer = async (a: Answer, patch: Partial<Pick<Answer, "score" | "feedback">>) => {
+  const updateAnswer = (a: Answer, patch: Partial<Pick<Answer, "score" | "feedback">>) => {
     const next = answers.map((x) => x.id === a.id ? { ...x, ...patch } : x);
     setAnswers(next);
-    const { error } = await supabase.from("assignment_answers")
-      .update({ ...patch, graded_at: new Date().toISOString() })
-      .eq("id", a.id);
-    if (error) toast.error(error.message);
   };
 
   const saveOverall = async (studentId: string) => {
     if (!id) return;
     const g = grades[studentId] ?? { overall_score: null, overall_feedback: null };
-    const { error } = await supabase.from("assignment_grades").upsert(
-      {
-        assignment_id: id, student_id: studentId,
-        overall_score: g.overall_score, overall_feedback: g.overall_feedback,
-        graded_at: new Date().toISOString(),
-      },
-      { onConflict: "assignment_id,student_id" }
-    );
+    const answerGrades = answers
+      .filter((a) => a.student_id === studentId)
+      .map((a) => ({
+        answer_id: a.id,
+        score: a.score,
+        feedback: a.feedback,
+      }));
+    const { error } = await supabase.rpc("grade_assignment_submission", {
+      _assignment_id: id,
+      _student_id: studentId,
+      _answer_grades: answerGrades,
+      _overall_score: g.overall_score,
+      _overall_feedback: g.overall_feedback,
+    });
     if (error) { toast.error(error.message); return; }
     toast.success("Overall grade saved");
-
-    // Notify student
-    await supabase.from("notifications").insert({
-      user_id: studentId,
-      type: "assignment_graded",
-      message: `Your work on "${assignment.title}" has been graded`,
-      link: `/student/assignments/${id}`,
-    });
+    load();
   };
 
   if (loading) {

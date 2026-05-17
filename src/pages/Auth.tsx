@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { GraduationCap, Users, ArrowLeft, Mail, Lock, User as UserIcon } from "lucide-react";
+import { GraduationCap, Users, ArrowLeft, Mail, Lock, User as UserIcon, Ticket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,16 @@ const signUpSchema = z.object({
   fullName: z.string().trim().min(1, "Name is required").max(100),
   email: z.string().trim().email("Invalid email").max(255),
   password: z.string().min(8, "At least 8 characters").max(72),
+  teacherInviteCode: z.string().trim().max(128).optional(),
+  role: z.enum(["student", "teacher"]),
+}).superRefine((data, ctx) => {
+  if (data.role === "teacher" && !data.teacherInviteCode) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["teacherInviteCode"],
+      message: "Teacher invite code is required",
+    });
+  }
 });
 
 const signInSchema = z.object({
@@ -34,6 +44,7 @@ export default function Auth() {
   const [fullName, setFullName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [teacherInviteCode, setTeacherInviteCode] = useState("");
 
   const [signinEmail, setSigninEmail] = useState("");
   const [signinPassword, setSigninPassword] = useState("");
@@ -44,7 +55,13 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = signUpSchema.safeParse({ fullName, email: signupEmail, password: signupPassword });
+    const parsed = signUpSchema.safeParse({
+      fullName,
+      email: signupEmail,
+      password: signupPassword,
+      teacherInviteCode,
+      role: selectedRole,
+    });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
       return;
@@ -55,7 +72,11 @@ export default function Auth() {
       password: parsed.data.password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
-        data: { full_name: parsed.data.fullName, role: selectedRole },
+        data: {
+          full_name: parsed.data.fullName,
+          role: selectedRole,
+          teacher_invite_code: selectedRole === "teacher" ? parsed.data.teacherInviteCode : undefined,
+        },
       },
     });
     setSubmitting(false);
@@ -228,6 +249,18 @@ export default function Auth() {
                     onChange={setSignupPassword}
                     hint="Minimum 8 characters."
                   />
+                  {selectedRole === "teacher" && (
+                    <Field
+                      id="signup-teacher-invite"
+                      label="Teacher invite code"
+                      type="text"
+                      icon={Ticket}
+                      autoComplete="off"
+                      value={teacherInviteCode}
+                      onChange={setTeacherInviteCode}
+                      hint="Teacher accounts require a one-time school invite."
+                    />
+                  )}
 
                   <Button
                     type="submit"

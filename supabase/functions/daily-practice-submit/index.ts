@@ -1,14 +1,20 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("APP_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const MIN_QUESTIONS = 5;
+const MAX_QUESTIONS_PER_SESSION = 20;
 const BASE_COINS = 5;
 const BONUS_PER_EXTRA = 1;
 const MILESTONES: Record<number, number> = { 3: 5, 7: 10, 30: 25 };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function clip(value: unknown, max = 1000) {
+  return String(value ?? "").slice(0, max);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -36,8 +42,25 @@ Deno.serve(async (req) => {
     const user = userData?.user;
     if (!user) return json({ error: "Unauthorized" }, 401);
 
-    const { sessionId } = await req.json();
+    const bodyText = await req.text();
+    if (bodyText.length > 4096) return json({ error: "Request body too large" }, 413);
+    let body: any = {};
+    try {
+      body = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      return json({ error: "Invalid JSON body" }, 400);
+    }
+    const { sessionId } = body;
     if (!sessionId) return json({ error: "sessionId required" }, 400);
+    if (!UUID_RE.test(sessionId)) return json({ error: "Invalid sessionId" }, 400);
+
+    const { data: allowed, error: rateErr } = await admin.rpc("check_edge_rate_limit", {
+      _bucket_key: `daily-practice-submit:${user.id}`,
+      _limit: 20,
+      _window_seconds: 3600,
+    });
+    if (rateErr) return json({ error: "Rate limit check failed" }, 500);
+    if (!allowed) return json({ error: "Rate limit exceeded, please retry later" }, 429);
 
     const { data: session, error: sErr } = await admin
       .from("daily_practice_sessions")
@@ -52,6 +75,7 @@ Deno.serve(async (req) => {
       .from("daily_practice_answers")
       .select("*")
       .eq("session_id", sessionId)
+      .eq("student_id", user.id)
       .order("position", { ascending: true });
 
     const answeredRows = (answers || []).filter(
@@ -60,6 +84,20 @@ Deno.serve(async (req) => {
     const answered = answeredRows.length;
     if (answered < MIN_QUESTIONS) {
       return json({ error: `Answer at least ${MIN_QUESTIONS} questions to submit` }, 400);
+    }
+    if (answered > MAX_QUESTIONS_PER_SESSION) {
+      return json({ error: "Too many questions in this practice session" }, 400);
+    }
+
+    const multipleChoiceRows = answeredRows.filter(
+      (a: any) => a.question_type === "multiple_choice" && a.selected_index !== null,
+    );
+    for (const answer of multipleChoiceRows) {
+      await admin
+        .from("daily_practice_answers")
+        .update({ is_correct: answer.selected_index === answer.correct_index })
+        .eq("id", answer.id)
+        .eq("student_id", user.id);
     }
 
     // Grade short answers via Gemini if any are ungraded
@@ -73,12 +111,12 @@ Deno.serve(async (req) => {
 Mark a response correct if it captures the key idea of the expected answer (allow reasonable wording differences).
 
 ${JSON.stringify(
-  ungradedShort.map((a: any) => ({
-    id: a.id,
-    prompt: a.prompt,
-    expected: a.expected_answer,
-    response: a.text_response,
-  })),
+	  ungradedShort.map((a: any) => ({
+	    id: a.id,
+	    prompt: clip(a.prompt),
+	    expected: clip(a.expected_answer),
+	    response: clip(a.text_response),
+	  })),
   null,
   2,
 )}`;
@@ -103,7 +141,9 @@ ${JSON.stringify(
               await admin
                 .from("daily_practice_answers")
                 .update({ is_correct: !!res.is_correct })
-                .eq("id", res.id);
+                .eq("id", res.id)
+                .eq("student_id", user.id)
+                .eq("session_id", sessionId);
             }
           }
         } catch (e) {
@@ -116,7 +156,8 @@ ${JSON.stringify(
     const { data: finalAnswers } = await admin
       .from("daily_practice_answers")
       .select("*")
-      .eq("session_id", sessionId);
+      .eq("session_id", sessionId)
+      .eq("student_id", user.id);
     const finalAnswered = (finalAnswers || []).filter(
       (a: any) => a.selected_index !== null || (a.text_response && a.text_response.trim().length > 0),
     );

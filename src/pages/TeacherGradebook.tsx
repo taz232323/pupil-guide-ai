@@ -212,26 +212,14 @@ export default function TeacherGradebook() {
   const saveGrade = async (assignmentId: string, studentId: string, score: number | null, feedback: string) => {
     setBusy(true);
     try {
-      const assignment = assignments.find((a) => a.id === assignmentId);
-      const { error } = await supabase.from("assignment_grades").upsert(
-        {
-          assignment_id: assignmentId,
-          student_id: studentId,
-          overall_score: score,
-          overall_feedback: feedback || null,
-          graded_at: new Date().toISOString(),
-        },
-        { onConflict: "assignment_id,student_id" }
-      );
-      if (error) { toast.error(error.message); return false; }
-
-      // notify student
-      await supabase.from("notifications").insert({
-        user_id: studentId,
-        type: "assignment_graded",
-        message: `Your assignment "${assignment?.title ?? ""}" has been graded — check your feedback.`,
-        link: `/student/assignments/${assignmentId}`,
+      const { error } = await supabase.rpc("grade_assignment_submission", {
+        _assignment_id: assignmentId,
+        _student_id: studentId,
+        _answer_grades: [],
+        _overall_score: score,
+        _overall_feedback: feedback || null,
       });
+      if (error) { toast.error(error.message); return false; }
 
       toast.success("Grade saved");
       await loadClass(classId);

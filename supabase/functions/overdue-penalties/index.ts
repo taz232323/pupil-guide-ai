@@ -6,16 +6,30 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("APP_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 const DAILY_CAP = 5;
 
+function isAuthorizedCronRequest(req: Request) {
+  const configuredSecret = Deno.env.get("CRON_SECRET");
+  if (configuredSecret) {
+    return req.headers.get("x-cron-secret") === configuredSecret;
+  }
+
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const authHeader = req.headers.get("Authorization") || "";
+  return !!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+  if (!isAuthorizedCronRequest(req)) {
+    return json({ error: "Unauthorized" }, 401);
   }
 
   const supabase = createClient(
@@ -115,7 +129,7 @@ Deno.serve(async (req) => {
 
     // 7. Process each student.
     for (const [studentId, owes] of byStudent) {
-      let balance = balanceMap.get(studentId) ?? 0;
+      const balance = balanceMap.get(studentId) ?? 0;
       if (balance <= 0) continue;
 
       // Sort: most overdue first (largest days first).

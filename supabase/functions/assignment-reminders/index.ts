@@ -1,12 +1,29 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": Deno.env.get("APP_ORIGIN") ?? "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
+
+function isAuthorizedCronRequest(req: Request) {
+  const configuredSecret = Deno.env.get("CRON_SECRET");
+  if (configuredSecret) {
+    return req.headers.get("x-cron-secret") === configuredSecret;
+  }
+
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const authHeader = req.headers.get("Authorization") || "";
+  return !!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (!isAuthorizedCronRequest(req)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
