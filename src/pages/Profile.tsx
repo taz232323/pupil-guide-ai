@@ -194,11 +194,9 @@ export default function Profile() {
               />
               <StudentAvatar
                 name={name || "You"}
-                items={equipped}
+                avatarState={previewAvatar}
                 size="xl"
                 frame="card"
-                layers={avatarLayers}
-                layerFilters={layerFilters}
                 className="relative h-44 w-44 sm:h-48 sm:w-48 text-6xl ring-1 ring-border/60 shadow-[0_20px_50px_-20px_hsl(var(--primary)/0.55)]"
               />
               {/* Faux ground shadow for game-card depth */}
@@ -242,9 +240,9 @@ export default function Profile() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Save your avatar?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {equipped.length === 0
+                    {previewItems.length === 0
                       ? "You're saving with no items equipped."
-                      : `You'll equip ${equipped.length} item${equipped.length === 1 ? "" : "s"}.`}
+                      : `You'll save ${previewItems.length} selection${previewItems.length === 1 ? "" : "s"}.`}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -267,15 +265,15 @@ export default function Profile() {
             <CardDescription>Pick items by category. Locked items show their unlock cost.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="skin">
-              <TabsList className="grid grid-cols-4 w-full">
-                {(Object.keys(CATEGORY_LABEL) as BuilderCategory[]).map((c) => (
+            <Tabs defaultValue="skinTone">
+              <TabsList className="flex w-full justify-start overflow-x-auto">
+                {BUILDER_CATEGORIES.map((c) => (
                   <TabsTrigger key={c} value={c}>{CATEGORY_LABEL[c]}</TabsTrigger>
                 ))}
               </TabsList>
-              {(Object.keys(CATEGORY_LABEL) as BuilderCategory[]).map((cat) => {
+              {BUILDER_CATEGORIES.map((cat) => {
                 const catItems = BUILDER.filter((o) => o.category === cat);
-                const activeKey = pickForCategory(equipped, cat);
+                const activeKey = previewAvatar[cat];
                 return (
                   <TabsContent key={cat} value={cat} className="mt-5">
                     {loading ? (
