@@ -12,34 +12,24 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { StudentAvatar, COSMETIC_EMOJI, type AvatarLayers, type AvatarLayerFilters } from "@/components/StudentAvatar";
-import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
-import glassesImg from "@/assets/cosmetics/glasses.png";
-import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
-import haloImg from "@/assets/cosmetics/halo.png";
-import robotImg from "@/assets/cosmetics/robot.png";
-import rainbowAuraImg from "@/assets/cosmetics/rainbow-aura.png";
-import avatarBodyImg from "@/assets/avatar/base-body.png";
-import avatarHairImg from "@/assets/avatar/hair-default.png";
-import avatarShirtImg from "@/assets/avatar/shirt-hoodie-purple.png";
-import avatarHatImg from "@/assets/avatar/hat-wizard-fantasy.png";
-import avatarAuraImg from "@/assets/avatar/aura-magic.png";
+import {
+  StudentAvatar,
+  AVATAR_THUMBNAILS,
+  DEFAULT_AVATAR_STATE,
+  avatarStateFromItems,
+  avatarStateToItems,
+  clearAvatarCategory,
+  sameAvatarState,
+  updateAvatarState,
+  type AvatarCategory,
+  type AvatarState,
+} from "@/components/StudentAvatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Lock, Sparkles, Check, Star } from "lucide-react";
 import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
-
-// Image overrides for avatar builder tiles — keep in sync with Shop + StudentAvatar.
-const COSMETIC_TILE_IMAGE: Record<string, string> = {
-  hat_wizard: wizardHatImg,
-  halo: haloImg,
-  crown_silver: crownSilverImg,
-  glasses: glassesImg,
-  robot: robotImg,
-  rainbow_aura: rainbowAuraImg,
-};
 
 /* ------------------------------------------------------------------ *
  *  AVATAR BUILDER CATALOG
@@ -48,13 +38,15 @@ const COSMETIC_TILE_IMAGE: Record<string, string> = {
  *  Base parts (skin/hair-style/shirt-color) are unlocked by default.
  * ------------------------------------------------------------------ */
 
-type BuilderCategory = "skin" | "hair" | "clothing" | "headwear";
+type BuilderCategory = AvatarCategory;
 
 const CATEGORY_LABEL: Record<BuilderCategory, string> = {
-  skin: "Skin",
+  skinTone: "Skin",
   hair: "Hair",
   clothing: "Clothing",
   headwear: "Headwear",
+  accessory: "Accessory",
+  aura: "Aura",
 };
 
 type BuilderOption = {
@@ -67,57 +59,33 @@ type BuilderOption = {
   swatch?: string;
   /** Optional thumbnail image. */
   thumb?: string;
-  /** CSS filter applied to its layer when equipped (for tint variants). */
-  filter?: string;
-  /** Which avatar layer this option drives. */
-  layer: "body" | "hair" | "shirt" | "hat" | "accessory" | "background";
-  /** Layer image override (only used when this option swaps the asset). */
-  image?: string;
 };
 
 const BUILDER: BuilderOption[] = [
-  // --- Skin tones (filter the base body) ---
-  { key: "skin_light",  name: "Light",  category: "skin", swatch: "#f1c9a4", layer: "body" },
-  { key: "skin_tan",    name: "Tan",    category: "skin", swatch: "#c89271", layer: "body", filter: "hue-rotate(-8deg) saturate(1.15) brightness(0.88)" },
-  { key: "skin_brown",  name: "Brown",  category: "skin", swatch: "#8a5a3b", layer: "body", filter: "hue-rotate(-12deg) saturate(1.2) brightness(0.7)" },
-  { key: "skin_deep",   name: "Deep",   category: "skin", swatch: "#5a3922", layer: "body", filter: "hue-rotate(-14deg) saturate(1.25) brightness(0.5)" },
-  // --- Hair styles / colors (filter the hair layer) ---
-  { key: "hair_brown",  name: "Brown",  category: "hair", swatch: "#5a3a22", layer: "hair", image: avatarHairImg },
-  { key: "hair_black",  name: "Black",  category: "hair", swatch: "#1a1410", layer: "hair", image: avatarHairImg, filter: "brightness(0.45) saturate(0.6)" },
-  { key: "hair_blonde", name: "Blonde", category: "hair", swatch: "#d9b367", layer: "hair", image: avatarHairImg, filter: "hue-rotate(20deg) saturate(1.3) brightness(1.55)" },
-  { key: "hair_red",    name: "Red",    category: "hair", swatch: "#a43c1e", layer: "hair", image: avatarHairImg, filter: "hue-rotate(-25deg) saturate(2) brightness(1.05)" },
-  // --- Clothing colors (filter the shirt layer) ---
-  { key: "shirt_purple",name: "Purple", category: "clothing", swatch: "#6d3bd1", layer: "shirt", image: avatarShirtImg },
-  { key: "shirt_blue",  name: "Blue",   category: "clothing", swatch: "#2e6fe0", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(35deg) saturate(1.2)" },
-  { key: "shirt_green", name: "Green",  category: "clothing", swatch: "#2f8c52", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(110deg) saturate(1.15)" },
-  { key: "shirt_red",   name: "Red",    category: "clothing", swatch: "#c83b3b", layer: "shirt", image: avatarShirtImg, filter: "hue-rotate(-90deg) saturate(1.4)" },
-  // --- Headwear (real cosmetic items — require ownership) ---
-  { key: "hat_wizard",  name: "Wizard Hat", category: "headwear", cost: 10, layer: "hat", image: avatarHatImg, thumb: wizardHatImg },
-  { key: "halo",        name: "Halo",       category: "headwear", cost: 40, layer: "hat", image: haloImg,      thumb: haloImg },
+  { key: "skin_light", name: "Light", category: "skinTone", swatch: "#f1c9a4", thumb: AVATAR_THUMBNAILS.skin_light },
+  { key: "skin_tan", name: "Tan", category: "skinTone", swatch: "#c89271", thumb: AVATAR_THUMBNAILS.skin_tan },
+  { key: "skin_brown", name: "Brown", category: "skinTone", swatch: "#8a5a3b", thumb: AVATAR_THUMBNAILS.skin_brown },
+  { key: "skin_deep", name: "Deep", category: "skinTone", swatch: "#5a3922", thumb: AVATAR_THUMBNAILS.skin_deep },
+  { key: "hair_brown", name: "Brown", category: "hair", swatch: "#5a3a22", thumb: AVATAR_THUMBNAILS.hair_brown },
+  { key: "hair_black", name: "Black", category: "hair", swatch: "#1a1410", thumb: AVATAR_THUMBNAILS.hair_black },
+  { key: "hair_blonde", name: "Blonde", category: "hair", swatch: "#d9b367", thumb: AVATAR_THUMBNAILS.hair_blonde },
+  { key: "hair_red", name: "Red", category: "hair", swatch: "#a43c1e", thumb: AVATAR_THUMBNAILS.hair_red },
+  { key: "shirt_purple", name: "Purple", category: "clothing", swatch: "#6d3bd1", thumb: AVATAR_THUMBNAILS.shirt_purple },
+  { key: "shirt_blue", name: "Blue", category: "clothing", swatch: "#2e6fe0", thumb: AVATAR_THUMBNAILS.shirt_blue },
+  { key: "shirt_green", name: "Green", category: "clothing", swatch: "#2f8c52", thumb: AVATAR_THUMBNAILS.shirt_green },
+  { key: "shirt_red", name: "Red", category: "clothing", swatch: "#c83b3b", thumb: AVATAR_THUMBNAILS.shirt_red },
+  { key: "hat_wizard", name: "Wizard Hat", category: "headwear", cost: 10, thumb: AVATAR_THUMBNAILS.hat_wizard },
+  { key: "halo", name: "Halo", category: "headwear", cost: 40, thumb: AVATAR_THUMBNAILS.halo },
+  { key: "crown_silver", name: "Silver Crown", category: "headwear", cost: 25, thumb: AVATAR_THUMBNAILS.crown_silver },
+  { key: "glasses", name: "Glasses", category: "accessory", cost: 15, thumb: AVATAR_THUMBNAILS.glasses },
+  { key: "robot", name: "Robot Face", category: "accessory", cost: 60, thumb: AVATAR_THUMBNAILS.robot },
+  { key: "aura_magic", name: "Magic", category: "aura", thumb: AVATAR_THUMBNAILS.aura_magic },
+  { key: "rainbow_aura", name: "Rainbow", category: "aura", cost: 100, thumb: AVATAR_THUMBNAILS.rainbow_aura },
 ];
 
 const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
 
-// Defaults applied when the user has nothing selected for a category.
-const DEFAULT_SELECTION: Record<BuilderCategory, string> = {
-  skin: "skin_light",
-  hair: "hair_brown",
-  clothing: "shirt_purple",
-  headwear: "", // optional — no default headwear
-};
-
-/** Pick the equipped key for a given category from the avatar_items array. */
-function pickForCategory(items: string[], category: BuilderCategory): string {
-  const found = items.find((k) => OPTION_BY_KEY[k]?.category === category);
-  return found ?? DEFAULT_SELECTION[category] ?? "";
-}
-
-/** Replace any existing item in the same category with the new selection. */
-function applySelection(items: string[], optionKey: string): string[] {
-  const opt = OPTION_BY_KEY[optionKey];
-  if (!opt) return items;
-  return [...items.filter((k) => OPTION_BY_KEY[k]?.category !== opt.category), optionKey];
-}
+const BUILDER_CATEGORIES: BuilderCategory[] = ["skinTone", "hair", "clothing", "headwear", "accessory", "aura"];
 
 export default function Profile() {
   const { user, role } = useAuth();
@@ -126,8 +94,8 @@ export default function Profile() {
   const [originalName, setOriginalName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [owned, setOwned] = useState<Set<string>>(new Set());
-  const [equipped, setEquipped] = useState<string[]>([]);
-  const [originalEquipped, setOriginalEquipped] = useState<string[]>([]);
+  const [previewAvatar, setPreviewAvatar] = useState<AvatarState>(DEFAULT_AVATAR_STATE);
+  const [savedAvatar, setSavedAvatar] = useState<AvatarState>(DEFAULT_AVATAR_STATE);
   const [coins, setCoins] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -149,9 +117,9 @@ export default function Profile() {
       ]);
       setName(prof?.full_name ?? "");
       setOriginalName(prof?.full_name ?? "");
-      const eq = (prof?.avatar_items ?? []) as string[];
-      setEquipped(eq);
-      setOriginalEquipped(eq);
+      const loadedAvatar = avatarStateFromItems((prof?.avatar_items ?? []) as string[]);
+      setPreviewAvatar(loadedAvatar);
+      setSavedAvatar(loadedAvatar);
       setInappOn((prof as any)?.inapp_reminders_enabled !== false);
       setEmailOn((prof as any)?.email_reminders_enabled !== false);
       setLbUsername((prof as any)?.leaderboard_username ?? "");
@@ -167,47 +135,29 @@ export default function Profile() {
     const opt = OPTION_BY_KEY[optionKey];
     if (!opt) return;
     if (opt.cost && !owned.has(optionKey)) return;
-    setEquipped((prev) => applySelection(prev, optionKey));
+    setPreviewAvatar((prev) => updateAvatarState(prev, optionKey));
   };
 
   /** Unequip the current item in a category (only meaningful for headwear). */
   const clearCategory = (category: BuilderCategory) => {
-    setEquipped((prev) => prev.filter((k) => OPTION_BY_KEY[k]?.category !== category));
+    setPreviewAvatar((prev) => clearAvatarCategory(prev, category));
   };
 
-  // Resolved selections drive the live avatar layers.
-  const selSkin     = pickForCategory(equipped, "skin");
-  const selHair     = pickForCategory(equipped, "hair");
-  const selClothing = pickForCategory(equipped, "clothing");
-  const selHeadwear = pickForCategory(equipped, "headwear");
-
-  const avatarLayers: AvatarLayers = {
-    background: avatarAuraImg,
-    body: avatarBodyImg,
-    hair: OPTION_BY_KEY[selHair]?.image ?? avatarHairImg,
-    shirt: OPTION_BY_KEY[selClothing]?.image ?? avatarShirtImg,
-    hat: selHeadwear ? OPTION_BY_KEY[selHeadwear]?.image : undefined,
-  };
-  const layerFilters: AvatarLayerFilters = {
-    body: OPTION_BY_KEY[selSkin]?.filter,
-    hair: OPTION_BY_KEY[selHair]?.filter,
-    shirt: OPTION_BY_KEY[selClothing]?.filter,
-  };
-
-  const dirty =
-    equipped.length !== originalEquipped.length ||
-    equipped.some((k) => !originalEquipped.includes(k));
+  const previewItems = avatarStateToItems(previewAvatar);
+  const dirty = !sameAvatarState(previewAvatar, savedAvatar);
 
   const save = async () => {
     if (!user) return;
+    const avatarItems = avatarStateToItems(previewAvatar);
     setSaving(true);
     const { error } = await supabase.from("profiles")
-      .update({ avatar_items: equipped })
+      .update({ avatar_items: avatarItems })
       .eq("id", user.id);
     setSaving(false);
     setConfirmOpen(false);
     if (error) { toast.error(error.message); return; }
-    setOriginalEquipped(equipped);
+    setSavedAvatar(previewAvatar);
+    window.dispatchEvent(new CustomEvent("profile:updated", { detail: { userId: user.id } }));
     toast.success("Avatar saved");
   };
 
@@ -245,11 +195,9 @@ export default function Profile() {
               />
               <StudentAvatar
                 name={name || "You"}
-                items={equipped}
+                avatarState={previewAvatar}
                 size="xl"
                 frame="card"
-                layers={avatarLayers}
-                layerFilters={layerFilters}
                 className="relative h-44 w-44 sm:h-48 sm:w-48 text-6xl ring-1 ring-border/60 shadow-[0_20px_50px_-20px_hsl(var(--primary)/0.55)]"
               />
               {/* Faux ground shadow for game-card depth */}
@@ -293,9 +241,9 @@ export default function Profile() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Save your avatar?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {equipped.length === 0
+                    {previewItems.length === 0
                       ? "You're saving with no items equipped."
-                      : `You'll equip ${equipped.length} item${equipped.length === 1 ? "" : "s"}.`}
+                      : `You'll save ${previewItems.length} selection${previewItems.length === 1 ? "" : "s"}.`}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -318,15 +266,15 @@ export default function Profile() {
             <CardDescription>Pick items by category. Locked items show their unlock cost.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="skin">
-              <TabsList className="grid grid-cols-4 w-full">
-                {(Object.keys(CATEGORY_LABEL) as BuilderCategory[]).map((c) => (
+            <Tabs defaultValue="skinTone">
+              <TabsList className="flex w-full justify-start overflow-x-auto">
+                {BUILDER_CATEGORIES.map((c) => (
                   <TabsTrigger key={c} value={c}>{CATEGORY_LABEL[c]}</TabsTrigger>
                 ))}
               </TabsList>
-              {(Object.keys(CATEGORY_LABEL) as BuilderCategory[]).map((cat) => {
+              {BUILDER_CATEGORIES.map((cat) => {
                 const catItems = BUILDER.filter((o) => o.category === cat);
-                const activeKey = pickForCategory(equipped, cat);
+                const activeKey = previewAvatar[cat];
                 return (
                   <TabsContent key={cat} value={cat} className="mt-5">
                     {loading ? (
