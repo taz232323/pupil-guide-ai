@@ -366,7 +366,9 @@ export default function Profile() {
                     return !entry || entry.styles.includes(previewAvatar.avatarStyle);
                   });
                 }
-                const activeKey = previewAvatar[cat];
+                const activeKey = cat === "avatarStyle"
+                  ? STYLE_TO_KEY[previewAvatar.avatarStyle]
+                  : previewAvatar[cat];
                 const isCosmeticTab = COSMETIC_CATEGORIES.includes(cat);
                 return (
                   <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
