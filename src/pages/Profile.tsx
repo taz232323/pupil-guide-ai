@@ -510,7 +510,7 @@ export default function Profile() {
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="appearance">
-                    <SubTabs cats={APPEARANCE_CATEGORIES} defaultCat="skinTone" />
+                    <SubTabs cats={APPEARANCE_CATEGORIES} defaultCat="avatarStyle" />
                   </TabsContent>
                   <TabsContent value="cosmetics">
                     <SubTabs cats={COSMETIC_CATEGORIES} defaultCat="headwear" />
