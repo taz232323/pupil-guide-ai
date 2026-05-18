@@ -359,7 +359,13 @@ export default function Profile() {
           <CardContent>
             {(() => {
               const renderCategoryPanel = (cat: BuilderCategory) => {
-                const catItems = BUILDER.filter((o) => o.category === cat);
+                let catItems = BUILDER.filter((o) => o.category === cat);
+                if (cat === "hairStyle") {
+                  catItems = catItems.filter((o) => {
+                    const entry = HAIR_CATALOG[o.key];
+                    return !entry || entry.styles.includes(previewAvatar.avatarStyle);
+                  });
+                }
                 const activeKey = previewAvatar[cat];
                 const isCosmeticTab = COSMETIC_CATEGORIES.includes(cat);
                 return (
