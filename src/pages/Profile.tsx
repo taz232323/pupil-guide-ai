@@ -27,7 +27,7 @@ import {
 } from "@/components/StudentAvatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Lock, Sparkles, Check, Star } from "lucide-react";
+import { Lock, Sparkles, Check, Star, ShoppingBag, Gem } from "lucide-react";
 import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
@@ -120,17 +120,29 @@ const BUILDER: BuilderOption[] = [
 
 const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
 
-const BUILDER_CATEGORIES: BuilderCategory[] = [
+const APPEARANCE_CATEGORIES: BuilderCategory[] = [
   "skinTone",
   "hairStyle",
   "hairColor",
   "eyes",
   "clothing",
   "clothesColor",
-  "headwear",
-  "accessory",
-  "aura",
 ];
+const COSMETIC_CATEGORIES: BuilderCategory[] = ["headwear", "accessory", "aura"];
+
+type Rarity = "common" | "rare" | "epic" | "legendary";
+function rarityFor(cost?: number): Rarity {
+  if (!cost) return "common";
+  if (cost < 20) return "rare";
+  if (cost < 60) return "epic";
+  return "legendary";
+}
+const RARITY_STYLE: Record<Rarity, { ring: string; chip: string; label: string }> = {
+  common:    { ring: "ring-border/40",            chip: "bg-muted text-muted-foreground",                                label: "Common"    },
+  rare:      { ring: "ring-sky-400/60",           chip: "bg-sky-500/15 text-sky-600 dark:text-sky-300",                  label: "Rare"      },
+  epic:      { ring: "ring-violet-400/70",        chip: "bg-violet-500/15 text-violet-600 dark:text-violet-300",         label: "Epic"      },
+  legendary: { ring: "ring-amber-400/80",         chip: "bg-amber-500/20 text-amber-700 dark:text-amber-300",            label: "Legendary" },
+};
 
 export default function Profile() {
   const { user, role } = useAuth();
@@ -144,6 +156,8 @@ export default function Profile() {
   const [coins, setCoins] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [inappOn, setInappOn] = useState(true);
   const [emailOn, setEmailOn] = useState(true);
@@ -186,6 +200,34 @@ export default function Profile() {
   /** Unequip the current item in a category (only meaningful for headwear). */
   const clearCategory = (category: BuilderCategory) => {
     setPreviewAvatar((prev) => clearAvatarCategory(prev, category));
+  };
+
+  /** Buy a premium cosmetic inline. Uses shop_purchases — trigger handles cost & balance. */
+  const purchase = async (opt: BuilderOption) => {
+    if (!user || !opt.cost) return;
+    if (owned.has(opt.key)) return;
+    if (coins < opt.cost) { toast.error("Not enough star coins"); return; }
+    setPurchasing(opt.key);
+    const { error } = await supabase.from("shop_purchases").insert({
+      student_id: user.id,
+      item_key: opt.key,
+      // The server trigger overrides these from shop_items.
+      item_name: opt.name,
+      kind: "cosmetic",
+      currency: "star",
+      cost: opt.cost,
+    });
+    setPurchasing(null);
+    if (error) {
+      toast.error(error.message.includes("Insufficient") ? "Not enough star coins" : error.message);
+      return;
+    }
+    setOwned((prev) => new Set(prev).add(opt.key));
+    setCoins((c) => c - opt.cost!);
+    setPreviewAvatar((prev) => updateAvatarState(prev, opt.key));
+    setJustUnlocked(opt.key);
+    setTimeout(() => setJustUnlocked((v) => (v === opt.key ? null : v)), 1800);
+    toast.success(`Unlocked ${opt.name}!`);
   };
 
   const previewItems = avatarStateToItems(previewAvatar);
@@ -311,111 +353,163 @@ export default function Profile() {
             <CardDescription>Pick items by category. Locked items show their unlock cost.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="skinTone">
-              <TabsList className="flex w-full justify-start overflow-x-auto">
-                {BUILDER_CATEGORIES.map((c) => (
-                  <TabsTrigger key={c} value={c}>{CATEGORY_LABEL[c]}</TabsTrigger>
-                ))}
-              </TabsList>
-              {BUILDER_CATEGORIES.map((cat) => {
+            {(() => {
+              const renderCategoryPanel = (cat: BuilderCategory) => {
                 const catItems = BUILDER.filter((o) => o.category === cat);
                 const activeKey = previewAvatar[cat];
+                const isCosmeticTab = COSMETIC_CATEGORIES.includes(cat);
                 return (
-                  <TabsContent key={cat} value={cat} className="mt-5">
-                    {loading ? (
-                      <p className="text-sm text-muted-foreground">Loading...</p>
-                    ) : (
-                      <>
-                        {/* Mobile: horizontal scroll. Desktop: grid. */}
-                        <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
-                          {(cat === "headwear" || cat === "accessory") && (
-                            <button
-                              type="button"
-                              onClick={() => clearCategory(cat)}
-                              className={cn(
-                                "snap-start shrink-0 sm:shrink min-w-[7rem] sm:min-w-0 flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
-                                !activeKey && "border-primary ring-2 ring-primary/20 bg-primary/5",
-                                activeKey && "hover:border-primary/40 hover:-translate-y-0.5"
-                              )}
-                            >
-                              <div className="h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center text-2xl mb-2">∅</div>
-                              <span className="text-sm font-medium leading-tight">None</span>
-                            </button>
-                          )}
-                          {catItems.map((opt) => {
-                            const requiresOwnership = !!opt.cost;
-                            const isOwned = !requiresOwnership || owned.has(opt.key);
-                            const isOn = activeKey === opt.key;
-                            // Live mini preview: render current avatar but with this option applied.
-                            const livePreview = !opt.thumb && !opt.swatch
-                              ? getAvatarDataUri(updateAvatarState({ ...previewAvatar, headwear: "" }, opt.key), name || "you")
-                              : null;
-                            return (
-                              <button
-                                type="button"
-                                key={opt.key}
-                                onClick={() => selectOption(opt.key)}
-                                disabled={!isOwned}
-                                className={cn(
-                                  "snap-start shrink-0 sm:shrink min-w-[7rem] sm:min-w-0 group relative flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
-                                  isOwned && !isOn && "hover:border-primary/40 hover:shadow-sm hover:-translate-y-0.5",
-                                  isOn && "border-primary ring-2 ring-primary/20 bg-primary/5",
-                                  !isOwned && "opacity-90 cursor-not-allowed"
-                                )}
-                              >
-                                {isOn && (
-                                  <span className="absolute top-2 right-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                    <Check className="h-3 w-3" />
-                                  </span>
-                                )}
-                                <div className={cn(
-                                  "relative h-14 w-14 rounded-xl bg-muted/60 flex items-center justify-center overflow-hidden mb-2",
-                                  !isOwned && "grayscale"
-                                )}>
-                                  {livePreview ? (
-                                    <img src={livePreview} alt="" className="h-full w-full object-contain" draggable={false} />
-                                  ) : opt.thumb ? (
-                                    <img src={opt.thumb} alt="" className="h-11 w-11 object-contain" draggable={false} />
-                                  ) : opt.swatch ? (
-                                    <span
-                                      aria-hidden
-                                      className="block h-9 w-9 rounded-full border border-border/60 shadow-inner"
-                                      style={{ background: opt.swatch }}
-                                    />
-                                  ) : null}
-                                  {!isOwned && (
-                                    <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/70 backdrop-blur-[1px]">
-                                      <Lock className="h-5 w-5 text-muted-foreground" />
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-sm font-medium leading-tight">{opt.name}</span>
-                                <div className="mt-2 min-h-[18px]">
-                                  {requiresOwnership && !isOwned && (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
-                                      {opt.cost}
-                                    </span>
-                                  )}
-                                  {isOn && (
-                                    <Badge variant="default" className="text-[10px]">Equipped</Badge>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {cat === "headwear" && catItems.some((o) => o.cost && !owned.has(o.key)) && (
-                          <p className="mt-4 text-xs text-muted-foreground text-center">
-                            Earn star coins by completing assignments, then unlock items in the Shop.
-                          </p>
+                  <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
+                    {(cat === "headwear" || cat === "accessory" || cat === "aura") && (
+                      <button
+                        type="button"
+                        onClick={() => clearCategory(cat)}
+                        className={cn(
+                          "snap-start shrink-0 sm:shrink min-w-[7rem] sm:min-w-0 flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
+                          !activeKey && "border-primary ring-2 ring-primary/20 bg-primary/5",
+                          activeKey && "hover:border-primary/40 hover:-translate-y-0.5"
                         )}
-                      </>
+                      >
+                        <div className="h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center text-2xl mb-2">∅</div>
+                        <span className="text-sm font-medium leading-tight">None</span>
+                      </button>
                     )}
-                  </TabsContent>
+                    {catItems.map((opt) => {
+                      const requiresOwnership = !!opt.cost;
+                      const isOwned = !requiresOwnership || owned.has(opt.key);
+                      const isOn = activeKey === opt.key;
+                      const rarity = rarityFor(opt.cost);
+                      const rs = RARITY_STYLE[rarity];
+                      const unlocking = justUnlocked === opt.key;
+                      const canAfford = coins >= (opt.cost ?? 0);
+                      const livePreview = !opt.thumb && !opt.swatch
+                        ? getAvatarDataUri(updateAvatarState({ ...previewAvatar, headwear: "" }, opt.key), name || "you")
+                        : null;
+                      return (
+                        <div
+                          key={opt.key}
+                          className={cn(
+                            "snap-start shrink-0 sm:shrink min-w-[7.5rem] sm:min-w-0 group relative flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
+                            isOn && "border-primary ring-2 ring-primary/20 bg-primary/5",
+                            !isOn && requiresOwnership && isCosmeticTab && cn("ring-1", rs.ring),
+                            unlocking && "animate-pulse ring-2 ring-amber-400"
+                          )}
+                        >
+                          {/* Rarity chip for premium tiles */}
+                          {requiresOwnership && isCosmeticTab && (
+                            <span className={cn(
+                              "absolute top-2 left-2 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide",
+                              rs.chip
+                            )}>
+                              {rs.label}
+                            </span>
+                          )}
+                          {isOn && (
+                            <span className="absolute top-2 right-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                              <Check className="h-3 w-3" />
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => selectOption(opt.key)}
+                            disabled={!isOwned}
+                            className={cn(
+                              "w-full flex flex-col items-center focus:outline-none",
+                              isOwned && !isOn && "hover:-translate-y-0.5 transition-transform",
+                              !isOwned && "cursor-not-allowed"
+                            )}
+                          >
+                            <div className={cn(
+                              "relative h-14 w-14 rounded-xl bg-muted/60 flex items-center justify-center overflow-hidden mb-2 mt-3",
+                              !isOwned && "grayscale opacity-80"
+                            )}>
+                              {livePreview ? (
+                                <img src={livePreview} alt="" className="h-full w-full object-contain" draggable={false} />
+                              ) : opt.thumb ? (
+                                <img src={opt.thumb} alt="" className="h-11 w-11 object-contain" draggable={false} />
+                              ) : opt.swatch ? (
+                                <span
+                                  aria-hidden
+                                  className="block h-9 w-9 rounded-full border border-border/60 shadow-inner"
+                                  style={{ background: opt.swatch }}
+                                />
+                              ) : null}
+                              {!isOwned && (
+                                <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/70 backdrop-blur-[1px]">
+                                  <Lock className="h-5 w-5 text-muted-foreground" />
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-sm font-medium leading-tight">{opt.name}</span>
+                          </button>
+                          <div className="mt-2 min-h-[28px] w-full flex items-center justify-center">
+                            {isOn ? (
+                              <Badge variant="default" className="text-[10px]">Equipped</Badge>
+                            ) : !isOwned ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={canAfford ? "default" : "outline"}
+                                disabled={!canAfford || purchasing === opt.key}
+                                onClick={() => purchase(opt)}
+                                className="h-7 px-2 text-[11px] gap-1"
+                              >
+                                <Star className="h-3 w-3 fill-amber-300 text-amber-300" />
+                                {purchasing === opt.key ? "..." : canAfford ? `Buy · ${opt.cost}` : `Need ${opt.cost}`}
+                              </Button>
+                            ) : requiresOwnership ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                                <Check className="h-3 w-3 text-emerald-500" /> Owned
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 );
-              })}
-            </Tabs>
+              };
+
+              const SubTabs = ({ cats, defaultCat }: { cats: BuilderCategory[]; defaultCat: BuilderCategory }) => (
+                <Tabs defaultValue={defaultCat}>
+                  <TabsList className="flex w-full justify-start overflow-x-auto">
+                    {cats.map((c) => (
+                      <TabsTrigger key={c} value={c}>{CATEGORY_LABEL[c]}</TabsTrigger>
+                    ))}
+                  </TabsList>
+                  {cats.map((cat) => (
+                    <TabsContent key={cat} value={cat} className="mt-5">
+                      {loading ? <p className="text-sm text-muted-foreground">Loading...</p> : renderCategoryPanel(cat)}
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              );
+
+              return (
+                <Tabs defaultValue="appearance">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="appearance" className="gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5" /> Appearance
+                      <Badge variant="secondary" className="ml-1 text-[9px] px-1.5">Free</Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="cosmetics" className="gap-1.5">
+                      <Gem className="h-3.5 w-3.5" /> Cosmetics
+                      <Badge variant="outline" className="ml-1 text-[9px] px-1.5 border-amber-400/60 text-amber-600 dark:text-amber-300">Premium</Badge>
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="appearance">
+                    <SubTabs cats={APPEARANCE_CATEGORIES} defaultCat="skinTone" />
+                  </TabsContent>
+                  <TabsContent value="cosmetics">
+                    <SubTabs cats={COSMETIC_CATEGORIES} defaultCat="headwear" />
+                    <p className="mt-4 text-xs text-muted-foreground text-center inline-flex items-center justify-center gap-1.5 w-full">
+                      <ShoppingBag className="h-3 w-3" />
+                      Earn star coins from assignments &amp; daily practice — then unlock cosmetics right here.
+                    </p>
+                  </TabsContent>
+                </Tabs>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
