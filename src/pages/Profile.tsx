@@ -27,7 +27,7 @@ import {
 } from "@/components/StudentAvatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Lock, Sparkles, Check, Star } from "lucide-react";
+import { Lock, Sparkles, Check, Star, ShoppingBag, Gem } from "lucide-react";
 import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
@@ -120,17 +120,29 @@ const BUILDER: BuilderOption[] = [
 
 const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
 
-const BUILDER_CATEGORIES: BuilderCategory[] = [
+const APPEARANCE_CATEGORIES: BuilderCategory[] = [
   "skinTone",
   "hairStyle",
   "hairColor",
   "eyes",
   "clothing",
   "clothesColor",
-  "headwear",
-  "accessory",
-  "aura",
 ];
+const COSMETIC_CATEGORIES: BuilderCategory[] = ["headwear", "accessory", "aura"];
+
+type Rarity = "common" | "rare" | "epic" | "legendary";
+function rarityFor(cost?: number): Rarity {
+  if (!cost) return "common";
+  if (cost < 20) return "rare";
+  if (cost < 60) return "epic";
+  return "legendary";
+}
+const RARITY_STYLE: Record<Rarity, { ring: string; chip: string; label: string }> = {
+  common:    { ring: "ring-border/40",            chip: "bg-muted text-muted-foreground",                                label: "Common"    },
+  rare:      { ring: "ring-sky-400/60",           chip: "bg-sky-500/15 text-sky-600 dark:text-sky-300",                  label: "Rare"      },
+  epic:      { ring: "ring-violet-400/70",        chip: "bg-violet-500/15 text-violet-600 dark:text-violet-300",         label: "Epic"      },
+  legendary: { ring: "ring-amber-400/80",         chip: "bg-amber-500/20 text-amber-700 dark:text-amber-300",            label: "Legendary" },
+};
 
 export default function Profile() {
   const { user, role } = useAuth();
@@ -144,6 +156,8 @@ export default function Profile() {
   const [coins, setCoins] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [inappOn, setInappOn] = useState(true);
   const [emailOn, setEmailOn] = useState(true);
@@ -186,6 +200,34 @@ export default function Profile() {
   /** Unequip the current item in a category (only meaningful for headwear). */
   const clearCategory = (category: BuilderCategory) => {
     setPreviewAvatar((prev) => clearAvatarCategory(prev, category));
+  };
+
+  /** Buy a premium cosmetic inline. Uses shop_purchases — trigger handles cost & balance. */
+  const purchase = async (opt: BuilderOption) => {
+    if (!user || !opt.cost) return;
+    if (owned.has(opt.key)) return;
+    if (coins < opt.cost) { toast.error("Not enough star coins"); return; }
+    setPurchasing(opt.key);
+    const { error } = await supabase.from("shop_purchases").insert({
+      student_id: user.id,
+      item_key: opt.key,
+      // The server trigger overrides these from shop_items.
+      item_name: opt.name,
+      kind: "cosmetic",
+      currency: "star",
+      cost: opt.cost,
+    });
+    setPurchasing(null);
+    if (error) {
+      toast.error(error.message.includes("Insufficient") ? "Not enough star coins" : error.message);
+      return;
+    }
+    setOwned((prev) => new Set(prev).add(opt.key));
+    setCoins((c) => c - opt.cost!);
+    setPreviewAvatar((prev) => updateAvatarState(prev, opt.key));
+    setJustUnlocked(opt.key);
+    setTimeout(() => setJustUnlocked((v) => (v === opt.key ? null : v)), 1800);
+    toast.success(`Unlocked ${opt.name}!`);
   };
 
   const previewItems = avatarStateToItems(previewAvatar);
