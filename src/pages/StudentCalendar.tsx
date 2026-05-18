@@ -4,7 +4,7 @@ import {
   addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isSameDay,
   isSameMonth, startOfMonth, startOfWeek, subMonths, subWeeks, parseISO,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, Sparkles, ListTodo, Trash2, ExternalLink, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Sparkles, ListTodo, Trash2, ExternalLink, Check, Bell } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -336,7 +336,9 @@ export default function StudentCalendar() {
             <SheetDescription>The next 7 days, most urgent first.</SheetDescription>
           </SheetHeader>
           <PlanWeek assignments={assignments} reminders={reminders} completedIds={completedIds}
-            onMarkDone={markDone} />
+            onMarkDone={markDone}
+            onAddReminder={() => setEditingReminder({ start_at: new Date().toISOString(), kind: "reminder", duration_minutes: 30 })}
+            onDeleteReminder={deleteReminder} />
         </SheetContent>
       </Sheet>
 
@@ -601,16 +603,19 @@ function ReminderDialog({ value, onClose, onSave, onDelete }: {
 }
 
 /* -------------- Plan My Week -------------- */
-function PlanWeek({ assignments, reminders, completedIds, onMarkDone }: {
+function PlanWeek({ assignments, reminders, completedIds, onMarkDone, onAddReminder, onDeleteReminder }: {
   assignments: AssignmentLite[];
   reminders: Reminder[];
   completedIds: Set<string>;
   onMarkDone: (id: string) => void;
+  onAddReminder: (date?: Date) => void;
+  onDeleteReminder: (id: string) => void;
 }) {
   const today = new Date(); today.setHours(0,0,0,0);
   const horizon = addDays(today, 7);
   const items = useMemo(() => {
-    const arr: { date: Date; node: React.ReactNode; sort: number }[] = [];
+    const arr: { date: Date; node: React.ReactNode; sort: number; type: "assignment" | "reminder" }[] = [];
+    // Add assignments
     for (const a of assignments) {
       if (!a.due_date) continue;
       const d = parseISO(a.due_date);
@@ -622,6 +627,7 @@ function PlanWeek({ assignments, reminders, completedIds, onMarkDone }: {
       arr.push({
         date: d,
         sort: overdue ? -1 : d.getTime(),
+        type: "assignment",
         node: (
           <div className={cn("rounded-md border p-2", overdue && "border-destructive/40 bg-destructive/5")}
             style={!overdue ? { background: col.bg, borderColor: col.border } : undefined}>
@@ -646,8 +652,41 @@ function PlanWeek({ assignments, reminders, completedIds, onMarkDone }: {
         ),
       });
     }
+    // Add reminders
+    for (const r of reminders) {
+      const d = parseISO(r.start_at);
+      if (d < today || d > horizon) continue;
+      arr.push({
+        date: d,
+        sort: d.getTime(),
+        type: "reminder",
+        node: (
+          <div className="rounded-md border p-2 bg-amber-50 border-amber-300 dark:bg-amber-950/30 dark:border-amber-700">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex items-start gap-2">
+                <Bell className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium truncate text-amber-900 dark:text-amber-100">{r.title}</p>
+                  <p className="text-[11px] truncate text-amber-700 dark:text-amber-300">
+                    {format(d, "p")}{r.note ? ` · ${r.note}` : ""}
+                  </p>
+                </div>
+              </div>
+              <Badge className="shrink-0 bg-amber-200 text-amber-800 border-amber-400 dark:bg-amber-800 dark:text-amber-100 dark:border-amber-600">
+                Reminder
+              </Badge>
+            </div>
+            <div className="flex gap-1 mt-1 ml-6">
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-amber-700 hover:text-amber-900 dark:text-amber-300" onClick={() => onDeleteReminder(r.id)}>
+                <Trash2 className="h-3 w-3 mr-1" /> Remove
+              </Button>
+            </div>
+          </div>
+        ),
+      });
+    }
     return arr.sort((a, b) => a.sort - b.sort);
-  }, [assignments, completedIds, onMarkDone]);
+  }, [assignments, reminders, completedIds, onMarkDone, onDeleteReminder]);
 
   // group by day
   const groups = new Map<string, typeof items>();
@@ -657,9 +696,15 @@ function PlanWeek({ assignments, reminders, completedIds, onMarkDone }: {
     groups.get(k)!.push(it);
   });
 
-  if (items.length === 0) return <p className="text-sm text-muted-foreground mt-4">Nothing due in the next 7 days. 🎉</p>;
   return (
     <div className="mt-4 space-y-4">
+      {/* Add Reminder button */}
+      <Button variant="outline" className="w-full border-dashed border-amber-400 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-950/30" onClick={() => onAddReminder()}>
+        <Bell className="h-4 w-4 mr-2" /> Add Reminder
+      </Button>
+
+      {items.length === 0 && <p className="text-sm text-muted-foreground">Nothing scheduled for the next 7 days. 🎉</p>}
+
       {Array.from(groups.entries()).map(([k, list]) => (
         <div key={k}>
           <p className="text-xs font-semibold text-muted-foreground mb-1">{format(parseISO(k), "EEE, MMM d")}</p>

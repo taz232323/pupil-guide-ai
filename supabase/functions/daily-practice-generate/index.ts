@@ -46,13 +46,26 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!membership) return json({ error: "Not enrolled in this class" }, 403);
 
-    // Gather context: assignments + module items titles
+    // Gather comprehensive context: assignments, modules, lesson content, existing questions
     const { data: assignments } = await admin
       .from("assignments")
-      .select("title, description, unit_tag")
+      .select("id, title, description, unit_tag")
       .eq("class_id", classId)
       .order("created_at", { ascending: false })
       .limit(20);
+    
+    // Get existing assignment questions for context
+    const assignmentIds = (assignments || []).map((a: any) => a.id);
+    let existingQuestions: any[] = [];
+    if (assignmentIds.length) {
+      const { data: aq } = await admin
+        .from("assignment_questions")
+        .select("prompt, question_type, options")
+        .in("assignment_id", assignmentIds)
+        .limit(30);
+      existingQuestions = aq || [];
+    }
+    
     const { data: modules } = await admin
       .from("modules")
       .select("id, title, description")
@@ -62,11 +75,17 @@ Deno.serve(async (req) => {
     if (moduleIds.length) {
       const { data: mi } = await admin
         .from("module_items")
-        .select("title, module_id, item_type")
+        .select("title, module_id, item_type, content_html")
         .in("module_id", moduleIds)
         .limit(40);
       items = mi || [];
     }
+    
+    // Get teacher-submitted practice questions from the question bank
+    const { data: teacherQuestions } = await admin
+      .from("practice_question_bank")
+      .select("id, question_type, prompt, options, correct_index, expected_answer")
+      .eq("class_id", classId);
 
     // Get or create today's session
     const today = new Date().toISOString().slice(0, 10);
@@ -97,23 +116,61 @@ Deno.serve(async (req) => {
       .eq("session_id", session.id);
     const startPos = existingCount || 0;
 
-    // Build context for Gemini
+    // Helper to strip HTML tags for cleaner context
+    const stripHtml = (html: string) => html?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || '';
+    
+    // Build comprehensive context for Gemini
     const context = {
       class: { name: cls.name, subject: cls.subject, syllabus: cls.syllabus || "" },
       units: Array.from(new Set((assignments || []).map((a: any) => a.unit_tag).filter(Boolean))),
-      assignments: (assignments || []).map((a: any) => a.title),
-      modules: (modules || []).map((m: any) => m.title),
-      module_items: items.map((m: any) => m.title),
+      assignments: (assignments || []).map((a: any) => ({
+        title: a.title,
+        description: a.description || "",
+        unit: a.unit_tag || "",
+      })),
+      modules: (modules || []).map((m: any) => ({
+        title: m.title,
+        description: m.description || "",
+      })),
+      lesson_content: items
+        .filter((m: any) => m.content_html)
+        .map((m: any) => ({
+          title: m.title,
+          content: stripHtml(m.content_html).slice(0, 1000), // Limit content length
+        })),
+      existing_questions: existingQuestions.slice(0, 15).map((q: any) => ({
+        prompt: q.prompt,
+        type: q.question_type,
+      })),
     };
+
+    // Determine how many teacher questions to use vs AI-generated
+    const availableTeacherQs = teacherQuestions || [];
+    const teacherQsToUse = availableTeacherQs.slice(0, batchSize);
+    const aiQsNeeded = Math.max(0, batchSize - teacherQsToUse.length);
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "LOVABLE_API_KEY not configured" }, 500);
 
-    const prompt = `You are creating a short daily practice quiz for a student in the class "${cls.name}" (${cls.subject}).
-Use the following class context to ground your questions in topics the student has actually studied:
+    let aiQuestions: any[] = [];
+    
+    // Only call AI if we need more questions
+    if (aiQsNeeded > 0) {
+      const prompt = `You are creating a daily practice quiz for a student in the class "${cls.name}" (${cls.subject}).
+
+IMPORTANT: Generate questions ONLY about topics from the actual class content provided below. Do NOT create generic questions.
+
+CLASS CONTENT:
 ${JSON.stringify(context, null, 2)}
 
-Generate exactly ${batchSize} practice questions. Mix multiple_choice and short_answer roughly 50/50.
+Based on the modules, lessons, and assignments above, generate exactly ${aiQsNeeded} practice questions that test the student on what they have actually been learning.
+
+Guidelines:
+- Questions should directly relate to the lesson content, module topics, or assignment material
+- Mix multiple_choice and short_answer roughly 50/50
+- For multiple choice, provide 4 plausible options
+- Make questions specific to the content, not generic
+
 Return ONLY valid JSON matching this schema, no prose, no markdown:
 {
   "questions": [
@@ -131,36 +188,55 @@ Return ONLY valid JSON matching this schema, no prose, no markdown:
   ]
 }`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You generate practice quizzes. Always return valid JSON only." },
-          { role: "user", content: prompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (!aiResp.ok) {
-      const t = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, t);
-      if (aiResp.status === 429) return json({ error: "Rate limit exceeded, please retry shortly" }, 429);
-      if (aiResp.status === 402) return json({ error: "AI credits exhausted. Add credits in workspace settings." }, 402);
-      return json({ error: "Failed to generate questions" }, 500);
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: "You generate practice quizzes based on actual class content. Always return valid JSON only. Questions must be specific to the provided lesson material." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (!aiResp.ok) {
+        const t = await aiResp.text();
+        console.error("AI gateway error:", aiResp.status, t);
+        if (aiResp.status === 429) return json({ error: "Rate limit exceeded, please retry shortly" }, 429);
+        if (aiResp.status === 402) return json({ error: "AI credits exhausted. Add credits in workspace settings." }, 402);
+        // If AI fails but we have teacher questions, continue with those
+        if (teacherQsToUse.length === 0) {
+          return json({ error: "Failed to generate questions" }, 500);
+        }
+      } else {
+        const gj = await aiResp.json();
+        const text = gj?.choices?.[0]?.message?.content || "{}";
+        let parsed: any;
+        try { parsed = JSON.parse(text); } catch { parsed = { questions: [] }; }
+        aiQuestions = Array.isArray(parsed.questions) ? parsed.questions : [];
+      }
     }
-    const gj = await aiResp.json();
-    const text = gj?.choices?.[0]?.message?.content || "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(text); } catch { parsed = { questions: [] }; }
-    const qs = Array.isArray(parsed.questions) ? parsed.questions : [];
-    if (qs.length === 0) return json({ error: "No questions generated" }, 500);
 
-    const rows = qs.map((q: any, i: number) => {
+    // Combine teacher questions first, then AI questions
+    const allQuestions = [
+      ...teacherQsToUse.map((q: any) => ({
+        type: q.question_type,
+        prompt: q.prompt,
+        options: q.options,
+        correct_index: q.correct_index,
+        expected_answer: q.expected_answer,
+        is_teacher_question: true,
+      })),
+      ...aiQuestions,
+    ];
+
+    if (allQuestions.length === 0) return json({ error: "No questions available" }, 500);
+
+    const rows = allQuestions.map((q: any, i: number) => {
       const isMc = q.type === "multiple_choice" && Array.isArray(q.options);
       return {
         session_id: session.id,

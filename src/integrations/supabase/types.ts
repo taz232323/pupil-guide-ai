@@ -890,6 +890,85 @@ export type Database = {
         }
         Relationships: []
       }
+      practice_question_bank: {
+        Row: {
+          id: string
+          class_id: string
+          teacher_id: string
+          question_type: string
+          prompt: string
+          options: Json | null
+          correct_index: number | null
+          expected_answer: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          class_id: string
+          teacher_id: string
+          question_type: string
+          prompt: string
+          options?: Json | null
+          correct_index?: number | null
+          expected_answer?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          class_id?: string
+          teacher_id?: string
+          question_type?: string
+          prompt?: string
+          options?: Json | null
+          correct_index?: number | null
+          expected_answer?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_question_bank_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      teacher_dismissed_prompts: {
+        Row: {
+          id: string
+          teacher_id: string
+          prompt_key: string
+          class_id: string | null
+          dismissed_at: string
+        }
+        Insert: {
+          id?: string
+          teacher_id: string
+          prompt_key: string
+          class_id?: string | null
+          dismissed_at?: string
+        }
+        Update: {
+          id?: string
+          teacher_id?: string
+          prompt_key?: string
+          class_id?: string | null
+          dismissed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_dismissed_prompts_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           avatar_items: string[]
