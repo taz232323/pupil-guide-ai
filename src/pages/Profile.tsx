@@ -22,12 +22,15 @@ import {
   updateAvatarState,
   getAvatarDataUri,
   AVATAR_THUMBNAILS,
+  HAIR_CATALOG,
+  STYLE_TO_KEY,
   type AvatarCategory,
   type AvatarState,
+  type AvatarStyle,
 } from "@/components/StudentAvatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Lock, Sparkles, Check, Star, ShoppingBag, Gem } from "lucide-react";
+import { Lock, Sparkles, Check, Star, ShoppingBag, Gem, User } from "lucide-react";
 import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
@@ -42,6 +45,7 @@ import { useTheme } from "@/hooks/useTheme";
 type BuilderCategory = AvatarCategory;
 
 const CATEGORY_LABEL: Record<BuilderCategory, string> = {
+  avatarStyle: "Style",
   skinTone: "Skin",
   hairStyle: "Hair",
   hairColor: "Hair color",
@@ -66,19 +70,18 @@ type BuilderOption = {
 };
 
 const BUILDER: BuilderOption[] = [
+  // Avatar style (body)
+  { key: "style_male",   name: "Male",   category: "avatarStyle" },
+  { key: "style_female", name: "Female", category: "avatarStyle" },
   // Skin
   { key: "skin_light", name: "Light", category: "skinTone", swatch: "#ffdbb4" },
   { key: "skin_tan",   name: "Tan",   category: "skinTone", swatch: "#edb98a" },
   { key: "skin_brown", name: "Brown", category: "skinTone", swatch: "#d08b5b" },
   { key: "skin_deep",  name: "Deep",  category: "skinTone", swatch: "#614335" },
-  // Hair styles (preview rendered live)
-  { key: "hairstyle_short",  name: "Short",  category: "hairStyle" },
-  { key: "hairstyle_long",   name: "Long",   category: "hairStyle" },
-  { key: "hairstyle_curly",  name: "Curly",  category: "hairStyle" },
-  { key: "hairstyle_bun",    name: "Bun",    category: "hairStyle" },
-  { key: "hairstyle_buzz",   name: "Buzz",   category: "hairStyle" },
-  { key: "hairstyle_dreads", name: "Dreads", category: "hairStyle" },
-  { key: "hairstyle_big",    name: "Big",    category: "hairStyle" },
+  // Hair styles — sourced from HAIR_CATALOG and filtered at render time by avatar style.
+  ...Object.entries(HAIR_CATALOG)
+    .filter(([k]) => !k.startsWith("hairstyle_")) // hide legacy duplicates from picker
+    .map(([k, v]) => ({ key: k, name: v.name, category: "hairStyle" as BuilderCategory })),
   // Hair color
   { key: "hair_brown",  name: "Brown",  category: "hairColor", swatch: "#724133" },
   { key: "hair_black",  name: "Black",  category: "hairColor", swatch: "#2c1b18" },
@@ -121,6 +124,7 @@ const BUILDER: BuilderOption[] = [
 const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
 
 const APPEARANCE_CATEGORIES: BuilderCategory[] = [
+  "avatarStyle",
   "skinTone",
   "hairStyle",
   "hairColor",
@@ -355,8 +359,16 @@ export default function Profile() {
           <CardContent>
             {(() => {
               const renderCategoryPanel = (cat: BuilderCategory) => {
-                const catItems = BUILDER.filter((o) => o.category === cat);
-                const activeKey = previewAvatar[cat];
+                let catItems = BUILDER.filter((o) => o.category === cat);
+                if (cat === "hairStyle") {
+                  catItems = catItems.filter((o) => {
+                    const entry = HAIR_CATALOG[o.key];
+                    return !entry || entry.styles.includes(previewAvatar.avatarStyle);
+                  });
+                }
+                const activeKey = cat === "avatarStyle"
+                  ? STYLE_TO_KEY[previewAvatar.avatarStyle]
+                  : previewAvatar[cat];
                 const isCosmeticTab = COSMETIC_CATEGORIES.includes(cat);
                 return (
                   <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
@@ -498,7 +510,7 @@ export default function Profile() {
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="appearance">
-                    <SubTabs cats={APPEARANCE_CATEGORIES} defaultCat="skinTone" />
+                    <SubTabs cats={APPEARANCE_CATEGORIES} defaultCat="avatarStyle" />
                   </TabsContent>
                   <TabsContent value="cosmetics">
                     <SubTabs cats={COSMETIC_CATEGORIES} defaultCat="headwear" />

@@ -13,6 +13,8 @@ import headwearCrownSilverImg from "@/assets/avatar/layers/headwear-crown-silver
  * ------------------------------------------------------------------ */
 
 export type AvatarState = {
+  /** Body/character style (drives the hairstyle catalog). */
+  avatarStyle: AvatarStyle;
   skinTone: string;
   hairStyle: string;
   hairColor: string;
@@ -28,10 +30,12 @@ export type AvatarState = {
 };
 
 export type AvatarCategory = keyof AvatarState;
+export type AvatarStyle = "male" | "female";
 
 export const DEFAULT_AVATAR_STATE: AvatarState = {
+  avatarStyle: "male",
   skinTone: "skin_light",
-  hairStyle: "hairstyle_short",
+  hairStyle: "male_short",
   hairColor: "hair_brown",
   eyes: "eyes_default",
   clothing: "clothes_hoodie",
@@ -39,6 +43,16 @@ export const DEFAULT_AVATAR_STATE: AvatarState = {
   headwear: "",
   accessory: "",
   aura: "aura_magic",
+};
+
+/** Persisted item keys representing the chosen body style. */
+export const STYLE_KEYS: Record<string, AvatarStyle> = {
+  style_male: "male",
+  style_female: "female",
+};
+export const STYLE_TO_KEY: Record<AvatarStyle, string> = {
+  male: "style_male",
+  female: "style_female",
 };
 
 /* ---------- DiceBear option mappings ---------- */
@@ -57,15 +71,45 @@ const HAIR_HEX: Record<string, string> = {
   hair_red: "c93305",
 };
 
-const HAIR_TOP: Record<string, string> = {
-  hairstyle_short: "shortHairShortFlat",
-  hairstyle_long: "longButNotTooLong",
-  hairstyle_curly: "curly",
-  hairstyle_bun: "bun",
-  hairstyle_buzz: "shortHairShortRound",
-  hairstyle_dreads: "dreads",
-  hairstyle_big: "bigHair",
+/**
+ * Hairstyle catalog. Each entry maps a stored key → DiceBear avataaars `top` value,
+ * and is tagged with the body style(s) it belongs to so the UI can filter.
+ */
+export type HairEntry = { top: string; styles: AvatarStyle[]; name: string };
+export const HAIR_CATALOG: Record<string, HairEntry> = {
+  // Male / masculine-presenting
+  male_short:        { top: "shortHairShortFlat",   styles: ["male"], name: "Short" },
+  male_messy:        { top: "shortHairShortWaved",  styles: ["male"], name: "Messy" },
+  male_curly_short:  { top: "shortHairShortCurly",  styles: ["male"], name: "Curly short" },
+  male_fade:         { top: "shortHairSides",       styles: ["male"], name: "Fade" },
+  male_spiky:        { top: "shortHairFrizzle",     styles: ["male"], name: "Spiky" },
+  male_buzz:         { top: "shortHairShortRound",  styles: ["male"], name: "Buzz" },
+  male_caesar:       { top: "shortHairTheCaesar",   styles: ["male"], name: "Caesar" },
+  // Female / feminine-presenting
+  female_long:       { top: "longHairStraight",     styles: ["female"], name: "Long" },
+  female_ponytail:   { top: "longHairStraightStrand", styles: ["female"], name: "Ponytail" },
+  female_braids:     { top: "longHairDreads",       styles: ["female"], name: "Braids" },
+  female_wavy:       { top: "longHairCurvy",        styles: ["female"], name: "Wavy" },
+  female_bun:        { top: "longHairBun",          styles: ["female"], name: "Bun" },
+  female_bob:        { top: "longHairBob",          styles: ["female"], name: "Bob" },
+  female_big:        { top: "longHairBigHair",      styles: ["female"], name: "Big curls" },
+  // Legacy keys (kept for backward compat, treated as unisex)
+  hairstyle_short:   { top: "shortHairShortFlat",   styles: ["male","female"], name: "Short" },
+  hairstyle_long:    { top: "longButNotTooLong",    styles: ["male","female"], name: "Long" },
+  hairstyle_curly:   { top: "curly",                styles: ["male","female"], name: "Curly" },
+  hairstyle_bun:     { top: "bun",                  styles: ["female"],        name: "Bun" },
+  hairstyle_buzz:    { top: "shortHairShortRound",  styles: ["male"],          name: "Buzz" },
+  hairstyle_dreads:  { top: "dreads",               styles: ["male","female"], name: "Dreads" },
+  hairstyle_big:     { top: "bigHair",              styles: ["female"],        name: "Big" },
 };
+/** Default hairstyle per body style. Used when switching style. */
+export const DEFAULT_HAIR_FOR_STYLE: Record<AvatarStyle, string> = {
+  male: "male_short",
+  female: "female_long",
+};
+const HAIR_TOP: Record<string, string> = Object.fromEntries(
+  Object.entries(HAIR_CATALOG).map(([k, v]) => [k, v.top])
+);
 
 const EYES_MAP: Record<string, string> = {
   eyes_default: "default",
@@ -131,6 +175,7 @@ for (const k of Object.keys(CLOTHES_HEX)) AVATAR_ITEM_CATEGORY[k] = "clothesColo
 for (const k of Object.keys(DICEBEAR_ACCESSORIES)) AVATAR_ITEM_CATEGORY[k] = "accessory";
 for (const k of Object.keys(HEADWEAR_OVERLAY)) AVATAR_ITEM_CATEGORY[k] = "headwear";
 for (const k of Object.keys(AURA_OVERLAY)) AVATAR_ITEM_CATEGORY[k] = "aura";
+for (const k of Object.keys(STYLE_KEYS)) AVATAR_ITEM_CATEGORY[k] = "avatarStyle";
 // extra accessory keys preserved for legacy
 AVATAR_ITEM_CATEGORY["robot"] = "accessory";
 
@@ -148,16 +193,30 @@ export const COSMETIC_EMOJI: Record<string, string> = {
 
 export function avatarStateFromItems(items: string[] | null | undefined): AvatarState {
   const state: AvatarState = { ...DEFAULT_AVATAR_STATE };
+  let hasStyle = false;
+  let hasHair = false;
   for (const key of items ?? []) {
     const category = AVATAR_ITEM_CATEGORY[key];
     if (!category) continue;
-    state[category] = key;
+    if (category === "avatarStyle") {
+      state.avatarStyle = STYLE_KEYS[key] ?? state.avatarStyle;
+      hasStyle = true;
+    } else {
+      (state as any)[category] = key;
+      if (category === "hairStyle") hasHair = true;
+    }
+  }
+  // Infer style from a legacy hairstyle if not explicitly stored.
+  if (!hasStyle && hasHair) {
+    const entry = HAIR_CATALOG[state.hairStyle];
+    if (entry && entry.styles.length === 1) state.avatarStyle = entry.styles[0];
   }
   return state;
 }
 
 export function avatarStateToItems(state: AvatarState): string[] {
   return [
+    STYLE_TO_KEY[state.avatarStyle],
     state.skinTone,
     state.hairStyle,
     state.hairColor,
@@ -173,6 +232,18 @@ export function avatarStateToItems(state: AvatarState): string[] {
 export function updateAvatarState(state: AvatarState, key: string): AvatarState {
   const category = AVATAR_ITEM_CATEGORY[key];
   if (!category) return state;
+  if (category === "avatarStyle") {
+    const nextStyle = STYLE_KEYS[key] ?? state.avatarStyle;
+    if (nextStyle === state.avatarStyle) return state;
+    // If the current hairstyle doesn't belong to the new style, switch to that style's default.
+    const currentHair = HAIR_CATALOG[state.hairStyle];
+    const hairOk = currentHair?.styles.includes(nextStyle);
+    return {
+      ...state,
+      avatarStyle: nextStyle,
+      hairStyle: hairOk ? state.hairStyle : DEFAULT_HAIR_FOR_STYLE[nextStyle],
+    };
+  }
   return { ...state, [category]: key };
 }
 
