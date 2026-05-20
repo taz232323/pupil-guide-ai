@@ -159,12 +159,12 @@ export default function StudentCalendar() {
 
   const markDone = async (assignmentId: string) => {
     if (!user) return;
-    const { error } = await supabase.from("assignment_status_records").upsert({
-      assignment_id: assignmentId, student_id: user.id, status: "submitted",
-    }, { onConflict: "assignment_id,student_id" });
+    const { error } = await supabase.rpc("save_assignment_progress", {
+      _assignment_id: assignmentId,
+      _answers: [],
+    });
     if (error) { toast.error(error.message); return; }
-    setCompletedIds(prev => new Set(prev).add(assignmentId));
-    toast.success("Marked done");
+    toast.info("Open the assignment to submit completed work.");
   };
 
   const deleteReminder = async (id: string) => {

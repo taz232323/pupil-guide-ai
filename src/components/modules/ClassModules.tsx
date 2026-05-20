@@ -132,7 +132,7 @@ export function ClassModules({ classId, isTeacher }: { classId: string; isTeache
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [classId, user?.id]);
+  useEffect(() => { load();   }, [classId, user?.id]);
 
   const itemsByModule = useMemo(() => {
     const m = new Map<string, ItemRow[]>();

@@ -121,12 +121,10 @@ export const StudentAssignments = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setRows((prev) => prev.map((r) => r.id === assignmentId ? { ...r, status } : r));
-    const { error } = await supabase
-      .from("assignment_status_records")
-      .upsert(
-        { assignment_id: assignmentId, student_id: user.id, status },
-        { onConflict: "assignment_id,student_id" }
-      );
+    const { error } = await supabase.rpc("set_assignment_status", {
+      _assignment_id: assignmentId,
+      _status: status,
+    });
     if (error) {
       toast.error(error.message);
       load();
@@ -145,11 +143,11 @@ export const StudentAssignments = () => {
     if (!user) return;
     setBusy(true);
     try {
-      let payload: { file_path?: string; link_url?: string } = {};
+      const payload: { file_path?: string; link_url?: string } = {};
       if (mode === "file") {
         if (!file) { toast.error("Choose a file"); return; }
         if (file.size > 20 * 1024 * 1024) { toast.error("Max 20MB"); return; }
-        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const safe = file.name.replace(/[^\w.-]+/g, "_");
         const path = `${submitFor.id}/${user.id}/${Date.now()}_${safe}`;
         const { error: upErr } = await supabase.storage
           .from("submissions")
@@ -167,12 +165,12 @@ export const StudentAssignments = () => {
         payload.link_url = trimmed;
       }
 
-      const { error } = await supabase
-        .from("submissions")
-        .upsert(
-          { assignment_id: submitFor.id, student_id: user.id, ...payload },
-          { onConflict: "assignment_id,student_id" }
-        );
+      const { error } = await supabase.rpc("submit_assignment", {
+        _assignment_id: submitFor.id,
+        _answers: [],
+        _file_path: payload.file_path ?? null,
+        _link_url: payload.link_url ?? null,
+      });
       if (error) { toast.error(error.message); return; }
       toast.success("Submitted");
       setSubmitFor(null);

@@ -187,7 +187,7 @@ export default function StudentDashboard() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { load();   }, [user]);
 
   const todayEnd = endOfDay().getTime();
   const tomorrowEnd = endOfDay(new Date(Date.now() + 86_400_000)).getTime();

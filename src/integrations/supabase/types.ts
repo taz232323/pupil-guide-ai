@@ -1264,6 +1264,10 @@ export type Database = {
       }
       claim_daily_login_box: { Args: never; Returns: Json }
       claim_quest: { Args: { _quest_key: string }; Returns: Json }
+      create_shop_purchase: {
+        Args: { _class_id: string | null; _item_key: string }
+        Returns: Json
+      }
       create_teacher_class: {
         Args: { _name: string; _subject: string }
         Returns: {
@@ -1286,6 +1290,16 @@ export type Database = {
         }
       }
       generate_join_code: { Args: never; Returns: string }
+      grade_assignment_submission: {
+        Args: {
+          _answer_grades?: Json
+          _assignment_id: string
+          _overall_feedback?: string | null
+          _overall_score?: number | null
+          _student_id: string
+        }
+        Returns: Json
+      }
       get_current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1331,6 +1345,33 @@ export type Database = {
       }
       join_class_by_code: { Args: { _code: string }; Returns: string }
       reload_schema_cache: { Args: never; Returns: undefined }
+      resolve_shop_purchase: {
+        Args: {
+          _purchase_id: string
+          _status: Database["public"]["Enums"]["purchase_status"]
+        }
+        Returns: Json
+      }
+      save_assignment_progress: {
+        Args: { _answers: Json; _assignment_id: string }
+        Returns: Json
+      }
+      set_assignment_status: {
+        Args: {
+          _assignment_id: string
+          _status: Database["public"]["Enums"]["assignment_status"]
+        }
+        Returns: Json
+      }
+      submit_assignment: {
+        Args: {
+          _answers?: Json
+          _assignment_id: string
+          _file_path?: string | null
+          _link_url?: string | null
+        }
+        Returns: Json
+      }
       teacher_award_coins: {
         Args: {
           _amount: number

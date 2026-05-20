@@ -319,13 +319,15 @@ export const DashboardShell = ({
         {/* Mobile bottom tab bar */}
         <nav
           className={cn(
-            "lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-card/95 backdrop-blur transition-all duration-200"
+            "lg:hidden fixed bottom-0 inset-x-0 z-30 overflow-x-auto overscroll-x-contain border-t border-border bg-card/95 backdrop-blur transition-all duration-200"
           )}
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <ul
-            className={cn("grid", keyboardOpen ? "min-h-[52px]" : "min-h-[68px]")}
-            style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
+            className={cn(
+              "grid w-max min-w-full grid-flow-col auto-cols-[minmax(4.75rem,1fr)]",
+              keyboardOpen ? "min-h-[52px]" : "min-h-[68px]"
+            )}
           >
             {nav.map((item) => {
               const active = isActive(item.to);
@@ -335,7 +337,7 @@ export const DashboardShell = ({
                     to={item.to}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "relative flex flex-col items-center justify-center gap-1 px-2 py-2 h-full text-[10px] leading-tight font-medium transition-base w-full min-w-[44px]",
+                      "relative flex flex-col items-center justify-center gap-1 px-2 py-2 h-full text-[10px] leading-tight font-medium transition-base w-full",
                       keyboardOpen ? "min-h-[44px]" : "min-h-[56px]",
                       active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                     )}

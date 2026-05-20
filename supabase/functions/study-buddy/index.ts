@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("APP_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -9,6 +9,10 @@ const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+function clip(value: unknown, max = 2000) {
+  return String(value ?? "").slice(0, max);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -25,6 +29,7 @@ Deno.serve(async (req) => {
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -33,8 +38,26 @@ Deno.serve(async (req) => {
     }
     const user = userData.user;
 
-    const body = await req.json().catch(() => ({}));
-    const messages: Array<{ role: "user" | "assistant"; content: string }> = Array.isArray(body.messages) ? body.messages : [];
+    const bodyText = await req.text();
+    if (bodyText.length > 64_000) {
+      return new Response(JSON.stringify({ error: "Request body too large" }), {
+        status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    let body: any = {};
+    try {
+      body = bodyText ? JSON.parse(bodyText) : {};
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = Array.isArray(body.messages)
+      ? body.messages.slice(-20).map((m: any) => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: clip(m.content),
+        }))
+      : [];
     if (messages.length === 0) {
       return new Response(JSON.stringify({ error: "No messages" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -49,6 +72,22 @@ Deno.serve(async (req) => {
     if (lastUserMsg.content.length > 2000) {
       return new Response(JSON.stringify({ error: "Message too long" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: allowed, error: rateErr } = await admin.rpc("check_edge_rate_limit", {
+      _bucket_key: `study-buddy:${user.id}`,
+      _limit: 60,
+      _window_seconds: 3600,
+    });
+    if (rateErr) {
+      return new Response(JSON.stringify({ error: "Rate limit check failed" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded, please retry later" }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 

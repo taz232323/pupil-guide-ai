@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import LinkExt from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import DOMPurify from "dompurify";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,28 @@ type Props = {
   className?: string;
   minHeight?: number;
 };
+
+const richHtmlConfig = {
+  ALLOWED_TAGS: ["p", "br", "strong", "em", "s", "ul", "ol", "li", "blockquote", "h2", "h3", "code", "pre", "a"],
+  ALLOWED_ATTR: ["href", "target", "rel", "class"],
+  ALLOW_DATA_ATTR: false,
+};
+
+function sanitizeRichHtml(html: string) {
+  return DOMPurify.sanitize(html || "", richHtmlConfig);
+}
+
+function isSafeLinkUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "mailto:";
+  } catch {
+    return false;
+  }
+}
 
 export function RichEditor({ value, onChange, placeholder, className, minHeight = 200 }: Props) {
   const editor = useEditor({
@@ -35,15 +58,15 @@ export function RichEditor({ value, onChange, placeholder, className, minHeight 
         style: `min-height: ${minHeight}px`,
       },
     },
-    onUpdate: ({ editor: e }) => onChange(e.getHTML()),
+    onUpdate: ({ editor: e }) => onChange(sanitizeRichHtml(e.getHTML())),
   });
 
   useEffect(() => {
     if (!editor) return;
-    if (value !== editor.getHTML()) {
-      editor.commands.setContent(value || "", { emitUpdate: false });
+    const clean = sanitizeRichHtml(value || "");
+    if (clean !== editor.getHTML()) {
+      editor.commands.setContent(clean, { emitUpdate: false });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor]);
 
   if (!editor) return null;
@@ -69,6 +92,10 @@ export function RichEditor({ value, onChange, placeholder, className, minHeight 
     if (url === null) return;
     if (url === "") {
       editor.chain().focus().unsetLink().run();
+      return;
+    }
+    if (!isSafeLinkUrl(url)) {
+      window.alert("Use an http, https, mailto, or site-relative link.");
       return;
     }
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
@@ -101,7 +128,7 @@ export function RichContent({ html, className }: { html: string; className?: str
   return (
     <div
       className={cn("prose prose-sm max-w-none prose-headings:font-semibold prose-a:text-primary", className)}
-      dangerouslySetInnerHTML={{ __html: html || "" }}
+      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(html) }}
     />
   );
 }

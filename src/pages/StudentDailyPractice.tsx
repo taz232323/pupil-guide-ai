@@ -113,15 +113,6 @@ export default function StudentDailyPractice() {
     const update: any = {};
     if ("selected_index" in patch) {
       update.selected_index = patch.selected_index;
-      // auto-grade MC
-      const { data: row } = await supabase
-        .from("daily_practice_answers")
-        .select("correct_index")
-        .eq("id", q.id)
-        .maybeSingle();
-      if (row && row.correct_index !== null) {
-        update.is_correct = patch.selected_index === row.correct_index;
-      }
     }
     if ("text_response" in patch) update.text_response = patch.text_response;
     await supabase.from("daily_practice_answers").update(update).eq("id", q.id);
