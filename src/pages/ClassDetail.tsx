@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X } from "lucide-react";
+import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X, HelpCircle, Plus, Trash2, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -34,6 +34,16 @@ type ClassRow = {
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
 
+type PracticeQuestion = {
+  id: string;
+  class_id: string;
+  question_type: "multiple_choice" | "short_answer";
+  prompt: string;
+  options: string[] | null;
+  correct_index: number | null;
+  expected_answer: string | null;
+};
+
 export default function ClassDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -53,6 +63,12 @@ export default function ClassDetail() {
   const [awardAmount, setAwardAmount] = useState<string>("1");
   const [awardReason, setAwardReason] = useState("");
   const [awarding, setAwarding] = useState(false);
+  
+  // Practice Question Bank state
+  const [practiceQuestions, setPracticeQuestions] = useState<PracticeQuestion[]>([]);
+  const [editingQuestion, setEditingQuestion] = useState<Partial<PracticeQuestion> | null>(null);
+  const [savingQuestion, setSavingQuestion] = useState(false);
+  const [showPracticePrompt, setShowPracticePrompt] = useState(false);
 
   const isTeacher = !!cls && !!user && cls.teacher_id === user.id;
 
@@ -128,9 +144,33 @@ export default function ClassDetail() {
         .from("assignments").select("id, title, due_date")
         .eq("class_id", id).order("created_at", { ascending: false });
       setAssignments((asgn ?? []) as any);
+      
+      // Load practice questions for teachers
+      if (c.teacher_id === user?.id) {
+        const { data: pqs } = await supabase
+          .from("practice_question_bank")
+          .select("*")
+          .eq("class_id", id)
+          .order("created_at", { ascending: false });
+        setPracticeQuestions((pqs ?? []) as PracticeQuestion[]);
+        
+        // Check if we should show the first-time prompt
+        if (c.daily_practice_enabled) {
+          const { data: dismissed } = await supabase
+            .from("teacher_dismissed_prompts")
+            .select("id")
+            .eq("teacher_id", user.id)
+            .eq("prompt_key", "practice_question_bank_intro")
+            .eq("class_id", id)
+            .maybeSingle();
+          if (!dismissed) {
+            setShowPracticePrompt(true);
+          }
+        }
+      }
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, user]);
 
   const saveSyllabus = async () => {
     if (!cls) return;
@@ -172,6 +212,70 @@ export default function ClassDetail() {
     toast.success(`${m.name} removed from class`);
   };
 
+  const savePracticeQuestion = async (q: Partial<PracticeQuestion>) => {
+    if (!cls || !user) return;
+    setSavingQuestion(true);
+    
+    if (q.id) {
+      // Update existing
+      const { error } = await supabase
+        .from("practice_question_bank")
+        .update({
+          question_type: q.question_type,
+          prompt: q.prompt,
+          options: q.options,
+          correct_index: q.correct_index,
+          expected_answer: q.expected_answer,
+        })
+        .eq("id", q.id);
+      if (error) { toast.error(error.message); setSavingQuestion(false); return; }
+      setPracticeQuestions((prev) => prev.map((x) => x.id === q.id ? { ...x, ...q } as PracticeQuestion : x));
+    } else {
+      // Insert new
+      const { data, error } = await supabase
+        .from("practice_question_bank")
+        .insert({
+          class_id: cls.id,
+          teacher_id: user.id,
+          question_type: q.question_type!,
+          prompt: q.prompt!,
+          options: q.options,
+          correct_index: q.correct_index,
+          expected_answer: q.expected_answer,
+        })
+        .select()
+        .single();
+      if (error) { toast.error(error.message); setSavingQuestion(false); return; }
+      setPracticeQuestions((prev) => [data as PracticeQuestion, ...prev]);
+    }
+    
+    setEditingQuestion(null);
+    setSavingQuestion(false);
+    toast.success("Question saved");
+  };
+
+  const deletePracticeQuestion = async (id: string) => {
+    const { error } = await supabase
+      .from("practice_question_bank")
+      .delete()
+      .eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setPracticeQuestions((prev) => prev.filter((x) => x.id !== id));
+    toast.success("Question deleted");
+  };
+
+  const dismissPracticePrompt = async () => {
+    if (!cls || !user) return;
+    await supabase
+      .from("teacher_dismissed_prompts")
+      .insert({
+        teacher_id: user.id,
+        prompt_key: "practice_question_bank_intro",
+        class_id: cls.id,
+      });
+    setShowPracticePrompt(false);
+  };
+
   if (loading || !cls) {
     return (
       <DashboardShell title="Class">
@@ -208,6 +312,7 @@ export default function ClassDetail() {
           <TabsTrigger value="overview"><BookOpen className="h-4 w-4 mr-1.5" />Overview</TabsTrigger>
           <TabsTrigger value="modules"><Layers className="h-4 w-4 mr-1.5" />Modules</TabsTrigger>
           <TabsTrigger value="assignments"><ClipboardList className="h-4 w-4 mr-1.5" />Assignments</TabsTrigger>
+          {isTeacher && <TabsTrigger value="question-bank"><HelpCircle className="h-4 w-4 mr-1.5" />Question Bank</TabsTrigger>}
           <TabsTrigger value="members"><Users className="h-4 w-4 mr-1.5" />Members</TabsTrigger>
         </TabsList>
 
@@ -342,6 +447,73 @@ export default function ClassDetail() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isTeacher && (
+          <TabsContent value="question-bank">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">Practice Question Bank</CardTitle>
+                  <CardDescription>
+                    Add questions that will appear in students' daily practice sessions. AI will fill remaining slots with questions based on your lesson content.
+                  </CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
+                  <Plus className="h-4 w-4 mr-1" />Add Question
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {practiceQuestions.length === 0 ? (
+                  <EmptyState
+                    icon={HelpCircle}
+                    title="No questions yet"
+                    description="Add practice questions to give students targeted daily practice. AI will also generate questions from your lesson content."
+                    action={
+                      <Button size="sm" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
+                        <Plus className="h-4 w-4 mr-1" />Add your first question
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {practiceQuestions.map((q) => (
+                      <li key={q.id} className="py-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted">
+                              {q.question_type === "multiple_choice" ? "Multiple Choice" : "Short Answer"}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium">{q.prompt}</p>
+                          {q.question_type === "multiple_choice" && q.options && (
+                            <ul className="mt-1 space-y-0.5">
+                              {(q.options as string[]).map((opt, i) => (
+                                <li key={i} className={`text-xs ${i === q.correct_index ? "text-green-600 font-medium" : "text-muted-foreground"}`}>
+                                  {String.fromCharCode(65 + i)}. {opt} {i === q.correct_index && "✓"}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {q.question_type === "short_answer" && q.expected_answer && (
+                            <p className="text-xs text-muted-foreground mt-1">Expected: {q.expected_answer}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditingQuestion(q)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive" onClick={() => deletePracticeQuestion(q.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="members">
           <Card>
@@ -482,6 +654,182 @@ export default function ClassDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Practice Question Dialog */}
+      <PracticeQuestionDialog
+        value={editingQuestion}
+        onClose={() => setEditingQuestion(null)}
+        onSave={savePracticeQuestion}
+        saving={savingQuestion}
+      />
+
+      {/* First-time Daily Practice Prompt */}
+      <Dialog open={showPracticePrompt} onOpenChange={setShowPracticePrompt}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-primary" />
+              Set up your Question Bank
+            </DialogTitle>
+            <DialogDescription>
+              Add practice questions to your question bank so students get the most relevant daily practice. You can also let AI generate questions from your lesson content automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border bg-muted/40 p-4 text-sm">
+            <p className="font-medium mb-2">How it works:</p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>• Your questions appear first in each student's daily practice</li>
+              <li>• AI fills remaining slots with questions based on your modules and lessons</li>
+              <li>• Students need to complete at least 5 questions daily to maintain their streak</li>
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={dismissPracticePrompt}>Maybe later</Button>
+            <Button onClick={() => { dismissPracticePrompt(); document.querySelector<HTMLButtonElement>('[value="question-bank"]')?.click(); }}>
+              <Plus className="h-4 w-4 mr-1" />Go to Question Bank
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardShell>
+  );
+}
+
+/* -------------- Practice Question Dialog -------------- */
+function PracticeQuestionDialog({ value, onClose, onSave, saving }: {
+  value: Partial<PracticeQuestion> | null;
+  onClose: () => void;
+  onSave: (q: Partial<PracticeQuestion>) => void;
+  saving: boolean;
+}) {
+  const [questionType, setQuestionType] = useState<"multiple_choice" | "short_answer">("multiple_choice");
+  const [prompt, setPrompt] = useState("");
+  const [options, setOptions] = useState<string[]>(["", "", "", ""]);
+  const [correctIndex, setCorrectIndex] = useState(0);
+  const [expectedAnswer, setExpectedAnswer] = useState("");
+
+  useEffect(() => {
+    if (!value) return;
+    setQuestionType(value.question_type || "multiple_choice");
+    setPrompt(value.prompt || "");
+    setOptions((value.options as string[]) || ["", "", "", ""]);
+    setCorrectIndex(value.correct_index ?? 0);
+    setExpectedAnswer(value.expected_answer || "");
+  }, [value]);
+
+  if (!value) return null;
+
+  const submit = () => {
+    if (!prompt.trim()) {
+      toast.error("Question text is required");
+      return;
+    }
+    if (questionType === "multiple_choice") {
+      const filledOptions = options.filter((o) => o.trim());
+      if (filledOptions.length < 2) {
+        toast.error("At least 2 options are required");
+        return;
+      }
+    }
+    onSave({
+      ...value,
+      question_type: questionType,
+      prompt: prompt.trim(),
+      options: questionType === "multiple_choice" ? options : null,
+      correct_index: questionType === "multiple_choice" ? correctIndex : null,
+      expected_answer: questionType === "short_answer" ? expectedAnswer.trim() : null,
+    });
+  };
+
+  return (
+    <Dialog open={!!value} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{value.id ? "Edit Question" : "Add Question"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm">Question Type</Label>
+            <RadioGroup
+              value={questionType}
+              onValueChange={(v) => setQuestionType(v as "multiple_choice" | "short_answer")}
+              className="flex gap-4 mt-2"
+            >
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <RadioGroupItem value="multiple_choice" />
+                <span>Multiple Choice</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <RadioGroupItem value="short_answer" />
+                <span>Short Answer</span>
+              </label>
+            </RadioGroup>
+          </div>
+          <div>
+            <Label htmlFor="q-prompt" className="text-sm">Question</Label>
+            <Textarea
+              id="q-prompt"
+              rows={3}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Enter your question..."
+              className="mt-1"
+            />
+          </div>
+          {questionType === "multiple_choice" ? (
+            <div>
+              <Label className="text-sm">Answer Options</Label>
+              <div className="space-y-2 mt-2">
+                {options.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCorrectIndex(i)}
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-medium transition-colors ${
+                        correctIndex === i
+                          ? "border-green-500 bg-green-500 text-white"
+                          : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                      }`}
+                    >
+                      {String.fromCharCode(65 + i)}
+                    </button>
+                    <Input
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...options];
+                        newOpts[i] = e.target.value;
+                        setOptions(newOpts);
+                      }}
+                      placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                      className="flex-1"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Click a letter to mark it as the correct answer</p>
+            </div>
+          ) : (
+            <div>
+              <Label htmlFor="q-expected" className="text-sm">Expected Answer (optional)</Label>
+              <Textarea
+                id="q-expected"
+                rows={2}
+                value={expectedAnswer}
+                onChange={(e) => setExpectedAnswer(e.target.value)}
+                placeholder="Model answer for grading reference..."
+                className="mt-1"
+              />
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={submit} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+            {saving ? "Saving..." : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
