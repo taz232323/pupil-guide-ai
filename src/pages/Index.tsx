@@ -460,7 +460,7 @@ export default function Index() {
                 data-aos-duration="600"
                 data-aos-delay={TESTIMONIALS.indexOf(t) * 250}
                 data-aos-anchor-placement="top-bottom"
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col transition-all duration-500 ease-out hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05]"
               >
                 <div className="text-sky-300/60 text-5xl leading-none font-serif select-none">"</div>
                 <blockquote className="mt-2 text-[15px] leading-relaxed text-slate-200 flex-1">
