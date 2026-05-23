@@ -50,7 +50,7 @@ export type SpeciesKey = "owl" | "fox" | "cat" | "wolf" | "bear" | "rabbit";
 export const SPECIES: Record<string, { key: SpeciesKey; name: string; defaultFur: string; allowedFur: string[] }> = {
   species_owl:    { key: "owl",    name: "Owl",    defaultFur: "fur_brown",  allowedFur: ["fur_brown", "fur_grey", "fur_white", "fur_black", "fur_cream"] },
   species_fox:    { key: "fox",    name: "Fox",    defaultFur: "fur_orange", allowedFur: ["fur_orange", "fur_red", "fur_grey", "fur_white", "fur_black"] },
-  species_cat:    { key: "cat",    name: "Cat",    defaultFur: "fur_grey",   allowedFur: ["fur_grey", "fur_black", "fur_white", "fur_orange", "fur_cream", "fur_brown"] },
+  species_cat:    { key: "cat",    name: "Cat",    defaultFur: "fur_orange", allowedFur: ["fur_orange", "fur_grey", "fur_black", "fur_white", "fur_cream", "fur_brown"] },
   species_wolf:   { key: "wolf",   name: "Wolf",   defaultFur: "fur_grey",   allowedFur: ["fur_grey", "fur_black", "fur_white", "fur_brown"] },
   species_bear:   { key: "bear",   name: "Bear",   defaultFur: "fur_brown",  allowedFur: ["fur_brown", "fur_black", "fur_cream", "fur_white"] },
   species_rabbit: { key: "rabbit", name: "Rabbit", defaultFur: "fur_white",  allowedFur: ["fur_white", "fur_grey", "fur_brown", "fur_cream", "fur_black"] },
@@ -268,9 +268,6 @@ function speciesParts(species: string, fur: string, furDark: string, furLight: s
         <!-- head -->
         <ellipse cx="${cx}" cy="40" rx="28" ry="28" fill="${fur}"/>
         ${shading}
-        <!-- chest feather scallops behind head -->
-        <path d="M22,62 Q30,56 38,62 Q46,56 54,62 Q62,56 70,62 Q74,58 78,62"
-              fill="none" stroke="${darken(fur,0.2)}" stroke-width="${sw}" stroke-linecap="round"/>
         <!-- facial disk: figure-8 of two soft circles -->
         <circle cx="40" cy="44" r="14" fill="${furLight}"/>
         <circle cx="60" cy="44" r="14" fill="${furLight}"/>
