@@ -255,7 +255,7 @@ export default function ClassDetail() {
   };
 
   const deletePracticeQuestion = async (id: string) => {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("practice_question_bank")
       .delete()
       .eq("id", id);
@@ -266,7 +266,7 @@ export default function ClassDetail() {
 
   const dismissPracticePrompt = async () => {
     if (!cls || !user) return;
-    await supabase
+    await (supabase as any)
       .from("teacher_dismissed_prompts")
       .insert({
         teacher_id: user.id,
