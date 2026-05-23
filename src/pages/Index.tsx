@@ -70,11 +70,10 @@ export default function Index() {
   const { user, role, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const heroSectionRef = useRef<HTMLDivElement | null>(null);
-  const mountainRef = useRef<HTMLDivElement | null>(null);
-  const backdropRef = useRef<HTMLDivElement | null>(null);
+  const sceneLayerRef = useRef<HTMLDivElement | null>(null);
   const headlineRef = useRef<HTMLHeadingElement | null>(null);
   const ctaRef = useRef<HTMLDivElement | null>(null);
-  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const vignetteRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -114,29 +113,21 @@ export default function Index() {
         // Smooth ease-out for cinematic camera dolly
         const eased = 1 - Math.pow(1 - progress, 2.2);
 
-        // Camera-into-mountain: dramatic scale + slight upward drift
-        if (mountainRef.current) {
-          const scale = 1 + eased * 3.5; // 1 → 4.5
-          const translateY = -eased * 120; // drift up as we move into it
-          mountainRef.current.style.transform = `translate3d(0, ${translateY}px, 0) scale(${scale})`;
-        }
-
-        // Parallax backdrop pulls back slightly + blurs to fake depth-of-field
-        if (backdropRef.current) {
-          const bgScale = 1 + eased * 0.25;
-          const blur = eased * 14;
-          backdropRef.current.style.transform = `translate3d(0, ${-eased * 40}px, 0) scale(${bgScale})`;
-          backdropRef.current.style.filter = `blur(${blur}px)`;
+        // Layer 1: camera moves into the complete mountain scene only.
+        if (sceneLayerRef.current) {
+          const scale = 1 + eased * 1.85; // 1 → 2.85
+          const translateY = -eased * 86;
+          sceneLayerRef.current.style.transform = `translate3d(0, ${translateY}px, 0) scale(${scale})`;
         }
 
         // Vignette darkens for text legibility
-        if (overlayRef.current) {
-          overlayRef.current.style.opacity = String(Math.min(eased * 1.1, 0.85));
+        if (vignetteRef.current) {
+          vignetteRef.current.style.opacity = String(Math.min(eased * 1.25, 0.9));
         }
 
         // Headline appears 50–80% through
         if (headlineRef.current) {
-          const textIn = Math.min(Math.max((eased - 0.5) / 0.3, 0), 1);
+          const textIn = Math.min(Math.max((eased - 0.48) / 0.22, 0), 1);
           const textScale = 0.9 + textIn * 0.1;
           const textY = (1 - textIn) * 28;
           headlineRef.current.style.opacity = String(textIn);
@@ -145,7 +136,7 @@ export default function Index() {
 
         // CTA appears 75–100%
         if (ctaRef.current) {
-          const ctaIn = Math.min(Math.max((eased - 0.75) / 0.22, 0), 1);
+          const ctaIn = Math.min(Math.max((eased - 0.62) / 0.24, 0), 1);
           const ctaY = (1 - ctaIn) * 24;
           ctaRef.current.style.opacity = String(ctaIn);
           ctaRef.current.style.transform = `translate3d(0, ${ctaY}px, 0)`;
@@ -230,34 +221,26 @@ export default function Index() {
         style={{ height: "280vh" }}
       >
         <div className="sticky top-0 h-screen w-full overflow-hidden">
-          {/* Parallax backdrop that blurs as the camera moves in */}
+          {/* Layer 1: background scene — the only layer that zooms */}
           <div
-            ref={backdropRef}
-            className="absolute inset-0 will-change-transform"
-            style={{ transform: "translate3d(0,0,0) scale(1)", filter: "blur(0px)" }}
+            ref={sceneLayerRef}
+            className="absolute inset-0 flex items-center justify-center will-change-transform"
+            style={{ transform: "translate3d(0,0,0) scale(1)", transformOrigin: "center center" }}
           >
             <AnimatedBackdrop />
-          </div>
-
-          {/* Mountain layer — camera moves into it */}
-          <div
-            ref={mountainRef}
-            className="absolute inset-0 flex items-center justify-center will-change-transform"
-            style={{ transform: "translate3d(0,0,0) scale(1)" }}
-          >
-            <div className="relative">
-              <div className="absolute inset-0 -z-10 blur-3xl opacity-60 bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent rounded-full" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute h-[52vw] max-h-[680px] w-[52vw] max-w-[680px] rounded-full bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent opacity-60 blur-3xl" />
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                className="w-[60vw] max-w-[720px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
+                className="relative w-[68vw] max-w-[760px] min-w-[320px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
               />
             </div>
           </div>
 
           {/* Dark vignette overlay for text contrast */}
           <div
-            ref={overlayRef}
+            ref={vignetteRef}
             aria-hidden
             className="absolute inset-0 pointer-events-none opacity-0 will-change-[opacity]"
             style={{
