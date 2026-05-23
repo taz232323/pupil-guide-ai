@@ -221,34 +221,26 @@ export default function Index() {
         style={{ height: "280vh" }}
       >
         <div className="sticky top-0 h-screen w-full overflow-hidden">
-          {/* Parallax backdrop that blurs as the camera moves in */}
+          {/* Layer 1: background scene — the only layer that zooms */}
           <div
-            ref={backdropRef}
-            className="absolute inset-0 will-change-transform"
-            style={{ transform: "translate3d(0,0,0) scale(1)", filter: "blur(0px)" }}
+            ref={sceneLayerRef}
+            className="absolute inset-0 flex items-center justify-center will-change-transform"
+            style={{ transform: "translate3d(0,0,0) scale(1)", transformOrigin: "center center" }}
           >
             <AnimatedBackdrop />
-          </div>
-
-          {/* Mountain layer — camera moves into it */}
-          <div
-            ref={mountainRef}
-            className="absolute inset-0 flex items-center justify-center will-change-transform"
-            style={{ transform: "translate3d(0,0,0) scale(1)" }}
-          >
-            <div className="relative">
-              <div className="absolute inset-0 -z-10 blur-3xl opacity-60 bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent rounded-full" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute h-[52vw] max-h-[680px] w-[52vw] max-w-[680px] rounded-full bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent opacity-60 blur-3xl" />
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                className="w-[60vw] max-w-[720px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
+                className="relative w-[68vw] max-w-[760px] min-w-[320px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
               />
             </div>
           </div>
 
           {/* Dark vignette overlay for text contrast */}
           <div
-            ref={overlayRef}
+            ref={vignetteRef}
             aria-hidden
             className="absolute inset-0 pointer-events-none opacity-0 will-change-[opacity]"
             style={{
