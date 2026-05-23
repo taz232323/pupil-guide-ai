@@ -212,9 +212,9 @@ export default function Index() {
         id="top"
         ref={heroSectionRef}
         className="relative isolate"
-        style={{ height: "280vh" }}
+        style={{ height: "190vh" }}
       >
-        <div className="sticky top-0 h-screen w-full overflow-hidden">
+        <div className="sticky top-0 h-[100svh] min-h-[560px] w-full overflow-hidden">
           {/* Layer 1: background scene — the only layer that zooms */}
           <div
             ref={sceneLayerRef}
@@ -223,11 +223,11 @@ export default function Index() {
           >
             <AnimatedBackdrop />
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute h-[52vw] max-h-[680px] w-[52vw] max-w-[680px] rounded-full bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent opacity-60 blur-3xl" />
+              <div className="absolute h-[min(64vw,64vh)] max-h-[620px] w-[min(64vw,64vh)] max-w-[620px] rounded-full bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent opacity-60 blur-3xl" />
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                className="relative w-[68vw] max-w-[760px] min-w-[320px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
+                className="relative w-[min(78vw,70vh)] max-w-[720px] min-w-[260px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
               />
             </div>
           </div>
@@ -246,12 +246,12 @@ export default function Index() {
 
           {/* Headline + CTA revealed inside the mountain scene */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center px-5 sm:px-8 text-center"
+            className="absolute inset-0 flex flex-col items-center justify-center px-5 sm:px-8 text-center pt-16 pb-8"
             style={{ zIndex: 100 }}
           >
             <h1
               ref={headlineRef}
-              className="font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] will-change-transform"
+              className="max-w-[11ch] sm:max-w-none font-bold tracking-tight text-[clamp(2.45rem,11vw,4.25rem)] sm:text-6xl lg:text-7xl leading-[1.02] will-change-transform"
               style={{ transform: "translate3d(0,0,0)", opacity: 1, visibility: "visible" }}
             >
               <span className="bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
@@ -265,13 +265,13 @@ export default function Index() {
 
             <div
               ref={ctaRef}
-              className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 will-change-transform"
+              className="mt-6 sm:mt-8 flex flex-col min-[420px]:flex-row items-center justify-center gap-3 will-change-transform"
               style={{ transform: "translate3d(0,0,0)", opacity: 1, visibility: "visible" }}
             >
               <Button
                 asChild
                 size="lg"
-                className="h-12 px-7 text-base bg-white/95 text-[#0d0f12] hover:bg-white shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] backdrop-blur"
+                className="h-11 sm:h-12 w-[min(15rem,82vw)] min-[420px]:w-auto px-7 text-base bg-white/95 text-[#0d0f12] hover:bg-white shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] backdrop-blur"
               >
                 <Link to="/auth">
                   Get Started <ArrowRight className="h-4 w-4" />
@@ -281,7 +281,7 @@ export default function Index() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="h-12 px-7 text-base border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white backdrop-blur-md"
+                className="h-11 sm:h-12 w-[min(15rem,82vw)] min-[420px]:w-auto px-7 text-base border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white backdrop-blur-md"
               >
                 <a href="#how">
                   <Play className="h-4 w-4" /> Watch Demo
