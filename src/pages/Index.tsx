@@ -71,7 +71,9 @@ export default function Index() {
   const [scrolled, setScrolled] = useState(false);
   const heroSectionRef = useRef<HTMLDivElement | null>(null);
   const mountainRef = useRef<HTMLDivElement | null>(null);
+  const backdropRef = useRef<HTMLDivElement | null>(null);
   const headlineRef = useRef<HTMLHeadingElement | null>(null);
+  const ctaRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,23 +111,44 @@ export default function Index() {
         const vh = window.innerHeight || 1;
         const total = Math.max(heroEl.offsetHeight - vh, 1);
         const progress = Math.min(Math.max(y / total, 0), 1);
-        // Ease-out for a cinematic feel
-        const eased = 1 - Math.pow(1 - progress, 2);
+        // Smooth ease-out for cinematic camera dolly
+        const eased = 1 - Math.pow(1 - progress, 2.2);
 
+        // Camera-into-mountain: dramatic scale + slight upward drift
         if (mountainRef.current) {
-          const scale = 1 + eased * 1.8; // 1 → 2.8
-          const translateY = -eased * 60; // gently drift up
+          const scale = 1 + eased * 3.5; // 1 → 4.5
+          const translateY = -eased * 120; // drift up as we move into it
           mountainRef.current.style.transform = `translate3d(0, ${translateY}px, 0) scale(${scale})`;
         }
+
+        // Parallax backdrop pulls back slightly + blurs to fake depth-of-field
+        if (backdropRef.current) {
+          const bgScale = 1 + eased * 0.25;
+          const blur = eased * 14;
+          backdropRef.current.style.transform = `translate3d(0, ${-eased * 40}px, 0) scale(${bgScale})`;
+          backdropRef.current.style.filter = `blur(${blur}px)`;
+        }
+
+        // Vignette darkens for text legibility
+        if (overlayRef.current) {
+          overlayRef.current.style.opacity = String(Math.min(eased * 1.1, 0.85));
+        }
+
+        // Headline appears 50–80% through
         if (headlineRef.current) {
-          const textIn = Math.min(Math.max((eased - 0.18) / 0.55, 0), 1);
-          const textScale = 0.92 + textIn * 0.08;
-          const textY = (1 - textIn) * 24;
+          const textIn = Math.min(Math.max((eased - 0.5) / 0.3, 0), 1);
+          const textScale = 0.9 + textIn * 0.1;
+          const textY = (1 - textIn) * 28;
           headlineRef.current.style.opacity = String(textIn);
           headlineRef.current.style.transform = `translate3d(0, ${textY}px, 0) scale(${textScale})`;
         }
-        if (overlayRef.current) {
-          overlayRef.current.style.opacity = String(Math.min(eased * 0.85, 0.7));
+
+        // CTA appears 75–100%
+        if (ctaRef.current) {
+          const ctaIn = Math.min(Math.max((eased - 0.75) / 0.22, 0), 1);
+          const ctaY = (1 - ctaIn) * 24;
+          ctaRef.current.style.opacity = String(ctaIn);
+          ctaRef.current.style.transform = `translate3d(0, ${ctaY}px, 0)`;
         }
       }
     };
@@ -204,12 +227,19 @@ export default function Index() {
         id="top"
         ref={heroSectionRef}
         className="relative isolate"
-        style={{ height: "220vh" }}
+        style={{ height: "280vh" }}
       >
         <div className="sticky top-0 h-screen w-full overflow-hidden">
-          <AnimatedBackdrop />
+          {/* Parallax backdrop that blurs as the camera moves in */}
+          <div
+            ref={backdropRef}
+            className="absolute inset-0 will-change-transform"
+            style={{ transform: "translate3d(0,0,0) scale(1)", filter: "blur(0px)" }}
+          >
+            <AnimatedBackdrop />
+          </div>
 
-          {/* Mountain layer — scales up dramatically */}
+          {/* Mountain layer — camera moves into it */}
           <div
             ref={mountainRef}
             className="absolute inset-0 flex items-center justify-center will-change-transform"
@@ -220,7 +250,7 @@ export default function Index() {
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                className="w-[70vw] max-w-[820px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
+                className="w-[60vw] max-w-[720px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
               />
             </div>
           </div>
@@ -232,31 +262,57 @@ export default function Index() {
             className="absolute inset-0 pointer-events-none opacity-0 will-change-[opacity]"
             style={{
               background:
-                "radial-gradient(ellipse at center, rgba(13,15,18,0.85) 0%, rgba(13,15,18,0.55) 40%, rgba(13,15,18,0) 75%)",
+                "radial-gradient(ellipse at center, rgba(13,15,18,0.92) 0%, rgba(13,15,18,0.7) 35%, rgba(13,15,18,0.25) 65%, rgba(13,15,18,0) 90%)",
             }}
           />
 
-          {/* Headline overlaid on mountain */}
-          <div className="absolute inset-0 flex items-center justify-center px-5 sm:px-8 pointer-events-none">
+          {/* Headline + CTA revealed inside the mountain scene */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-5 sm:px-8 text-center">
             <h1
               ref={headlineRef}
-              className="font-bold tracking-tight text-center text-4xl sm:text-6xl lg:text-7xl leading-[1.05] will-change-transform opacity-0"
-              style={{ transform: "translate3d(0,24px,0) scale(0.92)" }}
+              className="font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] will-change-transform opacity-0 pointer-events-none"
+              style={{ transform: "translate3d(0,28px,0) scale(0.9)" }}
             >
-              <span className="bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
+              <span className="bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
                 Knowledge Surpasses
               </span>
               <br />
-              <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
+              <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
                 Mountains.
               </span>
             </h1>
+
+            <div
+              ref={ctaRef}
+              className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 opacity-0 will-change-transform"
+              style={{ transform: "translate3d(0,24px,0)" }}
+            >
+              <Button
+                asChild
+                size="lg"
+                className="h-12 px-7 text-base bg-white/95 text-[#0d0f12] hover:bg-white shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] backdrop-blur"
+              >
+                <Link to="/auth">
+                  Get Started <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 px-7 text-base border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white backdrop-blur-md"
+              >
+                <a href="#how">
+                  <Play className="h-4 w-4" /> Watch Demo
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* === Hero CTA (revealed after zoom) === */}
-      <section className="relative py-20 sm:py-28 border-t border-white/5">
+      {/* === Sub-hero strip (after zoom completes) === */}
+      <section className="relative py-16 sm:py-20 border-t border-white/5">
         <div className="relative max-w-3xl mx-auto px-5 sm:px-8 text-center">
           <span
             data-aos="fade-up"
@@ -277,30 +333,7 @@ export default function Index() {
             One beautiful place for students to learn, teachers to teach, and schools to grow —
             with rewards, AI tutoring, and supervised messaging built in.
           </p>
-          <div
-            data-aos="fade-up"
-            data-aos-duration="700"
-            data-aos-delay="200"
-            data-aos-anchor-placement="top-center"
-            className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
-          >
-            <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
-              <Link to="/auth">
-                Get Started <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-12 px-7 text-base border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-            >
-              <a href="#how">
-                <Play className="h-4 w-4" /> Watch Demo
-              </a>
-            </Button>
-          </div>
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-widest text-slate-500">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-widest text-slate-500">
             <span>Trusted by educators</span>
             <span className="hidden sm:inline opacity-30">•</span>
             <span>FERPA-aware design</span>
