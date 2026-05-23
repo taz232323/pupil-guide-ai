@@ -125,20 +125,13 @@ export default function Index() {
           vignetteRef.current.style.opacity = String(Math.min(eased * 1.25, 0.9));
         }
 
-        // Headline appears 50–80% through
+        // Headline + CTA stay fully visible; only a subtle parallax drift.
         if (headlineRef.current) {
-          const textIn = Math.min(Math.max((eased - 0.48) / 0.22, 0), 1);
-          const textScale = 0.9 + textIn * 0.1;
-          const textY = (1 - textIn) * 28;
-          headlineRef.current.style.opacity = String(textIn);
-          headlineRef.current.style.transform = `translate3d(0, ${textY}px, 0) scale(${textScale})`;
+          const textY = -eased * 12;
+          headlineRef.current.style.transform = `translate3d(0, ${textY}px, 0)`;
         }
-
-        // CTA appears 75–100%
         if (ctaRef.current) {
-          const ctaIn = Math.min(Math.max((eased - 0.62) / 0.24, 0), 1);
-          const ctaY = (1 - ctaIn) * 24;
-          ctaRef.current.style.opacity = String(ctaIn);
+          const ctaY = -eased * 8;
           ctaRef.current.style.transform = `translate3d(0, ${ctaY}px, 0)`;
         }
       }
@@ -225,7 +218,7 @@ export default function Index() {
           <div
             ref={sceneLayerRef}
             className="absolute inset-0 flex items-center justify-center will-change-transform"
-            style={{ transform: "translate3d(0,0,0) scale(1)", transformOrigin: "center center" }}
+            style={{ transform: "translate3d(0,0,0) scale(1)", transformOrigin: "center center", zIndex: 1 }}
           >
             <AnimatedBackdrop />
             <div className="absolute inset-0 flex items-center justify-center">
@@ -244,17 +237,21 @@ export default function Index() {
             aria-hidden
             className="absolute inset-0 pointer-events-none opacity-0 will-change-[opacity]"
             style={{
+              zIndex: 2,
               background:
                 "radial-gradient(ellipse at center, rgba(13,15,18,0.92) 0%, rgba(13,15,18,0.7) 35%, rgba(13,15,18,0.25) 65%, rgba(13,15,18,0) 90%)",
             }}
           />
 
           {/* Headline + CTA revealed inside the mountain scene */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-5 sm:px-8 text-center">
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center px-5 sm:px-8 text-center"
+            style={{ zIndex: 100 }}
+          >
             <h1
               ref={headlineRef}
-              className="font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] will-change-transform opacity-0 pointer-events-none"
-              style={{ transform: "translate3d(0,28px,0) scale(0.9)" }}
+              className="font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] will-change-transform"
+              style={{ transform: "translate3d(0,0,0)", opacity: 1, visibility: "visible" }}
             >
               <span className="bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
                 Knowledge Surpasses
@@ -267,8 +264,8 @@ export default function Index() {
 
             <div
               ref={ctaRef}
-              className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 opacity-0 will-change-transform"
-              style={{ transform: "translate3d(0,24px,0)" }}
+              className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 will-change-transform"
+              style={{ transform: "translate3d(0,0,0)", opacity: 1, visibility: "visible" }}
             >
               <Button
                 asChild
