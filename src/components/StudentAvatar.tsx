@@ -241,86 +241,154 @@ function lighten(hex: string, amt = 0.4): string {
 
 /**
  * Build the species-specific head + ears + facial features.
- * Anchored so the top of the head is at y≈12 across all species —
- * keeps cosmetic headwear aligned regardless of species.
+ * All species share the same head footprint (cx=50, cy≈40, rx≈28, ry≈30)
+ * so cosmetic headwear lines up identically. Shading uses soft radial
+ * gradients + a single highlight blob — no harsh outlines, no paper edges.
  */
 function speciesParts(species: string, fur: string, furDark: string, furLight: string) {
   const cx = 50;
+  const stroke = darken(fur, 0.32);
+  const sw = 0.6;
+
+  // Shared face shading + highlight applied AFTER species silhouette.
+  const shading = `
+    <ellipse cx="${cx}" cy="48" rx="26" ry="26" fill="url(#headShade)"/>
+    <ellipse cx="${cx - 8}" cy="32" rx="8" ry="5" fill="#ffffff" opacity="0.18"/>
+  `;
+
   switch (species) {
-    case "species_owl":
+    case "species_owl": {
+      // OWL — feather treatment, no fur. Ear tufts are rounded plumes.
+      const beak = "#f0a83a";
+      const beakDark = darken(beak, 0.28);
       return `
-        <!-- ear tufts -->
-        <path d="M30,18 L36,8 L42,20 Z" fill="${furDark}"/>
-        <path d="M70,18 L64,8 L58,20 Z" fill="${furDark}"/>
+        <!-- soft plumes / ear tufts -->
+        <path d="M28,22 Q22,8 36,12 Q42,18 38,26 Z" fill="${furDark}"/>
+        <path d="M72,22 Q78,8 64,12 Q58,18 62,26 Z" fill="${furDark}"/>
         <!-- head -->
-        <ellipse cx="${cx}" cy="40" rx="26" ry="28" fill="${fur}"/>
-        <!-- face disc -->
-        <ellipse cx="${cx}" cy="44" rx="20" ry="22" fill="${furLight}"/>
-        <!-- beak -->
-        <path d="M46,52 L54,52 L50,60 Z" fill="#f5b54a" stroke="${darken("#f5b54a",0.2)}" stroke-width="0.6"/>
+        <ellipse cx="${cx}" cy="40" rx="28" ry="28" fill="${fur}"/>
+        ${shading}
+        <!-- chest feather scallops behind head -->
+        <path d="M22,62 Q30,56 38,62 Q46,56 54,62 Q62,56 70,62 Q74,58 78,62"
+              fill="none" stroke="${darken(fur,0.2)}" stroke-width="${sw}" stroke-linecap="round"/>
+        <!-- facial disk: figure-8 of two soft circles -->
+        <circle cx="40" cy="44" r="14" fill="${furLight}"/>
+        <circle cx="60" cy="44" r="14" fill="${furLight}"/>
+        <path d="M40,30 Q50,26 60,30" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" opacity="0.4"/>
+        <!-- eye discs -->
+        <circle cx="40" cy="44" r="6" fill="#ffffff"/>
+        <circle cx="60" cy="44" r="6" fill="#ffffff"/>
+        <!-- beak (smoothly integrated) -->
+        <path d="M46,48 Q50,46 54,48 Q52,56 50,57 Q48,56 46,48 Z"
+              fill="${beak}" stroke="${beakDark}" stroke-width="0.5" stroke-linejoin="round"/>
       `;
-    case "species_fox":
+    }
+    case "species_fox": {
       return `
-        <path d="M26,32 L22,12 L40,24 Z" fill="${fur}"/>
-        <path d="M74,32 L78,12 L60,24 Z" fill="${fur}"/>
-        <path d="M28,34 L26,18 L38,26 Z" fill="${furLight}"/>
-        <path d="M72,34 L74,18 L62,26 Z" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="42" rx="24" ry="24" fill="${fur}"/>
-        <path d="M34,52 Q50,68 66,52 Q60,62 50,64 Q40,62 34,52 Z" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="54" rx="4" ry="3.2" fill="${darken(fur,0.5)}"/>
+        <!-- ears (rounded triangles) -->
+        <path d="M24,30 Q22,10 38,22 Q34,30 26,32 Z" fill="${fur}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+        <path d="M76,30 Q78,10 62,22 Q66,30 74,32 Z" fill="${fur}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+        <path d="M27,28 Q26,18 35,24 Q33,28 28,30 Z" fill="${furLight}"/>
+        <path d="M73,28 Q74,18 65,24 Q67,28 72,30 Z" fill="${furLight}"/>
+        <!-- head -->
+        <path d="M22,42 Q22,18 50,18 Q78,18 78,42 Q78,62 50,66 Q22,62 22,42 Z"
+              fill="${fur}"/>
+        ${shading}
+        <!-- cheek/muzzle blaze -->
+        <path d="M34,50 Q50,72 66,50 Q58,62 50,63 Q42,62 34,50 Z" fill="${furLight}"/>
+        <!-- nose -->
+        <ellipse cx="${cx}" cy="54" rx="3.2" ry="2.4" fill="${darken(fur,0.6)}"/>
+        <path d="M50,56 L50,60" stroke="${darken(fur,0.5)}" stroke-width="0.6" stroke-linecap="round"/>
       `;
-    case "species_cat":
+    }
+    case "species_cat": {
       return `
-        <path d="M28,28 L24,12 L40,22 Z" fill="${fur}"/>
-        <path d="M72,28 L76,12 L60,22 Z" fill="${fur}"/>
-        <path d="M30,28 L28,18 L37,24 Z" fill="${furLight}"/>
-        <path d="M70,28 L72,18 L63,24 Z" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="42" rx="24" ry="22" fill="${fur}"/>
-        <ellipse cx="${cx}" cy="52" rx="10" ry="6" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="51" rx="2.4" ry="1.6" fill="${darken(fur,0.5)}"/>
+        <!-- ears -->
+        <path d="M26,28 Q24,10 40,22 Q36,28 28,30 Z" fill="${fur}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+        <path d="M74,28 Q76,10 60,22 Q64,28 72,30 Z" fill="${fur}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+        <path d="M29,26 Q28,16 37,22 Q35,27 30,28 Z" fill="${lighten(fur,0.5)}"/>
+        <path d="M71,26 Q72,16 63,22 Q65,27 70,28 Z" fill="${lighten(fur,0.5)}"/>
+        <!-- head -->
+        <ellipse cx="${cx}" cy="42" rx="26" ry="25" fill="${fur}"/>
+        ${shading}
+        <!-- muzzle pad -->
+        <path d="M38,50 Q50,62 62,50 Q56,58 50,58 Q44,58 38,50 Z" fill="${furLight}"/>
+        <!-- nose -->
+        <path d="M48,49 Q50,52 52,49 Q51,51 50,52 Q49,51 48,49 Z" fill="${darken(fur,0.6)}"/>
         <!-- whiskers -->
-        <line x1="38" y1="54" x2="28" y2="52" stroke="${darken(fur,0.4)}" stroke-width="0.6"/>
-        <line x1="38" y1="56" x2="28" y2="58" stroke="${darken(fur,0.4)}" stroke-width="0.6"/>
-        <line x1="62" y1="54" x2="72" y2="52" stroke="${darken(fur,0.4)}" stroke-width="0.6"/>
-        <line x1="62" y1="56" x2="72" y2="58" stroke="${darken(fur,0.4)}" stroke-width="0.6"/>
+        <g stroke="${darken(fur,0.45)}" stroke-width="0.5" stroke-linecap="round" opacity="0.7">
+          <line x1="40" y1="54" x2="26" y2="52"/>
+          <line x1="40" y1="56" x2="26" y2="58"/>
+          <line x1="60" y1="54" x2="74" y2="52"/>
+          <line x1="60" y1="56" x2="74" y2="58"/>
+        </g>
       `;
-    case "species_wolf":
+    }
+    case "species_wolf": {
       return `
-        <path d="M24,28 L20,10 L40,22 Z" fill="${fur}"/>
-        <path d="M76,28 L80,10 L60,22 Z" fill="${fur}"/>
-        <path d="M26,28 L24,16 L37,24 Z" fill="${furLight}"/>
-        <path d="M74,28 L76,16 L63,24 Z" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="42" rx="26" ry="24" fill="${fur}"/>
-        <path d="M32,48 Q50,72 68,48 Q62,64 50,66 Q38,64 32,48 Z" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="56" rx="4.5" ry="3.4" fill="${darken(fur,0.55)}"/>
+        <!-- larger pointed ears -->
+        <path d="M20,30 Q18,8 38,22 Q34,32 24,32 Z" fill="${fur}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+        <path d="M80,30 Q82,8 62,22 Q66,32 76,32 Z" fill="${fur}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+        <path d="M24,28 Q23,16 34,22 Q31,29 26,30 Z" fill="${furLight}"/>
+        <path d="M76,28 Q77,16 66,22 Q69,29 74,30 Z" fill="${furLight}"/>
+        <!-- head — angular but smooth -->
+        <path d="M20,44 Q20,18 50,18 Q80,18 80,44 Q78,62 50,68 Q22,62 20,44 Z"
+              fill="${fur}"/>
+        ${shading}
+        <!-- muzzle -->
+        <path d="M32,50 Q50,72 68,50 Q60,64 50,66 Q40,64 32,50 Z" fill="${furLight}"/>
+        <ellipse cx="${cx}" cy="55" rx="3.6" ry="2.6" fill="${darken(fur,0.6)}"/>
       `;
-    case "species_bear":
+    }
+    case "species_bear": {
       return `
-        <circle cx="30" cy="22" r="8" fill="${fur}"/>
-        <circle cx="70" cy="22" r="8" fill="${fur}"/>
-        <circle cx="30" cy="22" r="4" fill="${furLight}"/>
-        <circle cx="70" cy="22" r="4" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="42" rx="28" ry="26" fill="${fur}"/>
-        <ellipse cx="${cx}" cy="52" rx="13" ry="9" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="50" rx="3.6" ry="2.6" fill="${darken(fur,0.55)}"/>
+        <!-- rounded ears -->
+        <circle cx="28" cy="22" r="8.5" fill="${fur}" stroke="${stroke}" stroke-width="${sw}"/>
+        <circle cx="72" cy="22" r="8.5" fill="${fur}" stroke="${stroke}" stroke-width="${sw}"/>
+        <circle cx="28" cy="23" r="4.5" fill="${furLight}"/>
+        <circle cx="72" cy="23" r="4.5" fill="${furLight}"/>
+        <!-- head (extra round) -->
+        <circle cx="${cx}" cy="42" r="28" fill="${fur}"/>
+        ${shading}
+        <!-- muzzle pad -->
+        <ellipse cx="${cx}" cy="54" rx="14" ry="9" fill="${furLight}"/>
+        <ellipse cx="${cx}" cy="50" rx="3.6" ry="2.6" fill="${darken(fur,0.65)}"/>
+        <path d="M50,52 L50,58" stroke="${darken(fur,0.55)}" stroke-width="0.6" stroke-linecap="round"/>
       `;
-    case "species_rabbit":
+    }
+    case "species_rabbit": {
       return `
-        <ellipse cx="38" cy="14" rx="5" ry="14" fill="${fur}"/>
-        <ellipse cx="62" cy="14" rx="5" ry="14" fill="${fur}"/>
-        <ellipse cx="38" cy="16" rx="2.4" ry="10" fill="${furLight}"/>
-        <ellipse cx="62" cy="16" rx="2.4" ry="10" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="44" rx="22" ry="22" fill="${fur}"/>
-        <ellipse cx="${cx}" cy="54" rx="9" ry="5" fill="${furLight}"/>
-        <ellipse cx="${cx}" cy="52" rx="2.2" ry="1.5" fill="${darken(fur,0.4)}"/>
-        <path d="M45,58 L50,62 L55,58" fill="none" stroke="${darken(fur,0.45)}" stroke-width="0.8" stroke-linecap="round"/>
+        <!-- long ears -->
+        <path d="M38,8 Q33,8 33,22 Q33,34 40,34 Q42,30 41,18 Q41,10 38,8 Z" fill="${fur}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+        <path d="M62,8 Q67,8 67,22 Q67,34 60,34 Q58,30 59,18 Q59,10 62,8 Z" fill="${fur}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+        <path d="M38,12 Q36,14 37,22 Q38,30 40,30 Q41,24 40,16 Z" fill="${lighten(fur,0.5)}"/>
+        <path d="M62,12 Q64,14 63,22 Q62,30 60,30 Q59,24 60,16 Z" fill="${lighten(fur,0.5)}"/>
+        <!-- head -->
+        <ellipse cx="${cx}" cy="44" rx="24" ry="24" fill="${fur}"/>
+        ${shading}
+        <!-- muzzle / two cheek puffs -->
+        <ellipse cx="46" cy="55" rx="6" ry="4" fill="${furLight}"/>
+        <ellipse cx="54" cy="55" rx="6" ry="4" fill="${furLight}"/>
+        <ellipse cx="${cx}" cy="51" rx="2.2" ry="1.5" fill="${darken(fur,0.5)}"/>
+        <path d="M50,52 L50,55 M50,55 Q47,57 45,56 M50,55 Q53,57 55,56"
+              fill="none" stroke="${darken(fur,0.55)}" stroke-width="0.6" stroke-linecap="round"/>
+        <!-- front teeth -->
+        <rect x="48.6" y="56.5" width="2.8" height="3" rx="0.5" fill="#fafafa" stroke="${darken(fur,0.3)}" stroke-width="0.3"/>
+        <line x1="50" y1="56.6" x2="50" y2="59.4" stroke="${darken(fur,0.3)}" stroke-width="0.3"/>
       `;
+    }
   }
   return "";
 }
 
-function eyesSvg(kind: string, accent: string) {
-  const L = 42, R = 58, Y = 42, sw = 1.6;
+function eyesSvg(kind: string, accent: string, species: string) {
+  // Owl uses wider-set eyes that sit inside the facial disks.
+  const isOwl = species === "species_owl";
+  const L = isOwl ? 40 : 42;
+  const R = isOwl ? 60 : 58;
+  const Y = isOwl ? 44 : 42;
+  const sw = 1.4;
+  const pupil = isOwl ? 3.2 : 2.8;
   switch (kind) {
     case "eyes_happy":
       return `
@@ -328,8 +396,8 @@ function eyesSvg(kind: string, accent: string) {
         <path d="M${R-4},${Y} Q${R},${Y-5} ${R+4},${Y}" stroke="${accent}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
     case "eyes_wink":
       return `
-        <circle cx="${L}" cy="${Y}" r="2.4" fill="${accent}"/>
-        <circle cx="${L-0.7}" cy="${Y-0.8}" r="0.7" fill="#ffffff"/>
+        <circle cx="${L}" cy="${Y}" r="${pupil}" fill="${accent}"/>
+        <circle cx="${L-0.9}" cy="${Y-1}" r="0.9" fill="#ffffff"/>
         <path d="M${R-4},${Y+1} Q${R},${Y-4} ${R+4},${Y+1}" stroke="${accent}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
     case "eyes_sleepy":
       return `
@@ -342,10 +410,10 @@ function eyesSvg(kind: string, accent: string) {
     case "eyes_default":
     default:
       return `
-        <circle cx="${L}" cy="${Y}" r="2.6" fill="${accent}"/>
-        <circle cx="${L-0.8}" cy="${Y-0.9}" r="0.8" fill="#ffffff"/>
-        <circle cx="${R}" cy="${Y}" r="2.6" fill="${accent}"/>
-        <circle cx="${R-0.8}" cy="${Y-0.9}" r="0.8" fill="#ffffff"/>`;
+        <circle cx="${L}" cy="${Y}" r="${pupil}" fill="${accent}"/>
+        <circle cx="${L-0.9}" cy="${Y-1}" r="0.9" fill="#ffffff"/>
+        <circle cx="${R}" cy="${Y}" r="${pupil}" fill="${accent}"/>
+        <circle cx="${R-0.9}" cy="${Y-1}" r="0.9" fill="#ffffff"/>`;
   }
 }
 
@@ -414,41 +482,53 @@ function renderAvatarSvg(state: AvatarState): string {
   const cloth = CLOTHES_HEX[state.clothesColor] ?? CLOTHES_HEX.clothes_purple;
   const clothDark = darken(cloth, 0.2);
 
-  const hasPattern = state.furPattern && state.furPattern !== "pattern_solid";
+  // Owl uses feather treatment — no fur pattern overlay.
+  const isOwl = state.species === "species_owl";
+  const hasPattern = !isOwl && state.furPattern && state.furPattern !== "pattern_solid";
   const patId = "fpat";
   const patternOverlay = hasPattern
     ? `<g clip-path="url(#bodyClip)"><rect x="0" y="0" width="100" height="120" fill="url(#${patId})"/></g>`
     : "";
 
-  // Torso (upper body, shirt). Anchored at bottom of viewBox.
+  // Torso: smaller, narrower, with soft gradient and rounded shoulders.
   const torso = `
-    <!-- neck -->
-    <rect x="44" y="62" width="12" height="6" fill="${dark}"/>
-    <!-- shoulders/shirt -->
-    <path d="M22,118 L22,86 Q22,72 36,70 L64,70 Q78,72 78,86 L78,118 Z"
-          fill="${cloth}" stroke="${clothDark}" stroke-width="1"/>
-    <!-- collar -->
-    <path d="M40,70 Q50,78 60,70" fill="none" stroke="${clothDark}" stroke-width="1.2"/>
-    <!-- arms hint -->
-    <path d="M22,90 Q18,100 22,114" fill="none" stroke="${clothDark}" stroke-width="1"/>
-    <path d="M78,90 Q82,100 78,114" fill="none" stroke="${clothDark}" stroke-width="1"/>
+    <!-- soft contact shadow under body -->
+    <ellipse cx="50" cy="118" rx="34" ry="3" fill="#000" opacity="0.18"/>
+    <!-- neck (tucks behind head) -->
+    <path d="M44,64 Q50,70 56,64 L56,72 L44,72 Z" fill="${dark}" opacity="0.85"/>
+    <!-- shoulders/shirt (narrower than head) -->
+    <path d="M28,118 L28,90 Q28,76 40,74 L60,74 Q72,76 72,90 L72,118 Z"
+          fill="url(#shirtGrad)"/>
+    <!-- collar V -->
+    <path d="M42,74 Q50,82 58,74" fill="${clothDark}" opacity="0.55"/>
+    <!-- shirt highlight -->
+    <path d="M34,84 Q34,78 42,77" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.18"/>
   `;
 
   // Body clip-path = head silhouette union (for fur pattern overlay)
   const bodyClipShapes = `
-    <ellipse cx="50" cy="42" rx="28" ry="28"/>
-    <ellipse cx="38" cy="14" rx="8" ry="16"/>
-    <ellipse cx="62" cy="14" rx="8" ry="16"/>
+    <ellipse cx="50" cy="42" rx="30" ry="28"/>
+    <ellipse cx="38" cy="16" rx="9" ry="16"/>
+    <ellipse cx="62" cy="16" rx="9" ry="16"/>
   `;
 
   const parts = speciesParts(state.species, fur, dark, light);
-  const eyes = eyesSvg(state.eyes, "#1a1f26");
+  const eyes = eyesSvg(state.eyes, "#1a1f26", state.species);
   const acc = accessorySvg(state.accessory);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" width="100%" height="100%" shape-rendering="geometricPrecision">
   <defs>
     ${patternDefs(patId, state.furPattern, fur, dark)}
+    <radialGradient id="headShade" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.22"/>
+    </radialGradient>
+    <linearGradient id="shirtGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${lighten(cloth, 0.12)}"/>
+      <stop offset="100%" stop-color="${darken(cloth, 0.18)}"/>
+    </linearGradient>
     <clipPath id="bodyClip">${bodyClipShapes}</clipPath>
   </defs>
   ${torso}

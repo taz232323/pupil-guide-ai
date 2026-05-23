@@ -47,8 +47,8 @@ type BuilderCategory = AvatarCategory;
 
 const CATEGORY_LABEL: Record<BuilderCategory, string> = {
   species: "Species",
-  furColor: "Fur color",
-  furPattern: "Fur pattern",
+  furColor: "Coat color",
+  furPattern: "Coat pattern",
   eyes: "Eyes",
   clothesColor: "Clothing color",
   headwear: "Headwear",
@@ -360,6 +360,14 @@ export default function Profile() {
                 if (cat === "furColor") {
                   const sp = SPECIES[previewAvatar.species];
                   if (sp) catItems = catItems.filter((o) => sp.allowedFur.includes(o.key));
+                }
+                // Owls use feathers — no fur pattern overlay.
+                if (cat === "furPattern" && previewAvatar.species === "species_owl") {
+                  return (
+                    <p className="text-sm text-muted-foreground px-1 py-3">
+                      Owls have smooth feathered plumage — no pattern needed.
+                    </p>
+                  );
                 }
                 const activeKey = previewAvatar[cat];
                 const isCosmeticTab = COSMETIC_CATEGORIES.includes(cat);
