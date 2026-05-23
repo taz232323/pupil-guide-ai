@@ -377,39 +377,103 @@ function speciesParts(species: string, fur: string, furDark: string, furLight: s
   return "";
 }
 
+/* ---- Species-specific eyes ----
+ * Each species has a distinct eye shape, iris color, and pupil treatment so
+ * faces don't feel copy/pasted. Expression variants (happy/wink/sleepy/star)
+ * are layered on top of the species base so personality is preserved.
+ */
+const EYE_POS: Record<string, [number, number, number]> = {
+  species_owl:    [40, 60, 44],
+  species_fox:    [43, 57, 43],
+  species_cat:    [42, 58, 41],
+  species_wolf:   [41, 59, 42],
+  species_bear:   [43, 57, 43],
+  species_rabbit: [42, 58, 44],
+};
+
+function archEye(cx: number, cy: number, w: number, h: number, color: string) {
+  return `<path d="M${cx - w},${cy} Q${cx},${cy - h} ${cx + w},${cy}" stroke="${color}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+}
+function sleepyEye(cx: number, cy: number, w: number, color: string) {
+  return `<path d="M${cx - w},${cy} Q${cx},${cy + 2.5} ${cx + w},${cy}" stroke="${color}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+}
+function starShape(cx: number, cy: number, accent: string) {
+  return `<path d="M${cx},${cy - 3} L${cx + 0.9},${cy - 0.9} L${cx + 3},${cy - 0.6} L${cx + 1.2},${cy + 0.8} L${cx + 1.7},${cy + 3} L${cx},${cy + 1.6} L${cx - 1.7},${cy + 3} L${cx - 1.2},${cy + 0.8} L${cx - 3},${cy - 0.6} L${cx - 0.9},${cy - 0.9} Z" fill="#f5c43b" stroke="${accent}" stroke-width="0.4"/>`;
+}
+
+function speciesBaseEye(species: string, cx: number, cy: number, accent: string, side: 1 | -1): string {
+  switch (species) {
+    case "species_owl":
+      // Big amber iris inside the white facial disc, classic owl stare.
+      return `
+        <circle cx="${cx}" cy="${cy}" r="4.6" fill="#e9a93b"/>
+        <circle cx="${cx}" cy="${cy}" r="2.8" fill="${accent}"/>
+        <circle cx="${cx - 1}" cy="${cy - 1.2}" r="1" fill="#ffffff"/>`;
+    case "species_fox": {
+      // Almond eye with warm amber iris, slight outward tilt.
+      const tilt = side * 1.2;
+      return `
+        <path d="M${cx - 3.6},${cy + 0.4} Q${cx + tilt},${cy - 2.8} ${cx + 3.6},${cy + 0.4} Q${cx},${cy + 2.4} ${cx - 3.6},${cy + 0.4} Z" fill="#ffffff"/>
+        <ellipse cx="${cx + side * 0.3}" cy="${cy}" rx="2" ry="2.3" fill="#a4621e"/>
+        <ellipse cx="${cx + side * 0.3}" cy="${cy}" rx="0.9" ry="2.1" fill="${accent}"/>
+        <circle cx="${cx + side * 0.3 - 0.5}" cy="${cy - 1}" r="0.55" fill="#ffffff"/>`;
+    }
+    case "species_cat":
+      // Vertical slit pupil in a green almond eye.
+      return `
+        <ellipse cx="${cx}" cy="${cy}" rx="3.2" ry="3.8" fill="#ffffff"/>
+        <ellipse cx="${cx}" cy="${cy}" rx="2.8" ry="3.6" fill="#7bbf6a"/>
+        <ellipse cx="${cx}" cy="${cy}" rx="0.7" ry="3.1" fill="${accent}"/>
+        <circle cx="${cx - 0.8}" cy="${cy - 1.6}" r="0.55" fill="#ffffff"/>`;
+    case "species_wolf": {
+      // Sharp, narrow, fierce — heavy top lid + yellow iris.
+      const dx = side * 0.4;
+      return `
+        <path d="M${cx - 3.8},${cy + 0.4} Q${cx - side * 0.5},${cy - 2.2} ${cx + 3.8},${cy + 0.4} Q${cx},${cy + 2.4} ${cx - 3.8},${cy + 0.4} Z" fill="#ffffff"/>
+        <circle cx="${cx + dx}" cy="${cy + 0.3}" r="1.9" fill="#d2982a"/>
+        <circle cx="${cx + dx}" cy="${cy + 0.3}" r="1.05" fill="${accent}"/>
+        <path d="M${cx - 4.2},${cy - 2.4} Q${cx - side * 1.2},${cy - 3.4} ${cx + 4.2},${cy - 1.2}" stroke="${accent}" stroke-width="0.9" fill="none" stroke-linecap="round" opacity="0.85"/>`;
+    }
+    case "species_bear":
+      // Tiny beady eyes, close-set.
+      return `
+        <circle cx="${cx}" cy="${cy}" r="1.9" fill="${accent}"/>
+        <circle cx="${cx - 0.6}" cy="${cy - 0.7}" r="0.55" fill="#ffffff"/>`;
+    case "species_rabbit":
+    default:
+      // Big round glossy dark eyes.
+      return `
+        <ellipse cx="${cx}" cy="${cy}" rx="2.8" ry="3.2" fill="${accent}"/>
+        <circle cx="${cx - 0.9}" cy="${cy - 1.2}" r="0.9" fill="#ffffff"/>
+        <circle cx="${cx + 0.7}" cy="${cy + 1}" r="0.4" fill="#ffffff" opacity="0.8"/>`;
+  }
+}
+
 function eyesSvg(kind: string, accent: string, species: string) {
-  // Owl uses wider-set eyes that sit inside the facial disks.
-  const isOwl = species === "species_owl";
-  const L = isOwl ? 40 : 42;
-  const R = isOwl ? 60 : 58;
-  const Y = isOwl ? 44 : 42;
-  const sw = 1.4;
-  const pupil = isOwl ? 3.2 : 2.8;
+  const [L, R, Y] = EYE_POS[species] ?? EYE_POS.species_fox;
+
+  // Expression sizing — slightly different per species for visual harmony.
+  const archW = species === "species_bear" ? 2.6 : species === "species_owl" ? 4 : 3.5;
+  const archH = species === "species_bear" ? 3 : species === "species_owl" ? 5 : 4.5;
+  const sleepW = species === "species_bear" ? 2.4 : species === "species_owl" ? 4 : 3.2;
+
   switch (kind) {
     case "eyes_happy":
-      return `
-        <path d="M${L-4},${Y} Q${L},${Y-5} ${L+4},${Y}" stroke="${accent}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>
-        <path d="M${R-4},${Y} Q${R},${Y-5} ${R+4},${Y}" stroke="${accent}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
-    case "eyes_wink":
-      return `
-        <circle cx="${L}" cy="${Y}" r="${pupil}" fill="${accent}"/>
-        <circle cx="${L-0.9}" cy="${Y-1}" r="0.9" fill="#ffffff"/>
-        <path d="M${R-4},${Y+1} Q${R},${Y-4} ${R+4},${Y+1}" stroke="${accent}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
+      return archEye(L, Y, archW, archH, accent) + archEye(R, Y, archW, archH, accent);
     case "eyes_sleepy":
-      return `
-        <path d="M${L-3.5},${Y} Q${L},${Y+2.5} ${L+3.5},${Y}" stroke="${accent}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>
-        <path d="M${R-3.5},${Y} Q${R},${Y+2.5} ${R+3.5},${Y}" stroke="${accent}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
+      // Cat gets narrow slits instead of a curve.
+      if (species === "species_cat") {
+        return `<ellipse cx="${L}" cy="${Y}" rx="3.6" ry="0.9" fill="${accent}"/>
+                <ellipse cx="${R}" cy="${Y}" rx="3.6" ry="0.9" fill="${accent}"/>`;
+      }
+      return sleepyEye(L, Y, sleepW, accent) + sleepyEye(R, Y, sleepW, accent);
     case "eyes_star":
-      return `
-        <path d="M${L},${Y-3} L${L+0.9},${Y-0.9} L${L+3},${Y-0.6} L${L+1.2},${Y+0.8} L${L+1.7},${Y+3} L${L},${Y+1.6} L${L-1.7},${Y+3} L${L-1.2},${Y+0.8} L${L-3},${Y-0.6} L${L-0.9},${Y-0.9} Z" fill="#f5c43b" stroke="${accent}" stroke-width="0.4"/>
-        <path d="M${R},${Y-3} L${R+0.9},${Y-0.9} L${R+3},${Y-0.6} L${R+1.2},${Y+0.8} L${R+1.7},${Y+3} L${R},${Y+1.6} L${R-1.7},${Y+3} L${R-1.2},${Y+0.8} L${R-3},${Y-0.6} L${R-0.9},${Y-0.9} Z" fill="#f5c43b" stroke="${accent}" stroke-width="0.4"/>`;
+      return starShape(L, Y, accent) + starShape(R, Y, accent);
+    case "eyes_wink":
+      return speciesBaseEye(species, L, Y, accent, -1) + archEye(R, Y, archW, archH, accent);
     case "eyes_default":
     default:
-      return `
-        <circle cx="${L}" cy="${Y}" r="${pupil}" fill="${accent}"/>
-        <circle cx="${L-0.9}" cy="${Y-1}" r="0.9" fill="#ffffff"/>
-        <circle cx="${R}" cy="${Y}" r="${pupil}" fill="${accent}"/>
-        <circle cx="${R-0.9}" cy="${Y-1}" r="0.9" fill="#ffffff"/>`;
+      return speciesBaseEye(species, L, Y, accent, -1) + speciesBaseEye(species, R, Y, accent, 1);
   }
 }
 
