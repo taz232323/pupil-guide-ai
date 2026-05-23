@@ -409,31 +409,30 @@ function speciesBaseEye(species: string, cx: number, cy: number, accent: string,
         <circle cx="${cx}" cy="${cy}" r="4.6" fill="#e9a93b"/>
         <circle cx="${cx}" cy="${cy}" r="2.8" fill="${accent}"/>
         <circle cx="${cx - 1}" cy="${cy - 1.2}" r="1" fill="#ffffff"/>`;
-    case "species_fox": {
-      // Almond eye with warm amber iris, slight outward tilt.
-      const tilt = side * 1.2;
+    case "species_fox":
+      // Big round friendly eye with warm amber iris and two highlights.
       return `
-        <path d="M${cx - 3.6},${cy + 0.4} Q${cx + tilt},${cy - 2.8} ${cx + 3.6},${cy + 0.4} Q${cx},${cy + 2.4} ${cx - 3.6},${cy + 0.4} Z" fill="#ffffff"/>
-        <ellipse cx="${cx + side * 0.3}" cy="${cy}" rx="2" ry="2.3" fill="#a4621e"/>
-        <ellipse cx="${cx + side * 0.3}" cy="${cy}" rx="0.9" ry="2.1" fill="${accent}"/>
-        <circle cx="${cx + side * 0.3 - 0.5}" cy="${cy - 1}" r="0.55" fill="#ffffff"/>`;
-    }
+        <circle cx="${cx}" cy="${cy}" r="3" fill="#ffffff"/>
+        <circle cx="${cx}" cy="${cy + 0.2}" r="2.4" fill="#b86a23"/>
+        <circle cx="${cx}" cy="${cy + 0.4}" r="1.6" fill="${accent}"/>
+        <circle cx="${cx - 0.8}" cy="${cy - 1}" r="0.8" fill="#ffffff"/>
+        <circle cx="${cx + 0.9}" cy="${cy + 1.1}" r="0.4" fill="#ffffff" opacity="0.85"/>`;
     case "species_cat":
-      // Vertical slit pupil in a green almond eye.
+      // Big round eye with round (not slit) green iris — friendly kitten.
       return `
-        <ellipse cx="${cx}" cy="${cy}" rx="3.2" ry="3.8" fill="#ffffff"/>
-        <ellipse cx="${cx}" cy="${cy}" rx="2.8" ry="3.6" fill="#7bbf6a"/>
-        <ellipse cx="${cx}" cy="${cy}" rx="0.7" ry="3.1" fill="${accent}"/>
-        <circle cx="${cx - 0.8}" cy="${cy - 1.6}" r="0.55" fill="#ffffff"/>`;
-    case "species_wolf": {
-      // Sharp, narrow, fierce — heavy top lid + yellow iris.
-      const dx = side * 0.4;
+        <circle cx="${cx}" cy="${cy}" r="3.1" fill="#ffffff"/>
+        <circle cx="${cx}" cy="${cy + 0.2}" r="2.5" fill="#7bbf6a"/>
+        <circle cx="${cx}" cy="${cy + 0.4}" r="1.5" fill="${accent}"/>
+        <circle cx="${cx - 0.9}" cy="${cy - 1.1}" r="0.85" fill="#ffffff"/>
+        <circle cx="${cx + 0.9}" cy="${cy + 1.1}" r="0.4" fill="#ffffff" opacity="0.85"/>`;
+    case "species_wolf":
+      // Soft round puppy eyes — no brow ridge, no fierce squint.
       return `
-        <path d="M${cx - 3.8},${cy + 0.4} Q${cx - side * 0.5},${cy - 2.2} ${cx + 3.8},${cy + 0.4} Q${cx},${cy + 2.4} ${cx - 3.8},${cy + 0.4} Z" fill="#ffffff"/>
-        <circle cx="${cx + dx}" cy="${cy + 0.3}" r="1.9" fill="#d2982a"/>
-        <circle cx="${cx + dx}" cy="${cy + 0.3}" r="1.05" fill="${accent}"/>
-        <path d="M${cx - 4.2},${cy - 2.4} Q${cx - side * 1.2},${cy - 3.4} ${cx + 4.2},${cy - 1.2}" stroke="${accent}" stroke-width="0.9" fill="none" stroke-linecap="round" opacity="0.85"/>`;
-    }
+        <circle cx="${cx}" cy="${cy}" r="3" fill="#ffffff"/>
+        <circle cx="${cx}" cy="${cy + 0.2}" r="2.4" fill="#c98a35"/>
+        <circle cx="${cx}" cy="${cy + 0.4}" r="1.6" fill="${accent}"/>
+        <circle cx="${cx - 0.8}" cy="${cy - 1}" r="0.8" fill="#ffffff"/>
+        <circle cx="${cx + 0.9}" cy="${cy + 1.1}" r="0.4" fill="#ffffff" opacity="0.85"/>`;
     case "species_bear":
       // Tiny beady eyes, close-set.
       return `
