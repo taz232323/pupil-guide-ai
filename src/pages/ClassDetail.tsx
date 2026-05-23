@@ -147,7 +147,7 @@ export default function ClassDetail() {
       
       // Load practice questions for teachers
       if (c.teacher_id === user?.id) {
-        const { data: pqs } = await supabase
+        const { data: pqs } = await (supabase as any)
           .from("practice_question_bank")
           .select("*")
           .eq("class_id", id)
@@ -156,7 +156,7 @@ export default function ClassDetail() {
         
         // Check if we should show the first-time prompt
         if (c.daily_practice_enabled) {
-          const { data: dismissed } = await supabase
+          const { data: dismissed } = await (supabase as any)
             .from("teacher_dismissed_prompts")
             .select("id")
             .eq("teacher_id", user.id)
@@ -218,7 +218,7 @@ export default function ClassDetail() {
     
     if (q.id) {
       // Update existing
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("practice_question_bank")
         .update({
           question_type: q.question_type,
@@ -232,7 +232,7 @@ export default function ClassDetail() {
       setPracticeQuestions((prev) => prev.map((x) => x.id === q.id ? { ...x, ...q } as PracticeQuestion : x));
     } else {
       // Insert new
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("practice_question_bank")
         .insert({
           class_id: cls.id,
