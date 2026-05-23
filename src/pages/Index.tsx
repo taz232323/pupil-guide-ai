@@ -1,5 +1,5 @@
 import { Navigate, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Sparkles, BookOpen, BarChart3, ShieldCheck, Trophy, Bot,
   ClipboardCheck, MessagesSquare, ArrowRight, Play, GraduationCap,
@@ -69,16 +69,57 @@ const NAV = [
 export default function Index() {
   const { user, role, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
+  const mountainRef = useRef<HTMLDivElement | null>(null);
+  const headlineRef = useRef<HTMLHeadingElement | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
-    const onScroll = () => {
-      const y = window.scrollY;
-      setScrolled(y > 8);
-      setScrollY(y);
+
+    const prefersReduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    let ticking = false;
+    let lastY = window.scrollY;
+    let lastScrolledState = lastY > 8;
+    setScrolled(lastScrolledState);
+
+    const apply = () => {
+      ticking = false;
+      const y = lastY;
+
+      const nextScrolled = y > 8;
+      if (nextScrolled !== lastScrolledState) {
+        lastScrolledState = nextScrolled;
+        setScrolled(nextScrolled);
+      }
+
+      if (prefersReduced) return;
+
+      if (gridRef.current) {
+        gridRef.current.style.transform = `translate3d(0, ${y * 0.08}px, 0)`;
+      }
+      if (mountainRef.current) {
+        const scale = 1 + Math.min(y * 0.00025, 0.08);
+        mountainRef.current.style.transform = `translate3d(0, ${y * 0.2}px, 0) scale(${scale})`;
+      }
+      if (headlineRef.current) {
+        const opacity = Math.max(1 - y / 900, 0.4);
+        headlineRef.current.style.transform = `translate3d(0, ${y * 0.1}px, 0)`;
+        headlineRef.current.style.opacity = String(opacity);
+      }
     };
-    onScroll();
+
+    const onScroll = () => {
+      lastY = window.scrollY;
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(apply);
+      }
+    };
+
+    apply();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
@@ -156,11 +197,9 @@ export default function Index() {
 
           <div className="mt-10 flex justify-center">
             <div
-              className="relative w-full"
-              style={{
-                transform: `translate3d(0, ${scrollY * 0.8}px, 0)`,
-                willChange: "transform",
-              }}
+              ref={mountainRef}
+              className="relative w-full will-change-transform"
+              style={{ transform: "translate3d(0,0,0)" }}
             >
               <div className="absolute inset-0 -z-10 blur-3xl opacity-60 bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent rounded-full" />
               <img
@@ -172,10 +211,11 @@ export default function Index() {
           </div>
 
           <h1
+            ref={headlineRef}
             data-aos="fade-up"
             data-aos-duration="900"
             data-aos-anchor-placement="top-center"
-            className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]"
+            className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] will-change-transform"
           >
             <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
               Knowledge Surpasses
