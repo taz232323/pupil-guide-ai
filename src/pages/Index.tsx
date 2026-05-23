@@ -222,7 +222,7 @@ export default function Index() {
             style={{ transform: "translate3d(0,0,0) scale(1)", transformOrigin: "center center", zIndex: 1 }}
           >
             <AnimatedBackdrop />
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center" style={{ paddingTop: "18vh" }}>
               <div className="absolute h-[min(64vw,64vh)] max-h-[620px] w-[min(64vw,64vh)] max-w-[620px] rounded-full bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent opacity-60 blur-3xl" />
               <img
                 src={grapheionMark}
