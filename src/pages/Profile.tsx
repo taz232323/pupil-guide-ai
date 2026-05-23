@@ -396,7 +396,19 @@ export default function Profile() {
                       const unlocking = justUnlocked === opt.key;
                       const canAfford = coins >= (opt.cost ?? 0);
                       const livePreview = !opt.thumb && !opt.swatch
-                        ? getAvatarDataUri(updateAvatarState({ ...previewAvatar, headwear: "" }, opt.key), name || "you")
+                        ? (() => {
+                            // For species tiles, always preview with that species' signature color
+                            // so users see e.g. grey wolf, white rabbit, orange cat — not the
+                            // currently-equipped fur recolored across all options.
+                            if (opt.category === "species") {
+                              const sp = SPECIES[opt.key];
+                              const base = sp
+                                ? { ...previewAvatar, species: opt.key, furColor: sp.defaultFur, headwear: "" }
+                                : { ...previewAvatar, headwear: "" };
+                              return getAvatarDataUri(base, name || "you");
+                            }
+                            return getAvatarDataUri(updateAvatarState({ ...previewAvatar, headwear: "" }, opt.key), name || "you");
+                          })()
                         : null;
                       return (
                         <div

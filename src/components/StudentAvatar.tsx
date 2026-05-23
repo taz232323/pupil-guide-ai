@@ -271,7 +271,6 @@ function speciesParts(species: string, fur: string, furDark: string, furLight: s
         <!-- facial disk: figure-8 of two soft circles -->
         <circle cx="40" cy="44" r="14" fill="${furLight}"/>
         <circle cx="60" cy="44" r="14" fill="${furLight}"/>
-        <path d="M40,30 Q50,26 60,30" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" opacity="0.4"/>
         <!-- eye discs -->
         <circle cx="40" cy="44" r="6" fill="#ffffff"/>
         <circle cx="60" cy="44" r="6" fill="#ffffff"/>
