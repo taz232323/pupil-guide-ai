@@ -196,11 +196,12 @@ export function updateAvatarState(state: AvatarState, key: string): AvatarState 
     if (state.species === key) return state;
     const sp = SPECIES[key];
     if (!sp) return state;
-    const furOk = sp.allowedFur.includes(state.furColor);
+    // Coat color is no longer user-controlled — always snap to the species'
+    // signature color so e.g. rabbits are white, wolves grey, foxes orange.
     return {
       ...state,
       species: key,
-      furColor: furOk ? state.furColor : sp.defaultFur,
+      furColor: sp.defaultFur,
     };
   }
   return { ...state, [category]: key };
