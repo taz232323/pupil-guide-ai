@@ -632,8 +632,8 @@ export const StudentAvatar = ({
             src={auraSrc}
             alt=""
             draggable={false}
-            className="absolute inset-0 h-full w-full object-cover opacity-70 pointer-events-none select-none"
-            style={{ zIndex: 0 }}
+            className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
+            style={{ zIndex: 0, opacity: 0.95 }}
           />
         )}
         {/* Cartoon animal character */}
