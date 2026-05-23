@@ -156,12 +156,12 @@ export default function Index() {
 
   useEffect(() => {
     AOS.init({
-      duration: 900,
-      easing: "ease-out-quart",
+      duration: 1100,
+      easing: "ease-out-cubic",
       once: true,
       mirror: false,
-      offset: 0,
-      anchorPlacement: "top-center",
+      offset: 80,
+      anchorPlacement: "top-bottom",
       disable: false,
     });
     // Refresh after the first paint so AOS picks up dynamic content sizes.
