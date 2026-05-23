@@ -168,11 +168,10 @@ export function avatarStateFromItems(items: string[] | null | undefined): Avatar
     if (!category) continue;
     (state as any)[category] = key;
   }
-  // Make sure the chosen fur color is allowed for the species; otherwise fall back.
+  // Coat color is no longer user-selectable — always use the species'
+  // signature color so stored legacy fur items don't override it.
   const sp = SPECIES[state.species] ?? SPECIES.species_fox;
-  if (!sp.allowedFur.includes(state.furColor)) {
-    state.furColor = sp.defaultFur;
-  }
+  state.furColor = sp.defaultFur;
   return state;
 }
 
