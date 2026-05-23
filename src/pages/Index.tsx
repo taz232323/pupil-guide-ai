@@ -222,7 +222,7 @@ export default function Index() {
             style={{ transform: "translate3d(0,0,0) scale(1)", transformOrigin: "center center", zIndex: 1 }}
           >
             <AnimatedBackdrop />
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center" style={{ paddingTop: "18vh" }}>
               <div className="absolute h-[min(64vw,64vh)] max-h-[620px] w-[min(64vw,64vh)] max-w-[620px] rounded-full bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent opacity-60 blur-3xl" />
               <img
                 src={grapheionMark}
@@ -244,9 +244,9 @@ export default function Index() {
             }}
           />
 
-          {/* Headline + CTA revealed inside the mountain scene */}
+          {/* Headline + CTA pushed to the bottom so the mountain scene above is fully visible */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center px-5 sm:px-8 text-center pt-16 pb-8"
+            className="absolute inset-0 flex flex-col items-center justify-end px-5 sm:px-8 text-center pb-[14vh] sm:pb-[10vh]"
             style={{ zIndex: 100 }}
           >
             <h1
