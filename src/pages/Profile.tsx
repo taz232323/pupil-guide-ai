@@ -47,8 +47,8 @@ type BuilderCategory = AvatarCategory;
 
 const CATEGORY_LABEL: Record<BuilderCategory, string> = {
   species: "Species",
-  furColor: "Fur color",
-  furPattern: "Fur pattern",
+  furColor: "Coat color",
+  furPattern: "Coat pattern",
   eyes: "Eyes",
   clothesColor: "Clothing color",
   headwear: "Headwear",
