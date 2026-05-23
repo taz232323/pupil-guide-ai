@@ -25,7 +25,6 @@ import {
   SPECIES,
   FUR_HEX,
   FUR_PATTERNS,
-  EYES_LABEL,
   CLOTHES_HEX,
   type AvatarCategory,
   type AvatarState,
