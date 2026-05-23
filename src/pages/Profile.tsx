@@ -22,11 +22,12 @@ import {
   updateAvatarState,
   getAvatarDataUri,
   AVATAR_THUMBNAILS,
-  HAIR_CATALOG,
-  STYLE_TO_KEY,
+  SPECIES,
+  FUR_HEX,
+  FUR_PATTERNS,
+  CLOTHES_HEX,
   type AvatarCategory,
   type AvatarState,
-  type AvatarStyle,
 } from "@/components/StudentAvatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -45,13 +46,11 @@ import { useTheme } from "@/hooks/useTheme";
 type BuilderCategory = AvatarCategory;
 
 const CATEGORY_LABEL: Record<BuilderCategory, string> = {
-  avatarStyle: "Style",
-  skinTone: "Skin",
-  hairStyle: "Hair",
-  hairColor: "Hair color",
+  species: "Species",
+  furColor: "Fur color",
+  furPattern: "Fur pattern",
   eyes: "Eyes",
-  clothing: "Clothing",
-  clothesColor: "Clothes color",
+  clothesColor: "Clothing color",
   headwear: "Headwear",
   accessory: "Accessory",
   aura: "Aura",
@@ -69,49 +68,49 @@ type BuilderOption = {
   thumb?: string;
 };
 
+const FUR_LABEL: Record<string, string> = {
+  fur_orange: "Orange",
+  fur_red: "Red",
+  fur_brown: "Brown",
+  fur_grey: "Grey",
+  fur_black: "Black",
+  fur_white: "White",
+  fur_cream: "Cream",
+};
+
 const BUILDER: BuilderOption[] = [
-  // Avatar style (body)
-  { key: "style_male",   name: "Male",   category: "avatarStyle" },
-  { key: "style_female", name: "Female", category: "avatarStyle" },
-  // Skin
-  { key: "skin_light", name: "Light", category: "skinTone", swatch: "#ffdbb4" },
-  { key: "skin_tan",   name: "Tan",   category: "skinTone", swatch: "#edb98a" },
-  { key: "skin_brown", name: "Brown", category: "skinTone", swatch: "#d08b5b" },
-  { key: "skin_deep",  name: "Deep",  category: "skinTone", swatch: "#614335" },
-  // Hair styles — sourced from HAIR_CATALOG and filtered at render time by avatar style.
-  ...Object.entries(HAIR_CATALOG)
-    .filter(([k]) => !k.startsWith("hairstyle_")) // hide legacy duplicates from picker
-    .map(([k, v]) => ({ key: k, name: v.name, category: "hairStyle" as BuilderCategory })),
-  // Hair color
-  { key: "hair_brown",  name: "Brown",  category: "hairColor", swatch: "#724133" },
-  { key: "hair_black",  name: "Black",  category: "hairColor", swatch: "#2c1b18" },
-  { key: "hair_blonde", name: "Blonde", category: "hairColor", swatch: "#b58143" },
-  { key: "hair_red",    name: "Red",    category: "hairColor", swatch: "#c93305" },
+  // Species (animals)
+  ...Object.entries(SPECIES).map(([k, v]) => ({
+    key: k, name: v.name, category: "species" as BuilderCategory,
+  })),
+  // Fur color — full palette (filtered per species at render time)
+  ...Object.entries(FUR_HEX).map(([k, hex]) => ({
+    key: k, name: FUR_LABEL[k] ?? k, category: "furColor" as BuilderCategory, swatch: hex,
+  })),
+  // Fur patterns
+  ...Object.entries(FUR_PATTERNS).map(([k, label]) => ({
+    key: k, name: label, category: "furPattern" as BuilderCategory,
+  })),
   // Eyes
   { key: "eyes_default", name: "Default", category: "eyes" },
   { key: "eyes_happy",   name: "Happy",   category: "eyes" },
   { key: "eyes_wink",    name: "Wink",    category: "eyes" },
-  { key: "eyes_squint",  name: "Squint",  category: "eyes" },
-  { key: "eyes_hearts",  name: "Hearts",  category: "eyes" },
-  // Clothing styles
-  { key: "clothes_hoodie",  name: "Hoodie",  category: "clothing" },
-  { key: "clothes_blazer",  name: "Blazer",  category: "clothing" },
-  { key: "clothes_shirt",   name: "T-shirt", category: "clothing" },
-  { key: "clothes_vneck",   name: "V-neck",  category: "clothing" },
-  { key: "clothes_overall", name: "Overall", category: "clothing" },
-  { key: "clothes_collar",  name: "Sweater", category: "clothing" },
-  // Clothes color
-  { key: "clothes_purple", name: "Purple", category: "clothesColor", swatch: "#6d3bd1" },
-  { key: "clothes_blue",   name: "Blue",   category: "clothesColor", swatch: "#5199e4" },
-  { key: "clothes_green",  name: "Green",  category: "clothesColor", swatch: "#7ad9a1" },
-  { key: "clothes_red",    name: "Red",    category: "clothesColor", swatch: "#ff5c5c" },
-  { key: "clothes_black",  name: "Black",  category: "clothesColor", swatch: "#262e33" },
-  { key: "clothes_white",  name: "White",  category: "clothesColor", swatch: "#ffffff" },
+  { key: "eyes_sleepy",  name: "Sleepy",  category: "eyes" },
+  { key: "eyes_star",    name: "Star",    category: "eyes" },
+  // Clothing color
+  { key: "clothes_purple", name: "Purple", category: "clothesColor", swatch: CLOTHES_HEX.clothes_purple },
+  { key: "clothes_blue",   name: "Blue",   category: "clothesColor", swatch: CLOTHES_HEX.clothes_blue },
+  { key: "clothes_green",  name: "Green",  category: "clothesColor", swatch: CLOTHES_HEX.clothes_green },
+  { key: "clothes_red",    name: "Red",    category: "clothesColor", swatch: CLOTHES_HEX.clothes_red },
+  { key: "clothes_yellow", name: "Yellow", category: "clothesColor", swatch: CLOTHES_HEX.clothes_yellow },
+  { key: "clothes_pink",   name: "Pink",   category: "clothesColor", swatch: CLOTHES_HEX.clothes_pink },
+  { key: "clothes_black",  name: "Black",  category: "clothesColor", swatch: CLOTHES_HEX.clothes_black },
+  { key: "clothes_white",  name: "White",  category: "clothesColor", swatch: CLOTHES_HEX.clothes_white },
   // Headwear cosmetics (require purchase)
-  { key: "hat_wizard", name: "Wizard Hat", category: "headwear", cost: 10, thumb: AVATAR_THUMBNAILS.hat_wizard },
-  { key: "halo", name: "Halo", category: "headwear", cost: 40, thumb: AVATAR_THUMBNAILS.halo },
+  { key: "hat_wizard",   name: "Wizard Hat",   category: "headwear", cost: 10, thumb: AVATAR_THUMBNAILS.hat_wizard },
+  { key: "halo",         name: "Halo",         category: "headwear", cost: 40, thumb: AVATAR_THUMBNAILS.halo },
   { key: "crown_silver", name: "Silver Crown", category: "headwear", cost: 25, thumb: AVATAR_THUMBNAILS.crown_silver },
-  // Accessories (DiceBear-rendered glasses)
+  // Accessories
   { key: "glasses",       name: "Glasses",    category: "accessory" },
   { key: "sunglasses",    name: "Sunglasses", category: "accessory", cost: 15 },
   { key: "round_glasses", name: "Round",      category: "accessory" },
@@ -124,12 +123,10 @@ const BUILDER: BuilderOption[] = [
 const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
 
 const APPEARANCE_CATEGORIES: BuilderCategory[] = [
-  "avatarStyle",
-  "skinTone",
-  "hairStyle",
-  "hairColor",
+  "species",
+  "furColor",
+  "furPattern",
   "eyes",
-  "clothing",
   "clothesColor",
 ];
 const COSMETIC_CATEGORIES: BuilderCategory[] = ["headwear", "accessory", "aura"];
@@ -360,15 +357,11 @@ export default function Profile() {
             {(() => {
               const renderCategoryPanel = (cat: BuilderCategory) => {
                 let catItems = BUILDER.filter((o) => o.category === cat);
-                if (cat === "hairStyle") {
-                  catItems = catItems.filter((o) => {
-                    const entry = HAIR_CATALOG[o.key];
-                    return !entry || entry.styles.includes(previewAvatar.avatarStyle);
-                  });
+                if (cat === "furColor") {
+                  const sp = SPECIES[previewAvatar.species];
+                  if (sp) catItems = catItems.filter((o) => sp.allowedFur.includes(o.key));
                 }
-                const activeKey = cat === "avatarStyle"
-                  ? STYLE_TO_KEY[previewAvatar.avatarStyle]
-                  : previewAvatar[cat];
+                const activeKey = previewAvatar[cat];
                 const isCosmeticTab = COSMETIC_CATEGORIES.includes(cat);
                 return (
                   <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
@@ -510,7 +503,7 @@ export default function Profile() {
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="appearance">
-                    <SubTabs cats={APPEARANCE_CATEGORIES} defaultCat="avatarStyle" />
+                    <SubTabs cats={APPEARANCE_CATEGORIES} defaultCat="species" />
                   </TabsContent>
                   <TabsContent value="cosmetics">
                     <SubTabs cats={COSMETIC_CATEGORIES} defaultCat="headwear" />
