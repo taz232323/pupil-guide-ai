@@ -358,15 +358,11 @@ export default function Profile() {
             {(() => {
               const renderCategoryPanel = (cat: BuilderCategory) => {
                 let catItems = BUILDER.filter((o) => o.category === cat);
-                if (cat === "hairStyle") {
-                  catItems = catItems.filter((o) => {
-                    const entry = HAIR_CATALOG[o.key];
-                    return !entry || entry.styles.includes(previewAvatar.avatarStyle);
-                  });
+                if (cat === "furColor") {
+                  const sp = SPECIES[previewAvatar.species];
+                  if (sp) catItems = catItems.filter((o) => sp.allowedFur.includes(o.key));
                 }
-                const activeKey = cat === "avatarStyle"
-                  ? STYLE_TO_KEY[previewAvatar.avatarStyle]
-                  : previewAvatar[cat];
+                const activeKey = previewAvatar[cat];
                 const isCosmeticTab = COSMETIC_CATEGORIES.includes(cat);
                 return (
                   <div className="flex sm:grid gap-3 sm:grid-cols-3 md:grid-cols-4 overflow-x-auto pb-2 sm:overflow-visible snap-x snap-mandatory -mx-1 px-1">
