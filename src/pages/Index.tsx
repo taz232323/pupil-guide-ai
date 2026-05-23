@@ -244,9 +244,9 @@ export default function Index() {
             }}
           />
 
-          {/* Headline + CTA revealed inside the mountain scene */}
+          {/* Headline + CTA pushed to the bottom so the mountain scene above is fully visible */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center px-5 sm:px-8 text-center pt-16 pb-8"
+            className="absolute inset-0 flex flex-col items-center justify-end px-5 sm:px-8 text-center pb-[14vh] sm:pb-[10vh]"
             style={{ zIndex: 100 }}
           >
             <h1
