@@ -345,7 +345,7 @@ export default function Index() {
                 data-aos-duration="700"
                 data-aos-delay={i * 250}
                 data-aos-anchor-placement="top-bottom"
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-transform hover:-translate-y-1 hover:border-white/20"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-all duration-500 ease-out hover:-translate-y-1.5 hover:border-white/20 hover:shadow-[0_20px_60px_-20px_rgba(56,189,248,0.25)]"
               >
                 <div
                   className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${f.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10`}
