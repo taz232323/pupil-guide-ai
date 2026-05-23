@@ -298,7 +298,7 @@ export default function Index() {
           <span
             data-aos="fade-up"
             data-aos-duration="700"
-            data-aos-anchor-placement="top-center"
+            data-aos-anchor-placement="top-bottom"
             className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-300" />
@@ -308,7 +308,7 @@ export default function Index() {
             data-aos="fade-up"
             data-aos-duration="700"
             data-aos-delay="100"
-            data-aos-anchor-placement="top-center"
+            data-aos-anchor-placement="top-bottom"
             className="mt-6 text-base sm:text-lg text-slate-400"
           >
             One beautiful place for students to learn, teachers to teach, and schools to grow —
@@ -327,7 +327,7 @@ export default function Index() {
       {/* === Features === */}
       <section id="features" className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <div data-aos="fade-up" data-aos-anchor-placement="top-center">
+          <div data-aos="fade-up" data-aos-anchor-placement="top-bottom">
             <SectionHeader
               eyebrow="What's inside"
               title="Built for everyone in the classroom"
@@ -344,7 +344,7 @@ export default function Index() {
                 data-aos={aos}
                 data-aos-duration="700"
                 data-aos-delay={i * 250}
-                data-aos-anchor-placement="top-center"
+                data-aos-anchor-placement="top-bottom"
                 className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-transform hover:-translate-y-1 hover:border-white/20"
               >
                 <div
@@ -355,7 +355,7 @@ export default function Index() {
                   data-aos-duration="600"
                   data-aos-delay="500"
                   data-aos-easing="ease-out-back"
-                  data-aos-anchor-placement="top-center"
+                  data-aos-anchor-placement="top-bottom"
                   className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white"
                 >
                   <f.icon className="h-6 w-6" />
@@ -394,7 +394,7 @@ export default function Index() {
       {/* === How it works === */}
       <section id="how" className="relative py-24 sm:py-32 border-t border-white/5 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
-          <div data-aos="fade-up" data-aos-anchor-placement="top-center">
+          <div data-aos="fade-up" data-aos-anchor-placement="top-bottom">
             <SectionHeader
               eyebrow="How it works"
               title="Up and running in three steps"
@@ -409,7 +409,7 @@ export default function Index() {
               data-aos="zoom-in-right"
               data-aos-duration="900"
               data-aos-delay="100"
-              data-aos-anchor-placement="top-center"
+              data-aos-anchor-placement="top-bottom"
               className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent origin-left"
             />
             {STEPS.map((s, i) => (
@@ -418,7 +418,7 @@ export default function Index() {
                 data-aos="fade-right"
                 data-aos-duration="700"
                 data-aos-delay={i * 250}
-                data-aos-anchor-placement="top-center"
+                data-aos-anchor-placement="top-bottom"
                 className="relative text-center md:text-left"
               >
                 <div
@@ -426,7 +426,7 @@ export default function Index() {
                   data-aos-duration="600"
                   data-aos-delay={i * 250 + 250}
                   data-aos-easing="ease-out-back"
-                  data-aos-anchor-placement="top-center"
+                  data-aos-anchor-placement="top-bottom"
                   className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative"
                 >
                   <s.icon className="h-7 w-7 text-sky-300" />
@@ -445,7 +445,7 @@ export default function Index() {
       {/* === Testimonials === */}
       <section id="love" className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <div data-aos="fade-up" data-aos-anchor-placement="top-center">
+          <div data-aos="fade-up" data-aos-anchor-placement="top-bottom">
             <SectionHeader
               eyebrow="Loved by classrooms"
               title="Words from students, teachers, and leaders"
@@ -459,7 +459,7 @@ export default function Index() {
                 data-aos="fade-up"
                 data-aos-duration="600"
                 data-aos-delay={TESTIMONIALS.indexOf(t) * 250}
-                data-aos-anchor-placement="top-center"
+                data-aos-anchor-placement="top-bottom"
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col"
               >
                 <div className="text-sky-300/60 text-5xl leading-none font-serif select-none">"</div>
@@ -472,7 +472,7 @@ export default function Index() {
                     data-aos-duration="600"
                     data-aos-delay="250"
                     data-aos-easing="ease-out-back"
-                    data-aos-anchor-placement="top-center"
+                    data-aos-anchor-placement="top-bottom"
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10"
                   >
                     {t.initials}
@@ -494,7 +494,7 @@ export default function Index() {
           <div
             data-aos="fade"
             data-aos-duration="900"
-            data-aos-anchor-placement="top-center"
+            data-aos-anchor-placement="top-bottom"
             className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center"
           >
             <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
@@ -505,7 +505,7 @@ export default function Index() {
               data-aos-duration="600"
               data-aos-delay="500"
               data-aos-easing="ease-out-back"
-              data-aos-anchor-placement="top-center"
+              data-aos-anchor-placement="top-bottom"
               className="relative mx-auto inline-block"
             >
               <Mountain className="h-10 w-10 text-sky-300" />
