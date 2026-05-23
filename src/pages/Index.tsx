@@ -100,23 +100,26 @@ export default function Index() {
 
       if (prefersReduced) return;
 
-      if (gridRef.current) {
-        gridRef.current.style.transform = `translate3d(0, ${y * 0.08}px, 0)`;
-      }
-
       // Sticky cinematic zoom progress (0 → 1 across the hero section)
       const heroEl = heroSectionRef.current;
       if (heroEl) {
         const vh = window.innerHeight || 1;
+        const vw = window.innerWidth || 1;
+        const localY = Math.max(y - heroEl.offsetTop, 0);
         const total = Math.max(heroEl.offsetHeight - vh, 1);
-        const progress = Math.min(Math.max(y / total, 0), 1);
+        const progress = Math.min(Math.max(localY / total, 0), 1);
         // Smooth ease-out for cinematic camera dolly
         const eased = 1 - Math.pow(1 - progress, 2.2);
 
+        if (gridRef.current) {
+          gridRef.current.style.transform = `translate3d(0, ${eased * 18}px, 0)`;
+        }
+
         // Layer 1: camera moves into the complete mountain scene only.
         if (sceneLayerRef.current) {
-          const scale = 1 + eased * 1.85; // 1 → 2.85
-          const translateY = -eased * 86;
+          const isMobile = vw < 640;
+          const scale = 1 + eased * (isMobile ? 0.72 : 1.05);
+          const translateY = -eased * (isMobile ? 18 : 30);
           sceneLayerRef.current.style.transform = `translate3d(0, ${translateY}px, 0) scale(${scale})`;
         }
 
@@ -125,14 +128,12 @@ export default function Index() {
           vignetteRef.current.style.opacity = String(Math.min(eased * 1.25, 0.9));
         }
 
-        // Headline + CTA stay fully visible; only a subtle parallax drift.
+        // Headline + CTA stay locked to the viewport and fully visible.
         if (headlineRef.current) {
-          const textY = -eased * 12;
-          headlineRef.current.style.transform = `translate3d(0, ${textY}px, 0)`;
+          headlineRef.current.style.transform = "translate3d(0, 0, 0)";
         }
         if (ctaRef.current) {
-          const ctaY = -eased * 8;
-          ctaRef.current.style.transform = `translate3d(0, ${ctaY}px, 0)`;
+          ctaRef.current.style.transform = "translate3d(0, 0, 0)";
         }
       }
     };
