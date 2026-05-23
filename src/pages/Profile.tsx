@@ -124,8 +124,6 @@ const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.
 
 const APPEARANCE_CATEGORIES: BuilderCategory[] = [
   "species",
-  "furColor",
-  "furPattern",
   "eyes",
   "clothesColor",
 ];
