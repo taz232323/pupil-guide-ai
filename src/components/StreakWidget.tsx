@@ -88,10 +88,10 @@ export function StreakWidget() {
       <CardContent className="space-y-2">
         {rows.map((r) => (
           <div key={r.class_id} className="flex items-center justify-between rounded-lg border p-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <Flame className={`h-5 w-5 ${r.current_streak > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{r.class_name}</p>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Flame className={`h-5 w-5 shrink-0 ${r.current_streak > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium line-clamp-2">{r.class_name}</p>
                 <p className="text-xs text-muted-foreground">
                   {r.current_streak} day{r.current_streak === 1 ? "" : "s"}
                   {r.practiced_today ? " · ✅ done today" : " · practice today!"}
