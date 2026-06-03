@@ -102,7 +102,7 @@ export function StudyBuddy() {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col gap-0">
-          <SheetHeader className="border-b px-4 py-3 bg-gradient-to-br from-primary/10 via-background to-teal/10">
+          <SheetHeader className="border-b px-4 py-3 pr-12 bg-gradient-to-br from-primary/10 via-background to-teal/10">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-teal text-primary-foreground inline-flex items-center justify-center shadow">
