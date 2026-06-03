@@ -70,6 +70,7 @@ export default function Index() {
   const { user, role, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [heroProgress, setHeroProgress] = useState(0);
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
@@ -77,6 +78,13 @@ export default function Index() {
       const y = window.scrollY;
       setScrolled(y > 8);
       setScrollY(y);
+      const el = document.getElementById("hero-zoom");
+      if (el) {
+        const total = el.offsetHeight - window.innerHeight;
+        const start = el.offsetTop;
+        const p = Math.min(1, Math.max(0, (y - start) / Math.max(1, total)));
+        setHeroProgress(p);
+      }
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -139,94 +147,68 @@ export default function Index() {
         </div>
       </header>
 
-      {/* === Hero === */}
-      <section id="top" className="relative isolate overflow-hidden pt-32 pb-24 sm:pt-40 sm:pb-32">
-        <AnimatedBackdrop />
+      {/* === Hero (scroll-zoom) === */}
+      <section id="hero-zoom" className="relative" style={{ height: "220vh" }}>
+        <div id="top" className="sticky top-0 h-screen w-full overflow-hidden">
+          <AnimatedBackdrop />
 
-        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 text-center">
-          <span
-            data-aos="fade-up"
-            data-aos-duration="900"
-            data-aos-anchor-placement="top-center"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
+          {/* Mountain background layer */}
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{
+              transform: `translate3d(0, ${-heroProgress * 12}vh, 0) scale(${1 + heroProgress * 1.5})`,
+              transformOrigin: "center center",
+              willChange: "transform",
+            }}
           >
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            New: AI Study Buddy is now in every class
-          </span>
-
-          <div className="mt-10 flex justify-center">
-            <div
-              className="relative w-full"
-              style={{
-                transform: `translate3d(0, ${scrollY * 0.8}px, 0)`,
-                willChange: "transform",
-              }}
-            >
+            <div className="relative">
               <div className="absolute inset-0 -z-10 blur-3xl opacity-60 bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent rounded-full" />
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                className="mx-auto w-full max-w-[420px] sm:max-w-[640px] lg:max-w-[820px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
+                className="w-[80vw] max-w-[820px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
               />
             </div>
           </div>
 
-          <h1
-            data-aos="fade-up"
-            data-aos-duration="900"
-            data-aos-anchor-placement="top-center"
-            className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05]"
-          >
-            <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
-              Knowledge Surpasses
+          {/* Overlay content layer — stays fixed/visible throughout */}
+          <div className="relative z-10 h-full flex flex-col items-center justify-center px-5 sm:px-8 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1 text-xs text-slate-300">
+              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              New: AI Study Buddy is now in every class
             </span>
-            <br />
-            <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
-              Mountains.
-            </span>
-          </h1>
 
-          <p
-            data-aos="fade-up"
-            data-aos-duration="900"
-            data-aos-delay="250"
-            data-aos-anchor-placement="top-center"
-            className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-400"
-          >
-            One beautiful place for students to learn, teachers to teach, and schools to grow —
-            with rewards, AI tutoring, and supervised messaging built in.
-          </p>
+            <h1 className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
+              <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
+                Knowledge Surpasses
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
+                Mountains
+              </span>
+            </h1>
 
-          <div
-            data-aos="fade-up"
-            data-aos-duration="900"
-            data-aos-delay="500"
-            data-aos-anchor-placement="top-center"
-            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3"
-          >
-            <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
-              <Link to="/auth">
-                Get Started <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-12 px-7 text-base border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-            >
-              <a href="#how">
-                <Play className="h-4 w-4" /> Watch Demo
-              </a>
-            </Button>
-          </div>
+            <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
+              One beautiful place for students to learn, teachers to teach, and schools to grow.
+            </p>
 
-          <div className="mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-widest text-slate-500">
-            <span>Trusted by educators</span>
-            <span className="hidden sm:inline opacity-30">•</span>
-            <span>FERPA-aware design</span>
-            <span className="hidden sm:inline opacity-30">•</span>
-            <span>Built for K-12</span>
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
+                <Link to="/auth">
+                  Get Started <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 px-7 text-base border-white/15 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:text-white"
+              >
+                <a href="#how">
+                  <Play className="h-4 w-4" /> Watch Demo
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
