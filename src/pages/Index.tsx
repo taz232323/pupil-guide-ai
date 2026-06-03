@@ -71,7 +71,6 @@ export default function Index() {
   const [scrolled, setScrolled] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [heroProgress, setHeroProgress] = useState(0);
-  const heroRef = (typeof window !== "undefined") ? null : null;
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
