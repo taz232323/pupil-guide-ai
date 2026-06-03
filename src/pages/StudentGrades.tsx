@@ -4,7 +4,6 @@ import { ChevronDown, ChevronRight, Award, BookOpen, Sparkles } from "lucide-rea
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 import { CardListSkeleton } from "@/components/Skeletons";
 import { GradePredictorModal } from "@/components/GradePredictorModal";
@@ -218,18 +217,16 @@ export default function StudentGrades() {
                     open ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
                   )}
                 >
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setPredictorClass(c.id);
                     }}
-                    className="absolute top-2 right-2 h-7 px-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    className="absolute top-2 right-2 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-medium rounded-lg px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-all duration-150 ease-out hover:scale-105"
                   >
-                    <Sparkles className="h-3 w-3 mr-1" />
+                    <Sparkles className="h-3 w-3" />
                     What if?
-                  </Button>
+                  </button>
                   <button
                     onClick={() => setExpanded(open ? null : c.id)}
                     className="text-left w-full"
