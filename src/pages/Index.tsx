@@ -1,5 +1,5 @@
 import { Navigate, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Sparkles, BookOpen, BarChart3, ShieldCheck, Trophy, Bot,
   ClipboardCheck, MessagesSquare, ArrowRight, Play, GraduationCap,
@@ -71,6 +71,9 @@ export default function Index() {
   const [scrolled, setScrolled] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [heroProgress, setHeroProgress] = useState(0);
+  const targetProgress = useRef(0);
+  const currentProgress = useRef(0);
+  const rafId = useRef<number | null>(null);
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
@@ -83,13 +86,27 @@ export default function Index() {
         const total = el.offsetHeight - window.innerHeight;
         const start = el.offsetTop;
         const p = Math.min(1, Math.max(0, (y - start) / Math.max(1, total)));
-        setHeroProgress(p);
+        targetProgress.current = p;
       }
+    };
+    const tick = () => {
+      // Lerp toward target — produces a slow, scroll-velocity-scaled zoom
+      const diff = targetProgress.current - currentProgress.current;
+      if (Math.abs(diff) > 0.0005) {
+        currentProgress.current += diff * 0.08;
+        setHeroProgress(currentProgress.current);
+      } else if (currentProgress.current !== targetProgress.current) {
+        currentProgress.current = targetProgress.current;
+        setHeroProgress(currentProgress.current);
+      }
+      rafId.current = window.requestAnimationFrame(tick);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
+    rafId.current = window.requestAnimationFrame(tick);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      if (rafId.current) window.cancelAnimationFrame(rafId.current);
       document.documentElement.style.scrollBehavior = "";
     };
   }, []);
@@ -147,8 +164,8 @@ export default function Index() {
         </div>
       </header>
 
-      {/* === Hero (scroll-zoom) === */}
-      <section id="hero-zoom" className="relative" style={{ height: "220vh" }}>
+      {/* === Hero (slow scroll-zoom) === */}
+      <section id="hero-zoom" className="relative" style={{ height: "420vh" }}>
         <div id="top" className="sticky top-0 h-screen w-full overflow-hidden">
           <AnimatedBackdrop />
 
@@ -156,9 +173,10 @@ export default function Index() {
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
             style={{
-              transform: `translate3d(0, ${-heroProgress * 12}vh, 0) scale(${1 + heroProgress * 1.5})`,
+              transform: `translate3d(0, ${-heroProgress * 8}vh, 0) scale(${1 + heroProgress * 6})`,
               transformOrigin: "center center",
               willChange: "transform",
+              transition: "transform 120ms linear",
             }}
           >
             <div className="relative">
@@ -166,7 +184,7 @@ export default function Index() {
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                className="w-[80vw] max-w-[820px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
+                className="w-[60vw] max-w-[680px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
               />
             </div>
           </div>
