@@ -1,4 +1,4 @@
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   Sparkles, BookOpen, BarChart3, ShieldCheck, Trophy, Bot,
@@ -68,7 +68,12 @@ const NAV = [
 
 export default function Index() {
   const { user, role, loading } = useAuth();
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [zoomProgress, setZoomProgress] = useState(0);
+  const [zooming, setZooming] = useState(false);
+  const rafId = useRef<number | null>(null);
   const heroSectionRef = useRef<HTMLDivElement | null>(null);
   const sceneLayerRef = useRef<HTMLDivElement | null>(null);
   const headlineRef = useRef<HTMLHeadingElement | null>(null);
@@ -150,9 +155,37 @@ export default function Index() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
+      if (rafId.current) window.cancelAnimationFrame(rafId.current);
       document.documentElement.style.scrollBehavior = "";
     };
   }, []);
+
+  const startZoom = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (zooming) return;
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      navigate("/auth");
+      return;
+    }
+    setZooming(true);
+    const duration = 1600;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      // ease-in-cubic
+      const eased = t * t * t;
+      setZoomProgress(eased);
+      if (t < 1) {
+        rafId.current = window.requestAnimationFrame(step);
+      } else {
+        navigate("/auth");
+      }
+    };
+    rafId.current = window.requestAnimationFrame(step);
+  };
 
   useEffect(() => {
     AOS.init({
@@ -207,119 +240,99 @@ export default function Index() {
         </div>
       </header>
 
-      {/* === Hero (cinematic sticky zoom) === */}
-      <section
-        id="top"
-        ref={heroSectionRef}
-        className="relative isolate"
-        style={{ height: "190vh" }}
-      >
-        <div className="sticky top-0 h-[100svh] min-h-[560px] w-full overflow-hidden">
-          {/* Layer 1: background scene — the only layer that zooms */}
+      {/* === Hero (click-triggered zoom) === */}
+      <section id="hero-zoom" className="relative h-screen">
+        <div id="top" className="relative h-screen w-full overflow-hidden bg-[#0d0f12]">
+          <AnimatedBackdrop />
+
+          {/* Mountain background layer — fills viewport, zooms toward camera */}
           <div
-            ref={sceneLayerRef}
-            className="absolute inset-0 flex items-center justify-center will-change-transform"
-            style={{ transform: "translate3d(0,0,0) scale(1)", transformOrigin: "center center", zIndex: 1 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{
+              transform: `translate3d(0, ${-zoomProgress * 6}vh, 0) scale(${1 + zoomProgress * 6})`,
+              transformOrigin: "center center",
+              willChange: "transform",
+            }}
           >
-            <AnimatedBackdrop />
-            <div className="absolute inset-0 flex items-end justify-center pb-[14vh]">
-              <div className="absolute h-[min(64vw,64vh)] max-h-[620px] w-[min(64vw,64vh)] max-w-[620px] rounded-full bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent opacity-60 blur-3xl" />
+            <div className="relative h-full w-full flex items-center justify-center">
+              {/* Atmospheric glow that grows with the zoom so the frame never feels empty */}
+              <div
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 rounded-full blur-3xl"
+                style={{
+                  width: `${90 + zoomProgress * 80}vmax`,
+                  height: `${90 + zoomProgress * 80}vmax`,
+                  background:
+                    "radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(99,102,241,0.18) 35%, rgba(13,15,18,0) 70%)",
+                  opacity: 0.7 + zoomProgress * 0.3,
+                }}
+              />
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                className="relative w-[min(78vw,70vh)] max-w-[720px] min-w-[260px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
+                className="w-[92vw] max-w-[1100px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.55)]"
               />
             </div>
           </div>
 
-          {/* Dark vignette overlay for text contrast */}
+          {/* Vignette + bottom fade so the dark void blends into the next section */}
           <div
-            ref={vignetteRef}
             aria-hidden
-            className="absolute inset-0 pointer-events-none opacity-0 will-change-[opacity]"
+            className="absolute inset-0 pointer-events-none"
             style={{
-              zIndex: 2,
               background:
-                "radial-gradient(ellipse at center, rgba(13,15,18,0.92) 0%, rgba(13,15,18,0.7) 35%, rgba(13,15,18,0.25) 65%, rgba(13,15,18,0) 90%)",
+                "radial-gradient(ellipse at center, transparent 35%, rgba(13,15,18,0.55) 80%, rgba(13,15,18,0.95) 100%)",
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-40 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(13,15,18,0) 0%, rgba(13,15,18,1) 100%)",
             }}
           />
 
-          {/* Headline + CTA pushed to the bottom so the mountain scene above is fully visible */}
+          {/* Overlay content layer — stays fixed/visible throughout */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-end px-5 sm:px-8 text-center pb-[8vh] sm:pb-[6vh]"
-            style={{ zIndex: 100 }}
+            className="relative z-10 h-full flex flex-col items-center justify-center px-5 sm:px-8 text-center"
+            style={{
+              opacity: Math.max(0, 1 - zoomProgress * 1.25),
+              transform: `translate3d(0, ${zoomProgress * 4}vh, 0)`,
+              pointerEvents: zooming ? "none" : undefined,
+            }}
           >
-            <h1
-              ref={headlineRef}
-              className="max-w-[11ch] sm:max-w-none font-bold tracking-tight text-[clamp(2.45rem,11vw,4.25rem)] sm:text-6xl lg:text-7xl leading-[1.02] will-change-transform"
-              style={{ transform: "translate3d(0,0,0)", opacity: 1, visibility: "visible" }}
-            >
-              <span className="bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1 text-xs text-slate-300">
+              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+              New: AI Study Buddy is now in every class
+            </span>
+
+            <h1 className="mt-8 font-bold tracking-tight text-4xl sm:text-6xl lg:text-7xl leading-[1.05] drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]">
+              <span className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
                 Knowledge Surpasses
               </span>
               <br />
-              <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent drop-shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
+              <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
                 Mountains
               </span>
             </h1>
 
-            <div
-              ref={ctaRef}
-              className="mt-6 sm:mt-8 flex flex-col min-[420px]:flex-row items-center justify-center gap-3 will-change-transform"
-              style={{ transform: "translate3d(0,0,0)", opacity: 1, visibility: "visible" }}
-            >
-              <Button
-                asChild
-                size="lg"
-                className="h-11 sm:h-12 w-[min(15rem,82vw)] min-[420px]:w-auto px-7 text-base bg-white/95 text-[#0d0f12] hover:bg-white shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] backdrop-blur"
-              >
-                <Link to="/auth">
-                  Get Started <ArrowRight className="h-4 w-4" />
-                </Link>
+            <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-slate-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
+              One beautiful place for students to learn, teachers to teach, and schools to grow.
+            </p>
+
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button onClick={startZoom} size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
+                Get Started <ArrowRight className="h-4 w-4" />
               </Button>
               <Button
-                asChild
+                onClick={startZoom}
                 size="lg"
                 variant="outline"
-                className="h-11 sm:h-12 w-[min(15rem,82vw)] min-[420px]:w-auto px-7 text-base border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white backdrop-blur-md"
+                className="h-12 px-7 text-base border-white/15 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:text-white"
               >
-                <a href="#how">
-                  <Play className="h-4 w-4" /> Watch Demo
-                </a>
+                <Play className="h-4 w-4" /> Watch Demo
               </Button>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* === Sub-hero strip (after zoom completes) === */}
-      <section className="relative py-16 sm:py-20 border-t border-white/5">
-        <div className="relative max-w-3xl mx-auto px-5 sm:px-8 text-center">
-          <span
-            data-aos="fade-up"
-            data-aos-duration="700"
-            data-aos-anchor-placement="top-bottom"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            New: AI Study Buddy is now in every class
-          </span>
-          <p
-            data-aos="fade-up"
-            data-aos-duration="700"
-            data-aos-delay="100"
-            data-aos-anchor-placement="top-bottom"
-            className="mt-6 text-base sm:text-lg text-slate-400"
-          >
-            One beautiful place for students to learn, teachers to teach, and schools to grow —
-            with rewards, AI tutoring, and supervised messaging built in.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-widest text-slate-500">
-            <span>Trusted by educators</span>
-            <span className="hidden sm:inline opacity-30">•</span>
-            <span>FERPA-aware design</span>
-            <span className="hidden sm:inline opacity-30">•</span>
-            <span>Built for K-12</span>
           </div>
         </div>
       </section>
