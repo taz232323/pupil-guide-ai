@@ -183,6 +183,7 @@ export function TeacherShopManagement() {
       if (error) { toast.error(error.message); return; }
       toast.success("Item updated");
     } else {
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("shop_items").insert({
         item_key: item.item_key,
         item_name: item.item_name,
@@ -192,6 +193,7 @@ export function TeacherShopManagement() {
         currency: item.currency,
         cost: item.cost,
         active: true,
+        created_by: user?.id,
       });
       if (error) {
         if (error.code === "23505") { toast.error("An item with that key already exists"); return; }

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronRight, Award, BookOpen } from "lucide-react";
+import { ChevronDown, ChevronRight, Award, BookOpen, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/EmptyState";
 import { CardListSkeleton } from "@/components/Skeletons";
+import { GradePredictorModal } from "@/components/GradePredictorModal";
 import { cn } from "@/lib/utils";
 
 type ClassRow = { id: string; name: string; subject: string };
@@ -63,6 +64,7 @@ export default function StudentGrades() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [predictorClass, setPredictorClass] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -160,7 +162,11 @@ export default function StudentGrades() {
         ? Math.round(gradedRows.reduce((s, r) => s + (r.pct ?? 0), 0) / gradedRows.length)
         : null;
 
-      return { class: c, units, overall, totalCount: rows.length };
+      // Calculate total earned and total possible for grade predictor
+      const totalEarned = gradedRows.reduce((s, r) => s + (r.earned ?? 0), 0);
+      const totalPossible = gradedRows.reduce((s, r) => s + r.total, 0);
+
+      return { class: c, units, overall, totalCount: rows.length, totalEarned, totalPossible };
     });
   }, [classes, assignments, submissions, grades]);
 
@@ -204,33 +210,62 @@ export default function StudentGrades() {
             {perClass.map(({ class: c, overall }) => {
               const open = expanded === c.id;
               return (
-                <button
+                <div
                   key={c.id}
-                  onClick={() => setExpanded(open ? null : c.id)}
                   className={cn(
-                    "text-left rounded-xl border bg-card p-4 shadow-card transition-base hover:shadow-md",
+                    "relative rounded-xl border bg-card p-4 shadow-card transition-base hover:shadow-md",
                     open ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
                   )}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-semibold truncate">{c.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{c.subject}</p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPredictorClass(c.id);
+                    }}
+                    className="absolute top-2 right-2 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-medium rounded-lg px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-all duration-150 ease-out hover:scale-105"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    What if?
+                  </button>
+                  <button
+                    onClick={() => setExpanded(open ? null : c.id)}
+                    className="text-left w-full"
+                  >
+                    <div className="flex items-start justify-between gap-2 pr-16">
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">{c.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{c.subject}</p>
+                      </div>
+                      {open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
                     </div>
-                    {open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
-                  </div>
-                  <div className="mt-3 flex items-end gap-2">
-                    <p className={cn("text-3xl font-bold tabular-nums leading-none", pctColor(overall))}>
-                      {overall != null ? `${overall}%` : "—"}
-                    </p>
-                    <p className={cn("text-base font-semibold pb-0.5", pctColor(overall))}>
-                      {letterGrade(overall)}
-                    </p>
-                  </div>
-                </button>
+                    <div className="mt-3 flex items-end gap-2">
+                      <p className={cn("text-3xl font-bold tabular-nums leading-none", pctColor(overall))}>
+                        {overall != null ? `${overall}%` : "—"}
+                      </p>
+                      <p className={cn("text-base font-semibold pb-0.5", pctColor(overall))}>
+                        {letterGrade(overall)}
+                      </p>
+                    </div>
+                  </button>
+                </div>
               );
             })}
           </div>
+
+          {/* Grade Predictor Modal */}
+          {(() => {
+            const data = predictorClass ? perClass.find((p) => p.class.id === predictorClass) : null;
+            return (
+              <GradePredictorModal
+                open={!!predictorClass}
+                onOpenChange={(open) => !open && setPredictorClass(null)}
+                className={data?.class.name ?? ""}
+                currentPct={data?.overall ?? null}
+                totalEarned={data?.totalEarned ?? 0}
+                totalPossible={data?.totalPossible ?? 0}
+              />
+            );
+          })()}
 
           {/* Expanded breakdown */}
           {expanded && (() => {

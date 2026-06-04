@@ -74,15 +74,84 @@ export default function Index() {
   const [zoomProgress, setZoomProgress] = useState(0);
   const [zooming, setZooming] = useState(false);
   const rafId = useRef<number | null>(null);
+  const heroSectionRef = useRef<HTMLDivElement | null>(null);
+  const sceneLayerRef = useRef<HTMLDivElement | null>(null);
+  const headlineRef = useRef<HTMLHeadingElement | null>(null);
+  const ctaRef = useRef<HTMLDivElement | null>(null);
+  const vignetteRef = useRef<HTMLDivElement | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
-    const onScroll = () => {
-      const y = window.scrollY;
-      setScrolled(y > 8);
-      setScrollY(y);
+
+    const prefersReduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    let ticking = false;
+    let lastY = window.scrollY;
+    let lastScrolledState = lastY > 8;
+    setScrolled(lastScrolledState);
+
+    const apply = () => {
+      ticking = false;
+      const y = lastY;
+
+      const nextScrolled = y > 8;
+      if (nextScrolled !== lastScrolledState) {
+        lastScrolledState = nextScrolled;
+        setScrolled(nextScrolled);
+      }
+
+      if (prefersReduced) return;
+
+      // Sticky cinematic zoom progress (0 → 1 across the hero section)
+      const heroEl = heroSectionRef.current;
+      if (heroEl) {
+        const vh = window.innerHeight || 1;
+        const vw = window.innerWidth || 1;
+        const localY = Math.max(y - heroEl.offsetTop, 0);
+        const total = Math.max(heroEl.offsetHeight - vh, 1);
+        const progress = Math.min(Math.max(localY / total, 0), 1);
+        // Smooth ease-out for cinematic camera dolly
+        const eased = 1 - Math.pow(1 - progress, 2.2);
+
+        if (gridRef.current) {
+          gridRef.current.style.transform = `translate3d(0, ${eased * 18}px, 0)`;
+        }
+
+        // Layer 1: camera moves into the complete mountain scene only.
+        if (sceneLayerRef.current) {
+          const isMobile = vw < 640;
+          const scale = 1 + eased * (isMobile ? 0.72 : 1.05);
+          const translateY = -eased * (isMobile ? 18 : 30);
+          sceneLayerRef.current.style.transform = `translate3d(0, ${translateY}px, 0) scale(${scale})`;
+        }
+
+        // Vignette darkens for text legibility
+        if (vignetteRef.current) {
+          vignetteRef.current.style.opacity = String(Math.min(eased * 1.25, 0.9));
+        }
+
+        // Headline + CTA stay locked to the viewport and fully visible.
+        if (headlineRef.current) {
+          headlineRef.current.style.transform = "translate3d(0, 0, 0)";
+        }
+        if (ctaRef.current) {
+          ctaRef.current.style.transform = "translate3d(0, 0, 0)";
+        }
+      }
     };
-    onScroll();
+
+    const onScroll = () => {
+      lastY = window.scrollY;
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(apply);
+      }
+    };
+
+    apply();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
@@ -120,12 +189,12 @@ export default function Index() {
 
   useEffect(() => {
     AOS.init({
-      duration: 900,
-      easing: "ease-out-quart",
+      duration: 1100,
+      easing: "ease-out-cubic",
       once: true,
       mirror: false,
-      offset: 0,
-      anchorPlacement: "top-center",
+      offset: 80,
+      anchorPlacement: "top-bottom",
       disable: false,
     });
     // Refresh after the first paint so AOS picks up dynamic content sizes.
@@ -271,7 +340,7 @@ export default function Index() {
       {/* === Features === */}
       <section id="features" className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <div data-aos="fade-up" data-aos-anchor-placement="top-center">
+          <div data-aos="fade-up" data-aos-anchor-placement="top-bottom">
             <SectionHeader
               eyebrow="What's inside"
               title="Built for everyone in the classroom"
@@ -288,8 +357,8 @@ export default function Index() {
                 data-aos={aos}
                 data-aos-duration="700"
                 data-aos-delay={i * 250}
-                data-aos-anchor-placement="top-center"
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-transform hover:-translate-y-1 hover:border-white/20"
+                data-aos-anchor-placement="top-bottom"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 transition-all duration-500 ease-out hover:-translate-y-1.5 hover:border-white/20 hover:shadow-[0_20px_60px_-20px_rgba(56,189,248,0.25)]"
               >
                 <div
                   className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${f.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10`}
@@ -299,7 +368,7 @@ export default function Index() {
                   data-aos-duration="600"
                   data-aos-delay="500"
                   data-aos-easing="ease-out-back"
-                  data-aos-anchor-placement="top-center"
+                  data-aos-anchor-placement="top-bottom"
                   className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 text-white"
                 >
                   <f.icon className="h-6 w-6" />
@@ -338,7 +407,7 @@ export default function Index() {
       {/* === How it works === */}
       <section id="how" className="relative py-24 sm:py-32 border-t border-white/5 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
-          <div data-aos="fade-up" data-aos-anchor-placement="top-center">
+          <div data-aos="fade-up" data-aos-anchor-placement="top-bottom">
             <SectionHeader
               eyebrow="How it works"
               title="Up and running in three steps"
@@ -353,7 +422,7 @@ export default function Index() {
               data-aos="zoom-in-right"
               data-aos-duration="900"
               data-aos-delay="100"
-              data-aos-anchor-placement="top-center"
+              data-aos-anchor-placement="top-bottom"
               className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent origin-left"
             />
             {STEPS.map((s, i) => (
@@ -362,7 +431,7 @@ export default function Index() {
                 data-aos="fade-right"
                 data-aos-duration="700"
                 data-aos-delay={i * 250}
-                data-aos-anchor-placement="top-center"
+                data-aos-anchor-placement="top-bottom"
                 className="relative text-center md:text-left"
               >
                 <div
@@ -370,7 +439,7 @@ export default function Index() {
                   data-aos-duration="600"
                   data-aos-delay={i * 250 + 250}
                   data-aos-easing="ease-out-back"
-                  data-aos-anchor-placement="top-center"
+                  data-aos-anchor-placement="top-bottom"
                   className="mx-auto md:mx-0 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0d0f12] ring-1 ring-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.02)] relative"
                 >
                   <s.icon className="h-7 w-7 text-sky-300" />
@@ -389,7 +458,7 @@ export default function Index() {
       {/* === Testimonials === */}
       <section id="love" className="relative py-24 sm:py-32 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <div data-aos="fade-up" data-aos-anchor-placement="top-center">
+          <div data-aos="fade-up" data-aos-anchor-placement="top-bottom">
             <SectionHeader
               eyebrow="Loved by classrooms"
               title="Words from students, teachers, and leaders"
@@ -403,8 +472,8 @@ export default function Index() {
                 data-aos="fade-up"
                 data-aos-duration="600"
                 data-aos-delay={TESTIMONIALS.indexOf(t) * 250}
-                data-aos-anchor-placement="top-center"
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col"
+                data-aos-anchor-placement="top-bottom"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-7 flex flex-col transition-all duration-500 ease-out hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05]"
               >
                 <div className="text-sky-300/60 text-5xl leading-none font-serif select-none">"</div>
                 <blockquote className="mt-2 text-[15px] leading-relaxed text-slate-200 flex-1">
@@ -416,7 +485,7 @@ export default function Index() {
                     data-aos-duration="600"
                     data-aos-delay="250"
                     data-aos-easing="ease-out-back"
-                    data-aos-anchor-placement="top-center"
+                    data-aos-anchor-placement="top-bottom"
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-semibold ring-2 ring-white/10"
                   >
                     {t.initials}
@@ -438,7 +507,7 @@ export default function Index() {
           <div
             data-aos="fade"
             data-aos-duration="900"
-            data-aos-anchor-placement="top-center"
+            data-aos-anchor-placement="top-bottom"
             className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-800/60 via-[#1a1f29] to-[#0d0f12] p-10 sm:p-16 text-center"
           >
             <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
@@ -449,7 +518,7 @@ export default function Index() {
               data-aos-duration="600"
               data-aos-delay="500"
               data-aos-easing="ease-out-back"
-              data-aos-anchor-placement="top-center"
+              data-aos-anchor-placement="top-bottom"
               className="relative mx-auto inline-block"
             >
               <Mountain className="h-10 w-10 text-sky-300" />

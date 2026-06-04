@@ -1,10 +1,103 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 768" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 768" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="bgWash" cx="50%" cy="50%" r="75%">
+      <stop offset="0%"  stop-color="#fff7d6"/>
+      <stop offset="25%" stop-color="#ffd6a5"/>
+      <stop offset="50%" stop-color="#ffadad"/>
+      <stop offset="75%" stop-color="#bdb2ff"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </radialGradient>
 
-  <circle cx="384" cy="390" r="286" fill="#ef4444" opacity="0.07"/>
-  <path d="M161 534c88 106 358 128 462 0" stroke="#ef4444" stroke-width="24" stroke-linecap="round" opacity="0.20"/>
-  <path d="M181 502c82 95 323 112 406 0" stroke="#f59e0b" stroke-width="22" stroke-linecap="round" opacity="0.20"/>
-  <path d="M205 470c72 82 275 94 348 0" stroke="#22c55e" stroke-width="20" stroke-linecap="round" opacity="0.20"/>
-  <path d="M235 438c58 66 239 74 298 0" stroke="#38bdf8" stroke-width="18" stroke-linecap="round" opacity="0.20"/>
-  <path d="M267 406c48 48 186 52 234 0" stroke="#a78bfa" stroke-width="16" stroke-linecap="round" opacity="0.24"/>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="35%">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#fef3c7" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#fef3c7" stop-opacity="0"/>
+    </radialGradient>
 
+    <linearGradient id="armPeach" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#ffd6a5" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#ffb38a" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#ffd6a5" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="armYellow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#fff3b0" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#ffeb99" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#fff3b0" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="armMint" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#caffbf" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#8be3c4" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#caffbf" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="armBlue" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#a0c4ff" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#6aa0ff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#a0c4ff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="armPurple" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#bdb2ff" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#9b87f5" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#bdb2ff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="armPink" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#ffc6e0" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#ff8fbf" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#ffc6e0" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="softBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <filter id="heavyBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+
+    <style>
+      @keyframes spinCW  { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
+      @keyframes spinCCW { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+      .swirl  { transform-origin: 384px 384px; animation: spinCW 24s linear infinite; }
+      .swirl2 { transform-origin: 384px 384px; animation: spinCW 38s linear infinite; }
+      .swirl3 { transform-origin: 384px 384px; animation: spinCCW 60s linear infinite; }
+    </style>
+  </defs>
+
+  <!-- Full background wash -->
+  <rect width="768" height="768" fill="url(#bgWash)"/>
+
+  <!-- Heavily blurred wide arms forming a soft swirl, layer 1 -->
+  <g class="swirl3" filter="url(#heavyBlur)" opacity="0.9">
+    <path d="M384,384 C540,300 660,360 720,520 C600,500 480,470 384,384 Z" fill="#ffb38a"/>
+    <path d="M384,384 C460,220 610,200 700,260 C580,300 470,330 384,384 Z" fill="#ffeb99"/>
+    <path d="M384,384 C300,220 140,260 80,360 C200,360 320,360 384,384 Z" fill="#8be3c4"/>
+    <path d="M384,384 C240,420 100,520 80,640 C220,560 320,460 384,384 Z" fill="#6aa0ff"/>
+    <path d="M384,384 C360,540 460,680 600,720 C540,580 460,480 384,384 Z" fill="#9b87f5"/>
+    <path d="M384,384 C540,420 660,560 660,700 C520,620 440,500 384,384 Z" fill="#ff8fbf"/>
+  </g>
+
+  <!-- Spiraling thin rainbow arms, layer 2 -->
+  <g class="swirl" filter="url(#softBlur)">
+    <g stroke-linecap="round" fill="none" stroke-width="40">
+      <path d="M384,384 C470,300 600,300 720,260" stroke="url(#armPeach)"/>
+      <path d="M384,384 C420,260 540,160 700,140" stroke="url(#armYellow)"/>
+      <path d="M384,384 C300,300 180,320 60,280" stroke="url(#armMint)"/>
+      <path d="M384,384 C260,420 140,560 80,700" stroke="url(#armBlue)"/>
+      <path d="M384,384 C420,520 540,640 700,700" stroke="url(#armPurple)"/>
+      <path d="M384,384 C460,420 600,500 720,560" stroke="url(#armPink)"/>
+    </g>
+  </g>
+
+  <!-- Thinner detail arms, layer 3 (counter-rotating slow) -->
+  <g class="swirl2" filter="url(#softBlur)" opacity="0.8">
+    <g stroke-linecap="round" fill="none" stroke-width="22">
+      <path d="M384,384 C500,340 640,420 740,520" stroke="url(#armPeach)"/>
+      <path d="M384,384 C340,260 420,140 560,80"  stroke="url(#armYellow)"/>
+      <path d="M384,384 C260,360 140,440 60,560"  stroke="url(#armMint)"/>
+      <path d="M384,384 C320,460 220,640 200,740" stroke="url(#armBlue)"/>
+      <path d="M384,384 C500,460 580,600 620,740" stroke="url(#armPurple)"/>
+      <path d="M384,384 C540,360 660,260 720,160" stroke="url(#armPink)"/>
+    </g>
+  </g>
+
+  <!-- Bright center glow -->
+  <circle cx="384" cy="384" r="280" fill="url(#centerGlow)"/>
 </svg>
