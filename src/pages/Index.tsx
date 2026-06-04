@@ -165,32 +165,66 @@ export default function Index() {
       </header>
 
       {/* === Hero (slow scroll-zoom) === */}
-      <section id="hero-zoom" className="relative" style={{ height: "420vh" }}>
-        <div id="top" className="sticky top-0 h-screen w-full overflow-hidden">
+      <section id="hero-zoom" className="relative" style={{ height: "320vh" }}>
+        <div id="top" className="sticky top-0 h-screen w-full overflow-hidden bg-[#0d0f12]">
           <AnimatedBackdrop />
 
-          {/* Mountain background layer */}
+          {/* Mountain background layer — fills viewport, zooms toward camera */}
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
             style={{
-              transform: `translate3d(0, ${-heroProgress * 8}vh, 0) scale(${1 + heroProgress * 6})`,
+              transform: `translate3d(0, ${-heroProgress * 6}vh, 0) scale(${1 + heroProgress * 4})`,
               transformOrigin: "center center",
               willChange: "transform",
               transition: "transform 120ms linear",
             }}
           >
-            <div className="relative">
-              <div className="absolute inset-0 -z-10 blur-3xl opacity-60 bg-gradient-to-br from-sky-500/40 via-indigo-500/30 to-transparent rounded-full" />
+            <div className="relative h-full w-full flex items-center justify-center">
+              {/* Atmospheric glow that grows with the zoom so the frame never feels empty */}
+              <div
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 rounded-full blur-3xl"
+                style={{
+                  width: `${90 + heroProgress * 80}vmax`,
+                  height: `${90 + heroProgress * 80}vmax`,
+                  background:
+                    "radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(99,102,241,0.18) 35%, rgba(13,15,18,0) 70%)",
+                  opacity: 0.7 + heroProgress * 0.3,
+                }}
+              />
               <img
                 src={grapheionMark}
                 alt="Grapheion mountain logo"
-                className="w-[60vw] max-w-[680px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.45)]"
+                className="w-[92vw] max-w-[1100px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.55)]"
               />
             </div>
           </div>
 
+          {/* Vignette + bottom fade so the dark void blends into the next section */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, transparent 35%, rgba(13,15,18,0.55) 80%, rgba(13,15,18,0.95) 100%)",
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-40 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(13,15,18,0) 0%, rgba(13,15,18,1) 100%)",
+            }}
+          />
+
           {/* Overlay content layer — stays fixed/visible throughout */}
-          <div className="relative z-10 h-full flex flex-col items-center justify-center px-5 sm:px-8 text-center">
+          <div
+            className="relative z-10 h-full flex flex-col items-center justify-center px-5 sm:px-8 text-center"
+            style={{
+              opacity: Math.max(0, 1 - heroProgress * 1.25),
+              transform: `translate3d(0, ${heroProgress * 4}vh, 0)`,
+            }}
+          >
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1 text-xs text-slate-300">
               <Sparkles className="h-3.5 w-3.5 text-amber-300" />
               New: AI Study Buddy is now in every class
