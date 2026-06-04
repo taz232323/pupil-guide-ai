@@ -1,4 +1,4 @@
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   Sparkles, BookOpen, BarChart3, ShieldCheck, Trophy, Bot,
@@ -68,11 +68,11 @@ const NAV = [
 
 export default function Index() {
   const { user, role, loading } = useAuth();
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  const [heroProgress, setHeroProgress] = useState(0);
-  const targetProgress = useRef(0);
-  const currentProgress = useRef(0);
+  const [zoomProgress, setZoomProgress] = useState(0);
+  const [zooming, setZooming] = useState(false);
   const rafId = useRef<number | null>(null);
 
   useEffect(() => {
@@ -81,35 +81,42 @@ export default function Index() {
       const y = window.scrollY;
       setScrolled(y > 8);
       setScrollY(y);
-      const el = document.getElementById("hero-zoom");
-      if (el) {
-        const total = el.offsetHeight - window.innerHeight;
-        const start = el.offsetTop;
-        const p = Math.min(1, Math.max(0, (y - start) / Math.max(1, total)));
-        targetProgress.current = p;
-      }
-    };
-    const tick = () => {
-      // Lerp toward target — produces a slow, scroll-velocity-scaled zoom
-      const diff = targetProgress.current - currentProgress.current;
-      if (Math.abs(diff) > 0.0005) {
-        currentProgress.current += diff * 0.08;
-        setHeroProgress(currentProgress.current);
-      } else if (currentProgress.current !== targetProgress.current) {
-        currentProgress.current = targetProgress.current;
-        setHeroProgress(currentProgress.current);
-      }
-      rafId.current = window.requestAnimationFrame(tick);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    rafId.current = window.requestAnimationFrame(tick);
     return () => {
       window.removeEventListener("scroll", onScroll);
       if (rafId.current) window.cancelAnimationFrame(rafId.current);
       document.documentElement.style.scrollBehavior = "";
     };
   }, []);
+
+  const startZoom = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (zooming) return;
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      navigate("/auth");
+      return;
+    }
+    setZooming(true);
+    const duration = 1600;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      // ease-in-cubic
+      const eased = t * t * t;
+      setZoomProgress(eased);
+      if (t < 1) {
+        rafId.current = window.requestAnimationFrame(step);
+      } else {
+        navigate("/auth");
+      }
+    };
+    rafId.current = window.requestAnimationFrame(step);
+  };
 
   useEffect(() => {
     AOS.init({
@@ -164,19 +171,18 @@ export default function Index() {
         </div>
       </header>
 
-      {/* === Hero (slow scroll-zoom) === */}
-      <section id="hero-zoom" className="relative" style={{ height: "320vh" }}>
-        <div id="top" className="sticky top-0 h-screen w-full overflow-hidden bg-[#0d0f12]">
+      {/* === Hero (click-triggered zoom) === */}
+      <section id="hero-zoom" className="relative h-screen">
+        <div id="top" className="relative h-screen w-full overflow-hidden bg-[#0d0f12]">
           <AnimatedBackdrop />
 
           {/* Mountain background layer — fills viewport, zooms toward camera */}
           <div
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
             style={{
-              transform: `translate3d(0, ${-heroProgress * 6}vh, 0) scale(${1 + heroProgress * 4})`,
+              transform: `translate3d(0, ${-zoomProgress * 6}vh, 0) scale(${1 + zoomProgress * 6})`,
               transformOrigin: "center center",
               willChange: "transform",
-              transition: "transform 120ms linear",
             }}
           >
             <div className="relative h-full w-full flex items-center justify-center">
@@ -184,11 +190,11 @@ export default function Index() {
               <div
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 rounded-full blur-3xl"
                 style={{
-                  width: `${90 + heroProgress * 80}vmax`,
-                  height: `${90 + heroProgress * 80}vmax`,
+                  width: `${90 + zoomProgress * 80}vmax`,
+                  height: `${90 + zoomProgress * 80}vmax`,
                   background:
                     "radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(99,102,241,0.18) 35%, rgba(13,15,18,0) 70%)",
-                  opacity: 0.7 + heroProgress * 0.3,
+                  opacity: 0.7 + zoomProgress * 0.3,
                 }}
               />
               <img
@@ -221,8 +227,9 @@ export default function Index() {
           <div
             className="relative z-10 h-full flex flex-col items-center justify-center px-5 sm:px-8 text-center"
             style={{
-              opacity: Math.max(0, 1 - heroProgress * 1.25),
-              transform: `translate3d(0, ${heroProgress * 4}vh, 0)`,
+              opacity: Math.max(0, 1 - zoomProgress * 1.25),
+              transform: `translate3d(0, ${zoomProgress * 4}vh, 0)`,
+              pointerEvents: zooming ? "none" : undefined,
             }}
           >
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1 text-xs text-slate-300">
@@ -245,20 +252,16 @@ export default function Index() {
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button asChild size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
-                <Link to="/auth">
-                  Get Started <ArrowRight className="h-4 w-4" />
-                </Link>
+              <Button onClick={startZoom} size="lg" className="bg-white text-[#0d0f12] hover:bg-slate-200 h-12 px-7 text-base">
+                Get Started <ArrowRight className="h-4 w-4" />
               </Button>
               <Button
-                asChild
+                onClick={startZoom}
                 size="lg"
                 variant="outline"
                 className="h-12 px-7 text-base border-white/15 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 hover:text-white"
               >
-                <a href="#how">
-                  <Play className="h-4 w-4" /> Watch Demo
-                </a>
+                <Play className="h-4 w-4" /> Watch Demo
               </Button>
             </div>
           </div>
