@@ -1,21 +1,36 @@
-## Problem
+## Goal
+Remove the scroll-driven hero zoom. Make the mountain perform a cinematic zoom-in animation when the user clicks **Get Started** or **Watch Demo**, then navigate to `/auth` after the animation completes.
 
-Animations currently trigger when the **top** of the element reaches the **bottom** of the viewport (`anchorPlacement: "top-bottom"`), and the global `offset: 300` shifts that trigger another 300px earlier. So the element starts animating while it's still off-screen — by the time you scroll to it, the 900ms animation is mostly done and you only catch the tail end.
+## Changes (src/pages/Index.tsx only)
 
-## Fix
+1. **Remove scroll-zoom plumbing**
+   - Delete the `targetProgress`/`currentProgress`/`rafId` refs, the `tick` lerp loop, and the hero-progress portion of `onScroll`.
+   - Keep only the lightweight `scrolled` state for the nav bar.
+   - Collapse hero section height from `320vh` back to a normal full-viewport hero (`h-screen`, no sticky container).
 
-Change the trigger point so the animation starts when the element is actually entering the viewport, not before.
+2. **Add click-triggered zoom state**
+   - New state `zooming: boolean` and a `zoomProgress` value driven by a short `requestAnimationFrame` tween (~1.6s, ease-in-cubic).
+   - On click of either button:
+     - `e.preventDefault()`
+     - Set `zooming = true`, start the RAF tween from 0 → 1.
+     - On completion, `navigate("/auth")` via `react-router-dom`'s `useNavigate`.
 
-1. In `src/pages/Index.tsx` `AOS.init({...})`:
-   - `anchorPlacement: "top-bottom"` → `"center-bottom"` (waits until the element's center reaches the bottom of the viewport — i.e. roughly when its top edge is already on screen).
-   - `offset: 300` → `0` (no extra early trigger; the anchor alone decides the moment).
-   - Keep `duration: 900`, `easing: "ease-in-out"`, `once: true`, `mirror: false`.
+3. **Apply zoom transform**
+   - Reuse existing mountain layer styling, but drive `scale` (1 → ~7) and `translateY` (0 → small negative) from `zoomProgress` instead of `heroProgress`.
+   - Fade headline/buttons out as `zoomProgress` grows (`opacity: 1 - zoomProgress * 1.2`).
+   - Add `pointer-events-none` to buttons once `zooming` is true so the click can't repeat.
+   - Keep the atmospheric glow + vignette layers, also scaled by `zoomProgress`.
 
-2. Update every `data-aos-anchor-placement="top-bottom"` attribute on the page to `data-aos-anchor-placement="center-bottom"` so per-element overrides match the new global behavior. Affected elements: hero badge, h1, paragraph, CTA row, all Features section nodes, How It Works section nodes (including the connecting line and each step + icon), Testimonials section nodes, and the final CTA card + mountain icon.
+4. **Convert buttons**
+   - `Get Started`: change from `<Button asChild><Link to="/auth">` to a regular `<Button onClick={startZoom}>`.
+   - `Watch Demo`: same pattern — `<Button onClick={startZoom}>` (no longer scrolls to `#how`).
 
-3. Leave the hero mountain parallax (`translate3d` driven by `scrollY`) alone — it isn't an AOS animation.
+5. **Cleanup**
+   - Cancel the RAF in the unmount effect.
+   - Respect `prefers-reduced-motion`: if reduced, skip the animation and navigate immediately.
 
-## Expected result
-
-- On initial page load (no scroll): nothing has animated; every element sits in its pre-animation state.
-- As the user scrolls, each element begins its 900ms animation right as it crosses into the visible area, so the full motion is seen.
+## Technical notes
+- Single `useNavigate()` hook from `react-router-dom`.
+- Tween via `requestAnimationFrame` with a `startTime` timestamp; no new dependency needed.
+- The rest of the page (Features, How it works, Testimonials, Footer) is unchanged.
+- No backend, no schema, no other files touched.
