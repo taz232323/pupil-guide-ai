@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Coins, Flame, Sparkles, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { celebrate } from "@/lib/confetti";
+import { GoldCoinBurst } from "@/components/GoldCoinBurst";
 
 export type RewardData = {
   title: string;
@@ -25,9 +25,10 @@ type Props = {
  * Pure-CSS animations for entrance; canvas-confetti for the burst.
  */
 export function RewardOverlay({ open, data, onClose }: Props) {
+  const burstKey = useRef(0);
   useEffect(() => {
     if (!open || !data) return;
-    celebrate(data.intensity ?? (data.milestone ? "big" : "small"));
+    burstKey.current += 1;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -36,6 +37,7 @@ export function RewardOverlay({ open, data, onClose }: Props) {
   if (!open || !data) return null;
 
   const totalCoins = (data.coins ?? 0) + (data.bonusCoins ?? 0);
+  const big = (data.intensity ?? (data.milestone ? "big" : "small")) === "big";
 
   return (
     <div
@@ -44,6 +46,7 @@ export function RewardOverlay({ open, data, onClose }: Props) {
       role="dialog"
       aria-modal="true"
     >
+      <GoldCoinBurst triggerKey={burstKey.current} count={big ? 34 : 22} />
       {/* Backdrop with blur and soft gradient wash */}
       <div className="absolute inset-0 bg-foreground/40 backdrop-blur-md" />
       <div
