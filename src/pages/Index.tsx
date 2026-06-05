@@ -8,6 +8,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import grapheionMark from "@/assets/grapheion-mark.png";
+import grapheionMarkHd from "@/assets/grapheion-mark-hd.png";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
@@ -71,7 +72,6 @@ export default function Index() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  const [zoomProgress, setZoomProgress] = useState(0);
   const [zooming, setZooming] = useState(false);
   const rafId = useRef<number | null>(null);
   const heroSectionRef = useRef<HTMLDivElement | null>(null);
@@ -80,6 +80,9 @@ export default function Index() {
   const ctaRef = useRef<HTMLDivElement | null>(null);
   const vignetteRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
+  const mountainLayerRef = useRef<HTMLDivElement | null>(null);
+  const glowRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
@@ -177,7 +180,22 @@ export default function Index() {
       const t = Math.min(1, (now - start) / duration);
       // ease-in-cubic
       const eased = t * t * t;
-      setZoomProgress(eased);
+      const mountain = mountainLayerRef.current;
+      if (mountain) {
+        mountain.style.transform = `translate3d(0, ${-eased * 6}vh, 0) scale(${1 + eased * 6})`;
+      }
+      const glow = glowRef.current;
+      if (glow) {
+        const size = 90 + eased * 80;
+        glow.style.width = `${size}vmax`;
+        glow.style.height = `${size}vmax`;
+        glow.style.opacity = String(0.7 + eased * 0.3);
+      }
+      const overlay = overlayRef.current;
+      if (overlay) {
+        overlay.style.opacity = String(Math.max(0, 1 - eased * 1.25));
+        overlay.style.transform = `translate3d(0, ${eased * 4}vh, 0)`;
+      }
       if (t < 1) {
         rafId.current = window.requestAnimationFrame(step);
       } else {
@@ -247,28 +265,36 @@ export default function Index() {
 
           {/* Mountain background layer — fills viewport, zooms toward camera */}
           <div
+            ref={mountainLayerRef}
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
             style={{
-              transform: `translate3d(0, ${-zoomProgress * 6}vh, 0) scale(${1 + zoomProgress * 6})`,
+              transform: "translate3d(0, 0, 0) scale(1)",
               transformOrigin: "center center",
               willChange: "transform",
+              backfaceVisibility: "hidden",
             }}
           >
             <div className="relative h-full w-full flex items-center justify-center">
               {/* Atmospheric glow that grows with the zoom so the frame never feels empty */}
               <div
+                ref={glowRef}
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 rounded-full blur-3xl"
                 style={{
-                  width: `${90 + zoomProgress * 80}vmax`,
-                  height: `${90 + zoomProgress * 80}vmax`,
+                  width: "90vmax",
+                  height: "90vmax",
                   background:
                     "radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(99,102,241,0.18) 35%, rgba(13,15,18,0) 70%)",
-                  opacity: 0.7 + zoomProgress * 0.3,
+                  opacity: 0.7,
+                  willChange: "width, height, opacity",
                 }}
               />
               <img
-                src={grapheionMark}
+                src={grapheionMarkHd}
                 alt="Grapheion mountain logo"
+                width={1920}
+                height={1080}
+                decoding="async"
+                fetchPriority="high"
                 className="w-[92vw] max-w-[1100px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.55)]"
               />
             </div>
@@ -294,11 +320,13 @@ export default function Index() {
 
           {/* Overlay content layer — stays fixed/visible throughout */}
           <div
+            ref={overlayRef}
             className="relative z-10 h-full flex flex-col items-center justify-center px-5 sm:px-8 text-center"
             style={{
-              opacity: Math.max(0, 1 - zoomProgress * 1.25),
-              transform: `translate3d(0, ${zoomProgress * 4}vh, 0)`,
+              opacity: 1,
+              transform: "translate3d(0, 0, 0)",
               pointerEvents: zooming ? "none" : undefined,
+              willChange: "transform, opacity",
             }}
           >
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm px-3 py-1 text-xs text-slate-300">
