@@ -288,10 +288,10 @@ export default function Index() {
                 }}
               />
               <img
-                src={grapheionMarkHd}
+                src={grapheionMark}
                 alt="Grapheion mountain logo"
-                width={1920}
-                height={1080}
+                width={328}
+                height={280}
                 decoding="async"
                 fetchPriority="high"
                 className="w-[92vw] max-w-[1100px] h-auto object-contain drop-shadow-[0_18px_60px_rgba(96,165,250,0.55)]"
