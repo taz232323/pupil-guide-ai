@@ -8,7 +8,6 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import grapheionMark from "@/assets/grapheion-mark.png";
-import grapheionMarkHd from "@/assets/grapheion-mark-hd.png";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
