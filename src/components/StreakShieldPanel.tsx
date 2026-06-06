@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { ShieldActivation } from "@/components/ShieldActivation";
 
 type ClassRow = { id: string; name: string };
 type Shield = { id: string; class_id: string; shield_date: string; consumed: boolean };
@@ -23,6 +24,7 @@ export function StreakShieldPanel({ shields: shieldCount, onChange }: { shields:
   const [day, setDay] = useState<string>("");
   const [active, setActive] = useState<Shield[]>([]);
   const [busy, setBusy] = useState(false);
+  const [showShield, setShowShield] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -72,6 +74,7 @@ export function StreakShieldPanel({ shields: shieldCount, onChange }: { shields:
         _shield_date: day,
       });
       if (error) throw error;
+      setShowShield(true);
       toast.success("Shield activated 🛡");
       const { data: sh } = await supabase
         .from("streak_freeze_activations")
@@ -89,6 +92,8 @@ export function StreakShieldPanel({ shields: shieldCount, onChange }: { shields:
   }
 
   return (
+    <>
+    <ShieldActivation show={showShield} onDone={() => setShowShield(false)} />
     <Card className="border-border/60 shadow-card">
       <CardContent className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
@@ -157,5 +162,6 @@ export function StreakShieldPanel({ shields: shieldCount, onChange }: { shields:
         )}
       </CardContent>
     </Card>
+    </>
   );
 }
