@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
   /** Trigger key — changing it replays the burst. */
@@ -79,7 +80,7 @@ export function GoldCoinBurst({ triggerKey, count = 26 }: Props) {
 
   if (!visible) return null;
 
-  return (
+  return createPortal(
     <div
       aria-hidden
       className="pointer-events-none fixed inset-0 z-[200] overflow-hidden"
@@ -133,7 +134,8 @@ export function GoldCoinBurst({ triggerKey, count = 26 }: Props) {
           </span>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
