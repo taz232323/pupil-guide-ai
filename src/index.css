@@ -215,12 +215,46 @@ All colors MUST be HSL.
   }
   .animate-pulse-ring { animation: pulse-ring 1.6s ease-out infinite; }
 
+  @keyframes sketch-flow {
+    from { stroke-dashoffset: 96; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes sketch-pop {
+    0%, 10% { opacity: 0; transform: scale(0.92); }
+    22%, 100% { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes sketch-helper {
+    0%, 100% { transform: translate(0, 0) rotate(-1deg); }
+    50% { transform: translate(3px, -3px) rotate(2deg); }
+  }
+
+  .animate-sketch-flow {
+    animation: sketch-flow 3.5s linear infinite;
+  }
+
+  .animate-sketch-pop {
+    animation: sketch-pop 600ms ease-out both;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .animate-sketch-helper {
+    animation: sketch-helper 4s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
   /* Honor reduced motion preference globally */
   @media (prefers-reduced-motion: reduce) {
     .animate-page-enter,
     .animate-fade-in,
     .animate-bounce-pop,
     .animate-pulse-ring,
+    .animate-sketch-flow,
+    .animate-sketch-pop,
+    .animate-sketch-helper,
     .stagger-children > * { animation: none !important; opacity: 1 !important; transform: none !important; }
     .ripple-effect { display: none !important; }
   }
