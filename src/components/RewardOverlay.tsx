@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Coins, Flame, Sparkles, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoldCoinBurst } from "@/components/GoldCoinBurst";
@@ -39,7 +40,7 @@ export function RewardOverlay({ open, data, onClose }: Props) {
   const totalCoins = (data.coins ?? 0) + (data.bonusCoins ?? 0);
   const big = (data.intensity ?? (data.milestone ? "big" : "small")) === "big";
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-fade-in"
       onClick={onClose}
@@ -144,6 +145,7 @@ export function RewardOverlay({ open, data, onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
