@@ -16,6 +16,8 @@ with check (
   sender_role = 'parent'
   and auth.uid() = sender_id
   and group_id is null
+  and is_broadcast = false
+  and broadcast_id is null
   and recipient_id is not null
   and public.is_class_member(class_id, auth.uid())
   and public.is_class_teacher(class_id, recipient_id)

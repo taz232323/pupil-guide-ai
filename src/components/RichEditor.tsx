@@ -2,7 +2,8 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import LinkExt from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect } from "react";
+import DOMPurify from "dompurify";
+import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Bold, Italic, Strikethrough, List, ListOrdered, Heading2, Heading3,
@@ -98,10 +99,33 @@ export function RichEditor({ value, onChange, placeholder, className, minHeight 
 }
 
 export function RichContent({ html, className }: { html: string; className?: string }) {
+  const cleanHtml = useMemo(
+    () => DOMPurify.sanitize(html || "", {
+      ALLOWED_TAGS: [
+        "a",
+        "blockquote",
+        "br",
+        "code",
+        "em",
+        "h2",
+        "h3",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "s",
+        "strong",
+        "ul",
+      ],
+      ALLOWED_ATTR: ["class", "href", "rel", "target"],
+    }),
+    [html],
+  );
+
   return (
     <div
       className={cn("prose prose-sm max-w-none prose-headings:font-semibold prose-a:text-primary", className)}
-      dangerouslySetInnerHTML={{ __html: html || "" }}
+      dangerouslySetInnerHTML={{ __html: cleanHtml }}
     />
   );
 }
