@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { GraduationCap, Users, ArrowLeft, Mail, Lock, User as UserIcon } from "lucide-react";
+import { GraduationCap, Users, ArrowLeft, Mail, Lock, User as UserIcon, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import grapheionMark from "@/assets/grapheion-mark.png";
 
 type Role = "student" | "teacher";
+type SignInAccess = Role | "parent";
 
 const signUpSchema = z.object({
   fullName: z.string().trim().min(1, "Name is required").max(100),
@@ -31,6 +32,7 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
 
   const [selectedRole, setSelectedRole] = useState<Role>("student");
+  const [signInAccess, setSignInAccess] = useState<SignInAccess>("student");
   const [fullName, setFullName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
@@ -39,6 +41,9 @@ export default function Auth() {
   const [signinPassword, setSigninPassword] = useState("");
 
   if (!loading && user && role) {
+    if (sessionStorage.getItem("access_mode") === "parent" && role === "student") {
+      return <Navigate to="/parent-dashboard" replace />;
+    }
     return <Navigate to={role === "teacher" ? "/teacher" : "/student"} replace />;
   }
 
@@ -50,6 +55,7 @@ export default function Auth() {
       return;
     }
     setSubmitting(true);
+    sessionStorage.removeItem("access_mode");
     const { error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
@@ -75,16 +81,43 @@ export default function Auth() {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    if (signInAccess === "parent") {
+      sessionStorage.setItem("access_mode", "parent");
+    } else {
+      sessionStorage.removeItem("access_mode");
+    }
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: parsed.data.email,
       password: parsed.data.password,
     });
-    setSubmitting(false);
     if (error) {
+      sessionStorage.removeItem("access_mode");
+      setSubmitting(false);
       toast.error(error.message);
       return;
     }
+
+    const { data: roleRow } = data.user
+      ? await supabase.from("user_roles").select("role").eq("user_id", data.user.id).maybeSingle()
+      : { data: null };
+
+    if (signInAccess === "parent") {
+      if (roleRow?.role !== "student") {
+        sessionStorage.removeItem("access_mode");
+        await supabase.auth.signOut();
+        setSubmitting(false);
+        toast.error("Parent access requires a student's login credentials.");
+        return;
+      }
+      setSubmitting(false);
+      toast.success("Parent view opened.");
+      navigate("/parent-dashboard", { replace: true });
+      return;
+    }
+
+    setSubmitting(false);
     toast.success("Welcome back!");
+    navigate(roleRow?.role === "teacher" ? "/teacher" : "/student", { replace: true });
   };
 
   return (
@@ -153,6 +186,29 @@ export default function Auth() {
 
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-xs uppercase tracking-widest text-slate-400">Access as</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <RoleCard
+                        active={signInAccess === "student"}
+                        onClick={() => setSignInAccess("student")}
+                        icon={<GraduationCap className="h-5 w-5" />}
+                        label="Student"
+                      />
+                      <RoleCard
+                        active={signInAccess === "teacher"}
+                        onClick={() => setSignInAccess("teacher")}
+                        icon={<Users className="h-5 w-5" />}
+                        label="Teacher"
+                      />
+                      <RoleCard
+                        active={signInAccess === "parent"}
+                        onClick={() => setSignInAccess("parent")}
+                        icon={<UserRound className="h-5 w-5" />}
+                        label="Parent Access"
+                      />
+                    </div>
+                  </div>
                   <Field
                     id="signin-email"
                     label="Email"

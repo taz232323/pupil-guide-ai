@@ -658,6 +658,7 @@ export type Database = {
           read_at: string | null
           recipient_id: string | null
           sender_id: string
+          sender_role: string
         }
         Insert: {
           body: string
@@ -670,6 +671,7 @@ export type Database = {
           read_at?: string | null
           recipient_id?: string | null
           sender_id: string
+          sender_role?: string
         }
         Update: {
           body?: string
@@ -682,6 +684,7 @@ export type Database = {
           read_at?: string | null
           recipient_id?: string | null
           sender_id?: string
+          sender_role?: string
         }
         Relationships: [
           {
