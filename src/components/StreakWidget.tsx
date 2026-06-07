@@ -133,5 +133,6 @@ export function StreakWidget() {
         ))}
       </CardContent>
     </Card>
+    </>
   );
 }
