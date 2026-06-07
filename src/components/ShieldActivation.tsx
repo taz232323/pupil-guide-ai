@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 type Props = {
   show: boolean;
   onDone?: () => void;
+  title?: string;
+  subtitle?: string;
 };
 
 /**
@@ -15,7 +17,7 @@ type Props = {
  * - Diagonal shimmer sweep
  * - Subtle camera shake on the whole overlay
  */
-export function ShieldActivation({ show, onDone }: Props) {
+export function ShieldActivation({ show, onDone, title = "Shield Activated", subtitle }: Props) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -160,6 +162,18 @@ export function ShieldActivation({ show, onDone }: Props) {
             }
           />
         ))}
+      </div>
+
+      {/* Title / subtitle */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-[calc(50%+140px)] text-center px-6 shield-text">
+        <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(255,210,74,0.65)]">
+          {title}
+        </div>
+        {subtitle && (
+          <div className="mt-1 text-sm sm:text-base text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+            {subtitle}
+          </div>
+        )}
       </div>
     </div>,
     document.body
