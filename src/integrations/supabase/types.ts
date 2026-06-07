@@ -1263,6 +1263,15 @@ export type Database = {
         Args: { _class_id: string; _shield_date: string }
         Returns: Json
       }
+      auto_apply_streak_shields: {
+        Args: never
+        Returns: {
+          class_id: string
+          class_name: string
+          current_streak: number
+          shields_used: number
+        }[]
+      }
       award_ai_message_coins: { Args: { _student_id: string }; Returns: number }
       can_message: {
         Args: { _class_id: string; _recipient: string; _sender: string }
