@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { ShieldActivation } from "@/components/ShieldActivation";
+import { toast } from "sonner";
 
 type Row = {
   class_id: string;
@@ -18,10 +20,27 @@ export function StreakWidget() {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shieldSave, setShieldSave] = useState<{ className: string; streak: number } | null>(null);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
+      // Auto-apply streak shields for any missed days before reading streaks
+      try {
+        const { data: saves } = await supabase.rpc("auto_apply_streak_shields");
+        const list = (saves as any[]) ?? [];
+        if (list.length > 0) {
+          const first = list[0];
+          setShieldSave({
+            className: first.class_name,
+            streak: first.current_streak,
+          });
+          toast.success(`🛡 Streak Shield used — ${first.class_name} streak protected`);
+        }
+      } catch (e) {
+        // non-fatal
+      }
+
       // Get classes with daily practice enabled that the student is in
       const { data: memberships } = await supabase
         .from("class_members")
@@ -78,6 +97,13 @@ export function StreakWidget() {
   if (loading || rows.length === 0) return null;
 
   return (
+    <>
+    <ShieldActivation
+      show={!!shieldSave}
+      onDone={() => setShieldSave(null)}
+      title="Streak Shield Used!"
+      subtitle={shieldSave ? `Your ${shieldSave.streak}-day streak in ${shieldSave.className} has been protected.` : undefined}
+    />
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
