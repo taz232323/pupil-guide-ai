@@ -131,6 +131,16 @@ ${JSON.stringify(
     const yesterday = new Date(todayDate);
     yesterday.setUTCDate(todayDate.getUTCDate() - 1);
     const yStr = yesterday.toISOString().slice(0, 10);
+    let autoAppliedShields = 0;
+
+    const { data: autoApplyResult, error: autoApplyError } = await supabase.rpc("auto_apply_streak_shields", {
+      _class_id: session.class_id,
+    });
+    if (autoApplyError) {
+      console.warn("auto_apply_streak_shields failed:", autoApplyError.message);
+    } else {
+      autoAppliedShields = Number((autoApplyResult as any)?.shieldsConsumed ?? 0);
+    }
 
     const { data: streak } = await admin
       .from("daily_practice_streaks")
@@ -142,7 +152,7 @@ ${JSON.stringify(
     let current = 1;
     let longest = 1;
     let milestonesAwarded: number[] = [];
-    let shieldsConsumed = 0;
+    let shieldsConsumed = autoAppliedShields;
     if (streak) {
       milestonesAwarded = Array.isArray(streak.milestones_awarded) ? [...streak.milestones_awarded] : [];
       if (streak.last_practice_date === today) {
@@ -178,7 +188,7 @@ ${JSON.stringify(
               .from("streak_freeze_activations")
               .update({ consumed: true, consumed_at: new Date().toISOString() })
               .in("id", shields.map((s: any) => s.id));
-            shieldsConsumed = shields.length;
+            shieldsConsumed += shields.length;
             current = streak.current_streak + missingDates.length + 1;
           } else {
             current = 1;

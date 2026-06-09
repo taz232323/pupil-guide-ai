@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { buildSketchModePrompt, sanitizeSketchPayload } from "../_shared/sketch-style-runtime.ts";
+import { buildSketchModePrompt, sanitizeSketchPayload, type SketchPayload } from "../_shared/sketch-style-runtime.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -90,20 +90,28 @@ Deno.serve(async (req) => {
       ? await buildTeacherPrompt(userClient, user.id, displayName)
       : await buildStudentPrompt(userClient, user.id, displayName);
 
+    const cleanPrompt = lastUserMsg.content.replace(/^Sketch It:\s*/i, "").trim();
+
     if (!GEMINI_API_KEY) {
-      console.error("GEMINI_API_KEY is missing.");
-      return jsonResponse({ error: "Study Buddy AI is not configured." }, 503);
+      console.warn("GEMINI_API_KEY is missing. Returning deterministic Study Buddy fallback.");
+      return jsonResponse(buildFallbackResponse(mode, cleanPrompt, role));
     }
 
-    const reply = await callGemini({
-      mode,
-      systemPrompt: mode === "sketch" ? buildSketchModePrompt(systemPrompt) : systemPrompt,
-      messages,
-    });
+    let reply: string;
+    try {
+      reply = await callGemini({
+        mode,
+        systemPrompt: mode === "sketch" ? buildSketchModePrompt(systemPrompt) : systemPrompt,
+        messages,
+      });
+    } catch (error) {
+      console.error("Gemini request failed. Returning deterministic Study Buddy fallback.", error);
+      return jsonResponse(buildFallbackResponse(mode, cleanPrompt, role));
+    }
 
     if (mode === "sketch") {
       const rawSketch = parseJsonObject(reply);
-      const sketch = sanitizeSketchPayload(rawSketch);
+      const sketch = sanitizeSketchPayload(rawSketch) ?? buildFallbackSketch(cleanPrompt);
       if (!sketch) {
         console.error("Sketch payload failed validation.", reply.slice(0, 500));
         return jsonResponse({ error: "Sketch output was incomplete. Try a shorter, more concrete concept." }, 502);
@@ -122,6 +130,171 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });
+
+function buildFallbackResponse(mode: StudyBuddyMode, prompt: string, role: "teacher" | "student") {
+  if (mode === "sketch") {
+    const sketch = buildFallbackSketch(prompt);
+    return {
+      reply: sketch.explanation,
+      sketch,
+      awarded: 0,
+      fallback: true,
+    };
+  }
+
+  const concept = getConceptTitle(prompt);
+  const teacherLine = "Here is a quick classroom-ready starting point";
+  const studentLine = "Here is the simple version";
+  return {
+    reply: `${role === "teacher" ? teacherLine : studentLine} for **${concept}**:\n\n- Start with the main idea in one sentence.\n- Show one concrete example students can picture.\n- Ask a quick check question so you can tell whether it clicked.\n\nTry asking for a specific subject or clicking **Sketch It** for a visual version.`,
+    awarded: 0,
+    fallback: true,
+  };
+}
+
+function buildFallbackSketch(prompt: string): SketchPayload {
+  const lower = prompt.toLowerCase();
+  const title = getConceptTitle(prompt);
+
+  if (/(photo|plant|chlorophyll|leaf|sunlight|carbon dioxide|oxygen|glucose)/.test(lower)) {
+    return {
+      title: "Photosynthesis",
+      template: "science_flow",
+      subject: "science",
+      explanation: "Photosynthesis is how plants turn light energy into food. The leaf takes in sunlight, water, and carbon dioxide. Inside the plant, those inputs are changed into glucose for energy and oxygen that leaves the leaf.",
+      visual_metaphor: "A leaf works like a tiny food factory powered by sunlight.",
+      composition: "Sun and water arrows enter a large leaf, carbon dioxide enters from the side, and glucose plus oxygen leave on the right.",
+      image_prompt: "16:9 pure white hand-drawn educational sketch of photosynthesis with a sun, leaf, water drops, carbon dioxide arrow, glucose output, oxygen output, sparse black linework, orange flow arrows, blue notes.",
+      labels: ["Sunlight", "Water", "CO2", "Glucose", "Oxygen"],
+      objects: [
+        { type: "sun", label: "Sunlight", role: "input" },
+        { type: "water", label: "Water", role: "input" },
+        { type: "gas", label: "CO2", role: "input" },
+        { type: "leaf", label: "Leaf", role: "center" },
+        { type: "sugar", label: "Glucose", role: "output" },
+        { type: "gas", label: "Oxygen", role: "output" },
+      ],
+      steps: ["Light hits the leaf", "Water and CO2 enter", "The plant makes glucose", "Oxygen leaves the leaf"],
+      check_question: "What are the three inputs plants need for photosynthesis?",
+    };
+  }
+
+  if (/(democracy|vote|voter|citizen|government|law|rights|branch|court|election)/.test(lower)) {
+    return {
+      title: "Democracy",
+      template: "civics_power_map",
+      subject: "civics",
+      explanation: "Democracy means people have a voice in how they are governed. Citizens use voting, speech, and participation to choose leaders and influence laws. The government should answer to the people instead of holding power without them.",
+      visual_metaphor: "Power starts with citizens and flows toward leaders and laws.",
+      composition: "A group of citizens on the left sends votes toward elected leaders, who create laws that affect the community on the right.",
+      image_prompt: "16:9 pure white hand-drawn educational sketch of democracy with citizens, ballot, elected leaders, law document, community, sparse black linework, orange arrows showing power flow, blue labels.",
+      labels: ["Citizens", "Votes", "Leaders", "Laws", "Community"],
+      objects: [
+        { type: "people", label: "Citizens", role: "left" },
+        { type: "voter", label: "Votes", role: "step" },
+        { type: "branch", label: "Leaders", role: "center" },
+        { type: "law", label: "Laws", role: "right" },
+        { type: "people", label: "Community", role: "effect" },
+      ],
+      steps: ["Citizens share needs", "People vote", "Leaders make laws", "Laws affect everyone"],
+      check_question: "In a democracy, where should government power come from?",
+    };
+  }
+
+  if (/(equation|solve|variable|algebra|proportion|balance)/.test(lower)) {
+    return {
+      title,
+      template: "math_balance",
+      subject: "math",
+      explanation: `${title} works best when both sides stay balanced. Whatever operation you do on one side, you do the same thing on the other. That keeps the equation true while you isolate the unknown.`,
+      visual_metaphor: "An equation is like a balanced scale.",
+      composition: "A balance scale holds the left side and right side of an equation with the variable highlighted.",
+      image_prompt: `16:9 pure white hand-drawn educational sketch of ${title} as a balanced scale, variable highlighted, sparse black linework, orange focus arrows, blue notes.`,
+      labels: ["Left side", "Right side", "Same move", "Variable"],
+      objects: [
+        { type: "variable", label: "x", role: "center" },
+        { type: "number", label: "Left side", role: "left" },
+        { type: "number", label: "Right side", role: "right" },
+      ],
+      steps: ["Find the variable", "Do the same move", "Keep balance", "Check the answer"],
+      check_question: "Why do you have to do the same operation to both sides?",
+    };
+  }
+
+  if (/(fraction|negative|integer|inequality|number line|coordinate)/.test(lower)) {
+    return {
+      title,
+      template: "math_number_line",
+      subject: "math",
+      explanation: `${title} can be pictured on a number line. The position shows how large or small a value is. Moving right means the value increases, and moving left means the value decreases.`,
+      visual_metaphor: "A number line is a map for values.",
+      composition: "A horizontal number line with marked points and arrows showing movement or comparison.",
+      image_prompt: `16:9 pure white hand-drawn educational sketch of ${title} on a number line, marked points, sparse black linework, orange arrows, blue labels.`,
+      labels: ["Smaller", "Point", "Bigger", "Direction"],
+      objects: [
+        { type: "number", label: "Smaller", role: "left" },
+        { type: "point", label: "Point", role: "center" },
+        { type: "number", label: "Bigger", role: "right" },
+      ],
+      steps: ["Draw the line", "Mark the point", "Compare positions", "Read the value"],
+      check_question: "Which direction on a number line means the value is increasing?",
+    };
+  }
+
+  if (/(plot|story|character|theme|claim|evidence|essay|conflict)/.test(lower)) {
+    return {
+      title,
+      template: "story_arc",
+      subject: "english",
+      explanation: `${title} is easier to understand when you track how ideas build. A story or argument usually starts with a setup, develops through evidence or conflict, and ends with a clearer meaning. The important part is seeing how each piece changes the reader's understanding.`,
+      visual_metaphor: "Ideas climb a story arc toward meaning.",
+      composition: "A rising story arc with labeled beats from setup to resolution or claim to evidence to reasoning.",
+      image_prompt: `16:9 pure white hand-drawn educational sketch of ${title} as a story arc, book, claim, evidence, conflict, sparse black linework, orange path, blue labels.`,
+      labels: ["Setup", "Conflict", "Evidence", "Meaning"],
+      objects: [
+        { type: "book", label: "Text", role: "left" },
+        { type: "conflict", label: "Conflict", role: "center" },
+        { type: "evidence", label: "Evidence", role: "step" },
+        { type: "claim", label: "Meaning", role: "right" },
+      ],
+      steps: ["Start with setup", "Add conflict or evidence", "Explain the change", "Name the meaning"],
+      check_question: "What detail best shows the main idea?",
+    };
+  }
+
+  return {
+    title,
+    template: "process",
+    subject: "general",
+    explanation: `${title} can be broken into a few connected parts. First identify the main idea, then look at what causes it, what changes, and what result comes next. A visual model helps you see the order instead of memorizing loose facts.`,
+    visual_metaphor: "A concept becomes a simple path from cause to result.",
+    composition: "Three labeled nodes move left to right with arrows showing how the idea develops.",
+    image_prompt: `16:9 pure white hand-drawn educational sketch explaining ${title}, three connected steps, sparse black linework, orange arrows, blue labels.`,
+    labels: ["Main idea", "Cause", "Change", "Result"],
+    objects: [
+      { type: "generic", label: "Main idea", role: "left" },
+      { type: "generic", label: "Change", role: "center" },
+      { type: "generic", label: "Result", role: "right" },
+    ],
+    steps: ["Name the idea", "Find the cause", "Show the change", "Check the result"],
+    check_question: "What is the most important result of this idea?",
+  };
+}
+
+function getConceptTitle(prompt: string) {
+  const cleaned = prompt
+    .replace(/^Sketch It:\s*/i, "")
+    .replace(/\b(give me|one sentence|in one sentence|briefly|quickly|please|can you|could you|about|explain|explaining|show|sketch|visual|simple|middle school|student|for a|with a)\b/gi, " ")
+    .replace(/[^a-z0-9\s-]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "This Concept";
+  return cleaned
+    .split(" ")
+    .slice(0, 5)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
 
 async function buildTeacherPrompt(userClient: any, userId: string, displayName: string) {
   const { data: classes } = await userClient

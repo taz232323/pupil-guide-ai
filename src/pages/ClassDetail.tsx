@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X, HelpCircle, Plus, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X, HelpCircle, Plus, Trash2, Loader2, ShieldCheck, HeartPulse, Send, Clock3, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StudentAvatar } from "@/components/StudentAvatar";
@@ -19,6 +20,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ClassModules } from "@/components/modules/ClassModules";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconButton } from "@/components/IconButton";
+import { getMoodOption } from "@/lib/moodCheckins";
 import { toast } from "sonner";
 
 type ClassRow = {
@@ -44,6 +46,21 @@ type PracticeQuestion = {
   expected_answer: string | null;
 };
 
+type AwardKind = "star" | "crown" | "shield";
+
+type MoodCheckIn = {
+  id: string;
+  class_id: string;
+  teacher_id: string;
+  student_id: string;
+  prompt: string;
+  mood_key: string | null;
+  note: string | null;
+  wants_help: boolean;
+  created_at: string;
+  responded_at: string | null;
+};
+
 export default function ClassDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -59,10 +76,15 @@ export default function ClassDetail() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [awardOpen, setAwardOpen] = useState(false);
   const [awardTargets, setAwardTargets] = useState<Member[]>([]);
-  const [awardCurrency, setAwardCurrency] = useState<"star" | "crown">("star");
+  const [awardKind, setAwardKind] = useState<AwardKind>("star");
   const [awardAmount, setAwardAmount] = useState<string>("1");
   const [awardReason, setAwardReason] = useState("");
   const [awarding, setAwarding] = useState(false);
+  const [moodCheckIns, setMoodCheckIns] = useState<MoodCheckIn[]>([]);
+  const [moodOpen, setMoodOpen] = useState(false);
+  const [moodTargets, setMoodTargets] = useState<Member[]>([]);
+  const [moodPrompt, setMoodPrompt] = useState("How are you feeling today?");
+  const [sendingMood, setSendingMood] = useState(false);
   
   // Practice Question Bank state
   const [practiceQuestions, setPracticeQuestions] = useState<PracticeQuestion[]>([]);
@@ -74,9 +96,61 @@ export default function ClassDetail() {
 
   const studentMembers = members.filter((m) => !m.isTeacher);
 
+  const getMember = (studentId: string) => members.find((m) => m.id === studentId);
+
+  const loadMoodCheckIns = async (classId: string) => {
+    const { data, error } = await supabase
+      .from("mood_checkins")
+      .select("*")
+      .eq("class_id", classId)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (error) {
+      console.warn("mood check-ins load failed:", error.message);
+      return;
+    }
+
+    setMoodCheckIns((data ?? []) as MoodCheckIn[]);
+  };
+
+  const openMoodCheckIn = (targets: Member[]) => {
+    setMoodTargets(targets);
+    setMoodPrompt("How are you feeling today?");
+    setMoodOpen(true);
+  };
+
+  const sendMoodCheckIn = async () => {
+    if (!cls || moodTargets.length === 0) return;
+    const prompt = moodPrompt.trim() || "How are you feeling today?";
+    if (prompt.length > 240) {
+      toast.error("Keep the prompt under 240 characters");
+      return;
+    }
+
+    setSendingMood(true);
+    const { data, error } = await supabase.rpc("teacher_send_mood_checkins", {
+      _class_id: cls.id,
+      _student_ids: moodTargets.map((target) => target.id),
+      _prompt: prompt,
+    });
+    setSendingMood(false);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    const count = (data as number) ?? moodTargets.length;
+    toast.success(`Sent check-in to ${count} student${count === 1 ? "" : "s"}`);
+    setMoodOpen(false);
+    setSelectedIds(new Set());
+    void loadMoodCheckIns(cls.id);
+  };
+
   const openAward = (targets: Member[]) => {
     setAwardTargets(targets);
-    setAwardCurrency("star");
+    setAwardKind("star");
     setAwardAmount("1");
     setAwardReason("");
     setAwardOpen(true);
@@ -90,18 +164,25 @@ export default function ClassDetail() {
       return;
     }
     setAwarding(true);
-    const { data, error } = await supabase.rpc("teacher_award_coins", {
-      _class_id: cls.id,
-      _student_ids: awardTargets.map((t) => t.id),
-      _currency: awardCurrency,
-      _amount: amt,
-      _reason: awardReason.trim() || null,
-    });
+    const { data, error } = awardKind === "shield"
+      ? await supabase.rpc("teacher_award_streak_shields", {
+          _class_id: cls.id,
+          _student_ids: awardTargets.map((t) => t.id),
+          _amount: amt,
+          _reason: awardReason.trim() || null,
+        })
+      : await supabase.rpc("teacher_award_coins", {
+          _class_id: cls.id,
+          _student_ids: awardTargets.map((t) => t.id),
+          _currency: awardKind,
+          _amount: amt,
+          _reason: awardReason.trim() || null,
+        });
     setAwarding(false);
     if (error) { toast.error(error.message); return; }
     const n = (data as number) ?? awardTargets.length;
-    const label = awardCurrency === "star" ? "Star" : "Crown";
-    toast.success(`Awarded ${amt} ${label} Coin${amt === 1 ? "" : "s"} to ${n} student${n === 1 ? "" : "s"}`);
+    const label = awardKind === "star" ? "Star Coin" : awardKind === "crown" ? "Crown Coin" : "Streak Shield";
+    toast.success(`Awarded ${amt} ${label}${amt === 1 ? "" : "s"} to ${n} student${n === 1 ? "" : "s"}`);
     setAwardOpen(false);
     setSelectedIds(new Set());
   };
@@ -167,9 +248,14 @@ export default function ClassDetail() {
             setShowPracticePrompt(true);
           }
         }
+
+        await loadMoodCheckIns(id);
+      } else {
+        setMoodCheckIns([]);
       }
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user]);
 
   const saveSyllabus = async () => {
@@ -534,13 +620,23 @@ export default function ClassDetail() {
                     />
                     <span>{selectedIds.size} selected</span>
                   </div>
-                  <Button
-                    size="sm"
-                    disabled={selectedIds.size === 0}
-                    onClick={() => openAward(studentMembers.filter((m) => selectedIds.has(m.id)))}
-                  >
-                    <Coins className="h-4 w-4 mr-1.5" />Give coins to selected
-                  </Button>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => openMoodCheckIn(studentMembers.filter((m) => selectedIds.has(m.id)))}
+                    >
+                      <HeartPulse className="h-4 w-4 mr-1.5" />Check in selected
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => openAward(studentMembers.filter((m) => selectedIds.has(m.id)))}
+                    >
+                      <Coins className="h-4 w-4 mr-1.5" />Give reward
+                    </Button>
+                  </div>
                 </div>
               )}
               <ul className="flex flex-wrap gap-3">
@@ -569,9 +665,19 @@ export default function ClassDetail() {
                         size="sm"
                         variant="outline"
                         className="h-7 px-2"
+                        onClick={() => openMoodCheckIn([m])}
+                      >
+                        <HeartPulse className="h-3.5 w-3.5 mr-1" />Check in
+                      </Button>
+                    )}
+                    {isTeacher && !m.isTeacher && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2"
                         onClick={() => openAward([m])}
                       >
-                        <Coins className="h-3.5 w-3.5 mr-1" />Give coins
+                        <Coins className="h-3.5 w-3.5 mr-1" />Reward
                       </Button>
                     )}
                     {isTeacher && !m.isTeacher && (
@@ -582,6 +688,83 @@ export default function ClassDetail() {
                   </li>
                 ))}
               </ul>
+
+              {isTeacher && (
+                <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-semibold">Recent check-ins</h3>
+                      <p className="text-xs text-muted-foreground">Private responses from students in this class.</p>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => loadMoodCheckIns(cls.id)}>
+                      Refresh
+                    </Button>
+                  </div>
+                  {moodCheckIns.length === 0 ? (
+                    <div className="mt-4 rounded-lg border border-dashed bg-card p-5 text-center text-sm text-muted-foreground">
+                      No check-ins sent yet.
+                    </div>
+                  ) : (
+                    <ul className="mt-4 divide-y divide-border rounded-lg border bg-card">
+                      {moodCheckIns.map((row) => {
+                        const student = getMember(row.student_id);
+                        const mood = getMoodOption(row.mood_key);
+                        return (
+                          <li key={row.id} className="p-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex min-w-0 items-start gap-3">
+                                <StudentAvatar size="sm" name={student?.name ?? "Student"} items={student?.items ?? []} />
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-sm font-semibold">{student?.name ?? "Student"}</p>
+                                    {row.responded_at ? (
+                                      <Badge variant="outline" className="gap-1 text-success">
+                                        <CheckCircle2 className="h-3 w-3" /> Responded
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="secondary" className="gap-1">
+                                        <Clock3 className="h-3 w-3" /> Pending
+                                      </Badge>
+                                    )}
+                                    {row.wants_help && (
+                                      <Badge variant="destructive" className="gap-1">
+                                        <AlertTriangle className="h-3 w-3" /> Wants help
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{row.prompt}</p>
+                                  {row.note && (
+                                    <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-sm leading-relaxed">
+                                      {row.note}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-left sm:text-right">
+                                {mood ? (
+                                  <Badge variant="outline" className="text-sm">
+                                    <span className="mr-1" aria-hidden="true">{mood.emoji}</span>{mood.label}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">No answer yet</Badge>
+                                )}
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  {new Date(row.responded_at ?? row.created_at).toLocaleString([], {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -595,23 +778,68 @@ export default function ClassDetail() {
         destructive
         onConfirm={async () => { if (toRemove) await removeStudent(toRemove); }}
       />
+      <Dialog open={moodOpen} onOpenChange={setMoodOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send check-in</DialogTitle>
+            <DialogDescription>
+              {moodTargets.length === 1
+                ? `Ask ${moodTargets[0]?.name} how they are feeling.`
+                : `Ask ${moodTargets.length} students how they are feeling.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/40 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Students</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {moodTargets.map((target) => (
+                  <span key={target.id} className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-medium">
+                    <StudentAvatar size="sm" name={target.name} items={target.items} />
+                    {target.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="mood-prompt" className="text-sm">Prompt</Label>
+              <Textarea
+                id="mood-prompt"
+                rows={3}
+                value={moodPrompt}
+                maxLength={240}
+                onChange={(event) => setMoodPrompt(event.target.value)}
+                placeholder="How are you feeling today?"
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">{moodPrompt.length}/240</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setMoodOpen(false)} disabled={sendingMood}>Cancel</Button>
+            <Button onClick={sendMoodCheckIn} disabled={sendingMood || moodTargets.length === 0}>
+              {sendingMood ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
+              {sendingMood ? "Sending..." : "Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={awardOpen} onOpenChange={setAwardOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Give coins</DialogTitle>
+            <DialogTitle>Give reward</DialogTitle>
             <DialogDescription>
               {awardTargets.length === 1
-                ? `Award coins to ${awardTargets[0]?.name}.`
-                : `Award the same coins to ${awardTargets.length} students.`}
+                ? `Award a classroom reward to ${awardTargets[0]?.name}.`
+                : `Award the same classroom reward to ${awardTargets.length} students.`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-sm">Coin type</Label>
+              <Label className="text-sm">Reward type</Label>
               <RadioGroup
-                value={awardCurrency}
-                onValueChange={(v) => setAwardCurrency(v as "star" | "crown")}
-                className="flex gap-4 mt-2"
+                value={awardKind}
+                onValueChange={(v) => setAwardKind(v as AwardKind)}
+                className="grid gap-2 mt-2 sm:grid-cols-3"
               >
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <RadioGroupItem value="star" id="award-star" />
@@ -620,6 +848,12 @@ export default function ClassDetail() {
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <RadioGroupItem value="crown" id="award-crown" />
                   <span>👑 Crown Coins</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <RadioGroupItem value="shield" id="award-shield" />
+                  <span className="inline-flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Streak Shields
+                  </span>
                 </label>
               </RadioGroup>
             </div>

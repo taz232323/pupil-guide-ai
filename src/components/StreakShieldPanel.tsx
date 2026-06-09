@@ -1,28 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import { CalendarPlus, ShieldCheck, ShieldAlert } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Clock3, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
 
 type ClassRow = { id: string; name: string };
-type Shield = { id: string; class_id: string; shield_date: string; consumed: boolean };
+type Shield = { id: string; class_id: string; shield_date: string; consumed: boolean; consumed_at: string | null };
 
-export function StreakShieldPanel({ shields: shieldCount, onChange }: { shields: number; onChange: () => void }) {
+export function StreakShieldPanel({ shields: shieldCount }: { shields: number; onChange?: () => void }) {
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRow[]>([]);
-  const [classId, setClassId] = useState<string>("");
-  const [day, setDay] = useState<string>("");
-  const [active, setActive] = useState<Shield[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [recent, setRecent] = useState<Shield[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -36,57 +25,19 @@ export function StreakShieldPanel({ shields: shieldCount, onChange }: { shields:
         .filter((c) => c && c.daily_practice_enabled)
         .map((c) => ({ id: c.id, name: c.name }));
       setClasses(list);
-      if (list[0]) setClassId(list[0].id);
 
-      const today = new Date().toISOString().slice(0, 10);
+      const since = new Date();
+      since.setDate(since.getDate() - 30);
       const { data: sh } = await supabase
         .from("streak_freeze_activations")
-        .select("id, class_id, shield_date, consumed")
+        .select("id, class_id, shield_date, consumed, consumed_at")
         .eq("student_id", user.id)
-        .gte("shield_date", today)
-        .order("shield_date");
-      setActive(((sh as Shield[]) ?? []));
+        .gte("shield_date", since.toISOString().slice(0, 10))
+        .order("shield_date", { ascending: false })
+        .limit(12);
+      setRecent(((sh as Shield[]) ?? []));
     })();
   }, [user]);
-
-  const dayOptions = useMemo(() => {
-    const out: { value: string; label: string }[] = [];
-    const d = new Date();
-    for (let i = 0; i <= 7; i++) {
-      const dt = new Date(d);
-      dt.setDate(d.getDate() + i);
-      const value = dt.toISOString().slice(0, 10);
-      const label =
-        i === 0 ? "Today" : i === 1 ? "Tomorrow" : dt.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-      out.push({ value, label });
-    }
-    return out;
-  }, []);
-
-  async function activate() {
-    if (!classId || !day) return;
-    setBusy(true);
-    try {
-      const { error } = await supabase.rpc("activate_streak_shield", {
-        _class_id: classId,
-        _shield_date: day,
-      });
-      if (error) throw error;
-      toast.success("Shield activated 🛡");
-      const { data: sh } = await supabase
-        .from("streak_freeze_activations")
-        .select("id, class_id, shield_date, consumed")
-        .eq("student_id", user!.id)
-        .gte("shield_date", new Date().toISOString().slice(0, 10))
-        .order("shield_date");
-      setActive(((sh as Shield[]) ?? []));
-      onChange();
-    } catch (e: any) {
-      toast.error(e.message || "Could not activate shield");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <Card className="border-border/60 shadow-card">
@@ -101,7 +52,7 @@ export function StreakShieldPanel({ shields: shieldCount, onChange }: { shields:
               </h3>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Activate one before a day you might miss daily practice — your streak survives.
+              Shields apply automatically after a missed daily practice day. One shield protects one missed day.
             </p>
           </div>
         </div>
@@ -110,45 +61,42 @@ export function StreakShieldPanel({ shields: shieldCount, onChange }: { shields:
           <p className="text-sm text-muted-foreground inline-flex items-center gap-1">
             <ShieldAlert className="h-4 w-4" /> Join a class with daily practice to use shields.
           </p>
+        ) : shieldCount > 0 ? (
+          <div className="rounded-lg border border-primary/20 bg-primary-soft/50 px-3 py-2 text-sm">
+            <span className="font-medium">Auto-protection ready.</span>{" "}
+            If you miss practice in any daily-practice class, Grapheion will use a shield to keep your streak alive.
+          </div>
         ) : (
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Select value={classId} onValueChange={setClassId}>
-              <SelectTrigger className="sm:w-1/2"><SelectValue placeholder="Class" /></SelectTrigger>
-              <SelectContent>
-                {classes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={day} onValueChange={setDay}>
-              <SelectTrigger className="sm:w-1/2"><SelectValue placeholder="Pick a day" /></SelectTrigger>
-              <SelectContent>
-                {dayOptions.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={activate} disabled={!classId || !day || shieldCount < 1 || busy}>
-              <CalendarPlus className="h-4 w-4 mr-1" />
-              {busy ? "…" : "Activate"}
-            </Button>
+          <div className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
+            No shields available. Earn more from quests, daily rewards, or teacher rewards.
           </div>
         )}
 
-        {active.length > 0 && (
+        {recent.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Active shields</p>
+            <p className="text-xs font-medium text-muted-foreground">Recent shield activity</p>
             <ul className="text-sm space-y-1">
-              {active.map((s) => {
+              {recent.map((s) => {
                 const cls = classes.find((c) => c.id === s.class_id)?.name ?? "Class";
                 const d = new Date(s.shield_date + "T00:00:00");
                 return (
-                  <li key={s.id} className="flex items-center justify-between rounded-md border border-border/60 px-3 py-1.5 bg-accent/40">
-                    <span className="inline-flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-primary" />
-                      {d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                  <li key={s.id} className="flex items-center justify-between gap-3 rounded-md border border-border/60 px-3 py-1.5 bg-accent/40">
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      {s.consumed ? (
+                        <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
+                      ) : (
+                        <Clock3 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="truncate">
+                        {d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                      </span>
                     </span>
-                    <span className="text-xs text-muted-foreground">{cls}</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="max-w-24 truncate text-xs text-muted-foreground">{cls}</span>
+                      <Badge variant={s.consumed ? "default" : "secondary"} className="text-[10px]">
+                        {s.consumed ? "Used" : "Ready"}
+                      </Badge>
+                    </div>
                   </li>
                 );
               })}

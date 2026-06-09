@@ -324,21 +324,36 @@ export default function ParentDashboard() {
     const text = message.trim();
     if (!text) return;
     setSending(true);
-    const { error } = await supabase.from("messages").insert({
-      class_id: selectedClassId,
-      sender_id: user.id,
-      recipient_id: selectedTeacher.id,
-      body: text,
-      sender_role: "parent",
-    });
-    setSending(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { data: insertedMessage, error } = await supabase.from("messages").insert({
+        class_id: selectedClassId,
+        sender_id: user.id,
+        recipient_id: selectedTeacher.id,
+        body: text,
+        sender_role: "parent",
+      }).select("id").single();
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      if (insertedMessage?.id) {
+        const { error: notifyError } = await supabase.functions.invoke("notify-parent-message", {
+          body: { messageId: insertedMessage.id },
+        });
+
+        if (notifyError) {
+          toast.warning("Message sent, but the email notification could not be delivered yet.");
+        }
+      }
+
+      toast.success("Message sent to teacher.");
+      setSelectedTeacher(null);
+      setMessage("");
+    } finally {
+      setSending(false);
     }
-    toast.success("Message sent to teacher.");
-    setSelectedTeacher(null);
-    setMessage("");
   };
 
   const exitParentView = () => {

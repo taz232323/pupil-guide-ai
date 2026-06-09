@@ -46,7 +46,7 @@ export default function StudentRewards() {
             <Sparkles className="h-6 w-6 text-warning" /> Rewards & Shop
           </h1>
           <p className="text-sm text-muted-foreground">
-            Open your daily box, finish quests, stockpile rare Streak Shields, and spend coins in the shop.
+            Open your daily box, finish quests, earn automatic Streak Shields, and spend coins in the shop.
           </p>
         </header>
 

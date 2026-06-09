@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { JoinClassCard } from "@/components/JoinClassCard";
 import { LeaderboardWidget } from "@/components/LeaderboardWidget";
 import { StreakWidget } from "@/components/StreakWidget";
+import { MoodCheckInCard } from "@/components/MoodCheckInCard";
 
 type Row = {
   id: string;
@@ -281,6 +282,7 @@ export default function StudentDashboard() {
         ) : (
           <>
             <JoinClassCard variant="compact" onJoined={load} />
+            <MoodCheckInCard />
             {/* Today's Focus — most prominent */}
             <section className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary-soft via-card to-card p-5 sm:p-6 shadow-elevated">
               <div className="flex items-center justify-between mb-4">

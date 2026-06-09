@@ -139,11 +139,14 @@ export default function StudentDailyPractice() {
       setResults(data);
       const r: any = data;
       const pct = r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
+      const shieldText = r.shieldsConsumed > 0
+        ? `${r.shieldsConsumed} Streak Shield${r.shieldsConsumed === 1 ? "" : "s"} protected your streak.`
+        : null;
       setReward({
         title: r.milestoneHit ? `${r.milestoneHit}-day streak!` : "Practice complete!",
         subtitle: r.milestoneHit
           ? "Milestone unlocked — keep the fire going."
-          : "Nice work — your streak grows.",
+          : shieldText ?? "Nice work — your streak grows.",
         coins: r.baseCoins + (r.milestoneBonus ?? 0),
         bonusCoins: r.bonusCoins,
         streak: r.currentStreak,
@@ -269,7 +272,7 @@ function ResultsView({ results }: { results: any }) {
       </div>
     );
   }
-  const { answered, correct, baseCoins, bonusCoins, milestoneBonus, milestoneHit, currentStreak } = results;
+  const { answered, correct, baseCoins, bonusCoins, milestoneBonus, milestoneHit, currentStreak, shieldsConsumed } = results;
   const pct = answered ? Math.round((correct / answered) * 100) : 0;
   return (
     <div className="space-y-3">
@@ -282,6 +285,9 @@ function ResultsView({ results }: { results: any }) {
         {bonusCoins > 0 && <p className="text-sm">✨ +{bonusCoins} bonus for extra questions</p>}
         {milestoneBonus > 0 && (
           <p className="text-sm">🎉 +{milestoneBonus} milestone bonus ({milestoneHit}-day streak!)</p>
+        )}
+        {shieldsConsumed > 0 && (
+          <p className="text-sm">🛡 {shieldsConsumed} Streak Shield{shieldsConsumed === 1 ? "" : "s"} protected missed practice.</p>
         )}
         <p className="text-sm font-medium pt-1 flex items-center gap-1">
           <Flame className="h-4 w-4 text-orange-500" /> {currentStreak}-day streak — keep it going tomorrow!
