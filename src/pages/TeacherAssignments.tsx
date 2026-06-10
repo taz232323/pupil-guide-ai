@@ -143,7 +143,7 @@ export const TeacherAssignments = () => {
               <DialogTitle>Create an assignment</DialogTitle>
               <DialogDescription>Students in the selected class will see it.</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
+            <form noValidate onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
                 <Label>Class</Label>
                 <Select value={classId} onValueChange={setClassId}>
