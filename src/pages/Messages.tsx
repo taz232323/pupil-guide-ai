@@ -262,7 +262,7 @@ export const Messages = () => {
       const { data, error } = await q;
       if (error) { toast.error(error.message); return; }
       if (cancel) return;
-      setThread((data ?? []) as Message[]);
+      setThread((data ?? []) as unknown as Message[]);
 
       // Mark received messages as read (best-effort; bumps unread badge down)
       const unreadIds = (data ?? [])
@@ -812,7 +812,7 @@ const BroadcastDialog = ({
       broadcast_id: broadcastId,
       sender_role: "teacher",
     }));
-    const { error } = await supabase.from("messages").insert(rows);
+    const { error } = await (supabase as any).from("messages").insert(rows);
     setSending(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`Broadcast sent to ${deliveries.length} student${deliveries.length === 1 ? "" : "s"}`);
