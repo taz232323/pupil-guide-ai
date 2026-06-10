@@ -37,7 +37,12 @@ export function StreakWidget() {
       }
       const classIds = enabled.map((m: any) => m.class_id);
       const today = new Date().toISOString().slice(0, 10);
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      // Compute the most recent weekday on or before yesterday (so Mon's "previous" is Fri).
+      const prev = new Date(Date.now() - 86400000);
+      while (prev.getUTCDay() === 0 || prev.getUTCDay() === 6) {
+        prev.setUTCDate(prev.getUTCDate() - 1);
+      }
+      const prevWeekday = prev.toISOString().slice(0, 10);
       const { error: shieldErr } = await (supabase as any).rpc("auto_apply_streak_shields");
       if (shieldErr) console.warn("auto shield sync failed:", shieldErr.message);
 
@@ -62,8 +67,8 @@ export function StreakWidget() {
       const list: Row[] = enabled.map((m: any) => {
         const s = map.get(m.class_id);
         let cur = s?.current_streak || 0;
-        // If they didn't practice yesterday or today, streak is broken
-        if (s && s.last_practice_date && s.last_practice_date !== today && s.last_practice_date !== yesterday) {
+        // Weekend-aware: streak alive if last practice was today, or on/after the most recent weekday.
+        if (s && s.last_practice_date && s.last_practice_date < prevWeekday && s.last_practice_date !== today) {
           cur = 0;
         }
         return {
