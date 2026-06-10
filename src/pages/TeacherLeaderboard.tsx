@@ -6,13 +6,15 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StudentAvatar } from "@/components/StudentAvatar";
-import { Trophy, Star, Crown, Medal } from "lucide-react";
+import { Trophy, Star, Crown, Medal, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { StreakFlame } from "@/components/StreakFlame";
+import { useStreakFlames } from "@/hooks/useStreakFlames";
 
 type ClassRow = { id: string; name: string; subject: string };
 type ProfileRow = { id: string; full_name: string | null; avatar_items: string[] };
-type Entry = { studentId: string; display: string; items: string[]; coins: number };
+type Entry = { studentId: string; display: string; items: string[]; coins: number; streak: number };
 
 export default function TeacherLeaderboard() {
   const { user } = useAuth();
@@ -24,6 +26,14 @@ export default function TeacherLeaderboard() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<string>("all");
   const [currency, setCurrency] = useState<"star" | "crown">("star");
+  const [sortBy, setSortBy] = useState<"coins" | "streak">("coins");
+
+  const allIds = useMemo(() => {
+    const s = new Set<string>();
+    membersByClass.forEach(arr => arr.forEach(id => s.add(id)));
+    return Array.from(s);
+  }, [membersByClass]);
+  const streaks = useStreakFlames(allIds);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -96,9 +106,13 @@ export default function TeacherLeaderboard() {
         display: p?.full_name || "Student",
         items: p?.avatar_items ?? [],
         coins: source.get(sid) ?? 0,
+        streak: streaks.get(sid) ?? 0,
       });
     }
-    return list.sort((a, b) => b.coins - a.coins || a.display.localeCompare(b.display));
+    return list.sort((a, b) => {
+      if (sortBy === "streak") return b.streak - a.streak || b.coins - a.coins || a.display.localeCompare(b.display);
+      return b.coins - a.coins || b.streak - a.streak || a.display.localeCompare(b.display);
+    });
   };
 
   const allEntries = useMemo(() => {
@@ -106,7 +120,7 @@ export default function TeacherLeaderboard() {
     classes.forEach(c => (membersByClass.get(c.id) ?? []).forEach(s => allIds.add(s)));
     return buildEntries(Array.from(allIds));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classes, membersByClass, profiles, starByStudent, crownByStudent, currency]);
+  }, [classes, membersByClass, profiles, starByStudent, crownByStudent, currency, streaks, sortBy]);
 
   const CoinIcon = currency === "star" ? Star : Crown;
   const coinColor = currency === "star" ? "fill-amber-400 text-amber-500" : "fill-primary text-primary";
@@ -129,6 +143,7 @@ export default function TeacherLeaderboard() {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{e.display}</p>
         </div>
+        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" />}
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
           <CoinIcon className={cn("h-4 w-4", coinColor)} />
           {e.coins}
@@ -154,6 +169,13 @@ export default function TeacherLeaderboard() {
           onClick={() => setCurrency("crown")}
         >
           <Crown className="h-3.5 w-3.5 mr-1.5 fill-current" /> Crown Coins
+        </Button>
+        <span className="mx-1 text-muted-foreground">·</span>
+        <Button size="sm" variant={sortBy === "coins" ? "default" : "outline"} onClick={() => setSortBy("coins")}>
+          Coins
+        </Button>
+        <Button size="sm" variant={sortBy === "streak" ? "default" : "outline"} onClick={() => setSortBy("streak")}>
+          <Flame className="h-3.5 w-3.5 mr-1.5" /> Top Streaks
         </Button>
       </div>
 
