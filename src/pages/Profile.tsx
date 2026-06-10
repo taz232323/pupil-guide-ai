@@ -145,6 +145,13 @@ const RARITY_STYLE: Record<Rarity, { ring: string; chip: string; label: string }
   legendary: { ring: "ring-amber-400/80",         chip: "bg-amber-500/20 text-amber-700 dark:text-amber-300",            label: "Legendary" },
 };
 
+function ProfileStreakFlame({ userId }: { userId: string }) {
+  const map = useStreakFlames([userId]);
+  const streak = map.get(userId) ?? 0;
+  if (streak <= 0) return null;
+  return <StreakFlame streak={streak} size="md" />;
+}
+
 export default function Profile() {
   const { user, role } = useAuth();
   const { theme, setTheme } = useTheme();
