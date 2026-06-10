@@ -99,7 +99,7 @@ export default function ClassDetail() {
   const getMember = (studentId: string) => members.find((m) => m.id === studentId);
 
   const loadMoodCheckIns = async (classId: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("mood_checkins")
       .select("*")
       .eq("class_id", classId)
@@ -111,7 +111,7 @@ export default function ClassDetail() {
       return;
     }
 
-    setMoodCheckIns((data ?? []) as MoodCheckIn[]);
+    setMoodCheckIns((data ?? []) as unknown as MoodCheckIn[]);
   };
 
   const openMoodCheckIn = (targets: Member[]) => {
@@ -129,7 +129,7 @@ export default function ClassDetail() {
     }
 
     setSendingMood(true);
-    const { data, error } = await supabase.rpc("teacher_send_mood_checkins", {
+    const { data, error } = await (supabase as any).rpc("teacher_send_mood_checkins", {
       _class_id: cls.id,
       _student_ids: moodTargets.map((target) => target.id),
       _prompt: prompt,
@@ -165,7 +165,7 @@ export default function ClassDetail() {
     }
     setAwarding(true);
     const { data, error } = awardKind === "shield"
-      ? await supabase.rpc("teacher_award_streak_shields", {
+      ? await (supabase as any).rpc("teacher_award_streak_shields", {
           _class_id: cls.id,
           _student_ids: awardTargets.map((t) => t.id),
           _amount: amt,
