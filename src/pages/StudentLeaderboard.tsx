@@ -142,6 +142,7 @@ export default function StudentLeaderboard() {
     const isMe = e.studentId === user?.id;
     const rank = idx + 1;
     const RankIcon = rank === 1 ? Crown : rank === 2 ? Medal : rank === 3 ? Trophy : null;
+    const isChampion = e.streak > 0 && idx === 0; // top streak holder in the rendered list
     return (
       <li
         key={e.studentId}
@@ -162,7 +163,7 @@ export default function StudentLeaderboard() {
             {e.display}{isMe && <span className="ml-2 text-xs text-primary">(You)</span>}
           </p>
         </div>
-        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" />}
+        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" isChampion={sortBy === "streak" && isChampion} />}
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
           <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
           {e.coins}
