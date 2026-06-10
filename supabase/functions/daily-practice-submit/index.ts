@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       (a: any) => a.question_type === "short_answer" && a.is_correct === null,
     );
     if (ungradedShort.length) {
-      const apiKey = Deno.env.get("GEMINI_API_KEY");
+      const apiKey = Deno.env.get("GEMINI_API_KEY") ?? Deno.env.get("gemini_api_key");
       if (apiKey) {
         const prompt = `Grade these short-answer questions. Return ONLY JSON: {"results":[{"id":"...","is_correct":true|false}]}.
 Mark a response correct if it captures the key idea of the expected answer (allow reasonable wording differences).

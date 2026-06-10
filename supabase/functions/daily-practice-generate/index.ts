@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     const teacherQsToUse = availableTeacherQs.slice(0, batchSize);
     const aiQsNeeded = Math.max(0, batchSize - teacherQsToUse.length);
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("GEMINI_API_KEY") ?? Deno.env.get("gemini_api_key");
 
     let aiQuestions: any[] = [];
     
@@ -188,31 +188,36 @@ Return ONLY valid JSON matching this schema, no prose, no markdown:
 }`;
 
       if (!apiKey) {
-        console.warn("LOVABLE_API_KEY is missing. Returning deterministic daily-practice fallback.");
+        console.warn("GEMINI_API_KEY/gemini_api_key is missing. Returning deterministic daily-practice fallback.");
         aiQuestions = buildFallbackQuestions(context, aiQsNeeded);
       } else {
-        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const aiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: "You generate practice quizzes based on actual class content. Always return valid JSON only. Questions must be specific to the provided lesson material." },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
+            systemInstruction: {
+              parts: [{
+                text: "You generate practice quizzes based on actual class content. Always return valid JSON only. Questions must be specific to the provided lesson material.",
+              }],
+            },
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.45,
+              maxOutputTokens: 1400,
+              responseMimeType: "application/json",
+            },
           }),
         });
         if (!aiResp.ok) {
           const t = await aiResp.text();
-          console.error("AI gateway error:", aiResp.status, t);
+          console.error("Gemini error:", aiResp.status, t);
           aiQuestions = buildFallbackQuestions(context, aiQsNeeded);
         } else {
           const gj = await aiResp.json();
-          const text = gj?.choices?.[0]?.message?.content || "{}";
+          const text = gj?.candidates?.[0]?.content?.parts
+            ?.map((part: any) => part.text)
+            .filter(Boolean)
+            .join("\n") || "{}";
           let parsed: any;
           try { parsed = JSON.parse(text); } catch { parsed = { questions: [] }; }
           aiQuestions = Array.isArray(parsed.questions) ? parsed.questions : [];
