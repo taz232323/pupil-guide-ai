@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { HeartPulse, Loader2, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 import { MOOD_OPTIONS, type MoodKey } from "@/lib/moodCheckins";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
-type MoodCheckIn = Tables<"mood_checkins">;
+type MoodCheckIn = {
+  id: string;
+  class_id: string;
+  student_id: string;
+  teacher_id: string;
+  prompt: string;
+  responded_at: string | null;
+  created_at: string;
+};
+const db = supabase as any;
 
 export function MoodCheckInCard() {
   const { user } = useAuth();
@@ -28,7 +36,7 @@ export function MoodCheckInCard() {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("mood_checkins")
       .select("*")
       .eq("student_id", user.id)
@@ -47,12 +55,12 @@ export function MoodCheckInCard() {
 
     const classIds = Array.from(new Set(rows.map((row) => row.class_id)));
     if (classIds.length > 0) {
-      const { data: classes } = await supabase
+      const { data: classes } = await db
         .from("classes")
         .select("id, name")
         .in("id", classIds);
       const names: Record<string, string> = {};
-      (classes ?? []).forEach((row) => {
+      (classes ?? []).forEach((row: any) => {
         names[row.id] = row.name;
       });
       setClassNames(names);
@@ -86,7 +94,7 @@ export function MoodCheckInCard() {
     }
 
     setSubmitting(true);
-    const { error } = await supabase.rpc("student_respond_mood_checkin", {
+    const { error } = await db.rpc("student_respond_mood_checkin", {
       _checkin_id: activeCheckIn.id,
       _mood_key: selectedMood,
       _note: note,
