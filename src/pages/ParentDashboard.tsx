@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Send,
   ShieldCheck,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { GradePredictorModal } from "@/components/GradePredictorModal";
 
 type StudentProfile = {
   name: string;
@@ -56,6 +58,8 @@ type ClassSummary = {
   teacherItems: string[];
   currentStreak: number;
   average: number | null;
+  totalEarned: number;
+  totalPossible: number;
   assignments: AssignmentSummary[];
 };
 
@@ -121,6 +125,7 @@ export default function ParentDashboard() {
   const [coins, setCoins] = useState({ star: 0, crown: 0 });
   const [classes, setClasses] = useState<ClassSummary[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherContact | null>(null);
+  const [predictorClassId, setPredictorClassId] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -261,6 +266,8 @@ export default function ParentDashboard() {
           const average = graded.length
             ? Math.round(graded.reduce((sum, a) => sum + (a.pct ?? 0), 0) / graded.length)
             : null;
+          const totalEarned = graded.reduce((sum, a) => sum + (a.earned ?? 0), 0);
+          const totalPossible = graded.reduce((sum, a) => sum + a.total, 0);
 
           return {
             id: c.id,
@@ -271,6 +278,8 @@ export default function ParentDashboard() {
             teacherItems: teacher?.items ?? [],
             currentStreak: validStreak(streakMap.get(c.id)),
             average,
+            totalEarned,
+            totalPossible,
             assignments: classAssignments,
           };
         });
@@ -455,6 +464,15 @@ export default function ParentDashboard() {
                         {letterGrade(classItem.average)}
                       </p>
                     </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setPredictorClassId(classItem.id)}
+                      className="border-white/15 bg-white/[0.03] text-slate-100 hover:bg-white/10 hover:text-white"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" /> What if?
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -600,6 +618,19 @@ export default function ParentDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {(() => {
+        const classItem = predictorClassId ? classes.find((item) => item.id === predictorClassId) : null;
+        return (
+          <GradePredictorModal
+            open={!!predictorClassId}
+            onOpenChange={(open) => !open && setPredictorClassId(null)}
+            className={classItem?.name ?? ""}
+            currentPct={classItem?.average ?? null}
+            totalEarned={classItem?.totalEarned ?? 0}
+            totalPossible={classItem?.totalPossible ?? 0}
+          />
+        );
+      })()}
     </main>
   );
 }
