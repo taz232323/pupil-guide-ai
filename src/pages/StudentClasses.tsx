@@ -8,6 +8,8 @@ import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { JoinClassCard } from "@/components/JoinClassCard";
+import { StreakFlame } from "@/components/StreakFlame";
+import { useStreakFlames } from "@/hooks/useStreakFlames";
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
 type ClassRow = { id: string; name: string; subject: string; members: Member[] };
@@ -16,6 +18,8 @@ export function StudentClasses() {
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const memberIds = Array.from(new Set(classes.flatMap(c => c.members.filter(m => !m.isTeacher).map(m => m.id))));
+  const streaks = useStreakFlames(memberIds);
 
   const load = async () => {
     if (!user) return;
@@ -92,6 +96,9 @@ export function StudentClasses() {
                         {m.id === user?.id ? "You" : m.name}
                         {m.isTeacher && <span className="ml-1 text-xs text-muted-foreground">(Teacher)</span>}
                       </span>
+                      {!m.isTeacher && (streaks.get(m.id) ?? 0) > 0 && (
+                        <StreakFlame streak={streaks.get(m.id)!} size="xs" />
+                      )}
                     </li>
                   ))}
                 </ul>

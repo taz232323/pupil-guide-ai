@@ -5,8 +5,10 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StudentAvatar } from "@/components/StudentAvatar";
-import { Trophy, Star, Crown, Medal } from "lucide-react";
+import { Trophy, Star, Crown, Medal, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StreakFlame } from "@/components/StreakFlame";
+import { useStreakFlames } from "@/hooks/useStreakFlames";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -18,7 +20,7 @@ import { Link } from "react-router-dom";
 
 type ClassRow = { id: string; name: string; subject: string; leaderboard_anonymous: boolean };
 type ProfileRow = { id: string; full_name: string | null; leaderboard_username: string | null; avatar_items: string[] };
-type Entry = { studentId: string; display: string; items: string[]; coins: number };
+type Entry = { studentId: string; display: string; items: string[]; coins: number; streak: number };
 
 function displayFor(p: ProfileRow | undefined, anonymous: boolean, isMe: boolean) {
   if (!p) return "Student";
@@ -37,6 +39,14 @@ export default function StudentLeaderboard() {
   const [promptOpen, setPromptOpen] = useState(false);
   const [usernameDraft, setUsernameDraft] = useState("");
   const [savingUsername, setSavingUsername] = useState(false);
+  const [sortBy, setSortBy] = useState<"coins" | "streak">("coins");
+
+  const allMemberIds = useMemo(() => {
+    const s = new Set<string>();
+    membersByClass.forEach(arr => arr.forEach(id => s.add(id)));
+    return Array.from(s);
+  }, [membersByClass]);
+  const streaks = useStreakFlames(allMemberIds);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -110,9 +120,13 @@ export default function StudentLeaderboard() {
         display: displayFor(p, anonymous, sid === user?.id),
         items: p?.avatar_items ?? [],
         coins: coinsByStudent.get(sid) ?? 0,
+        streak: streaks.get(sid) ?? 0,
       });
     }
-    return list.sort((a, b) => b.coins - a.coins || a.display.localeCompare(b.display));
+    return list.sort((a, b) => {
+      if (sortBy === "streak") return b.streak - a.streak || b.coins - a.coins || a.display.localeCompare(b.display);
+      return b.coins - a.coins || b.streak - a.streak || a.display.localeCompare(b.display);
+    });
   };
 
   const allClassesEntries = useMemo(() => {
@@ -122,7 +136,7 @@ export default function StudentLeaderboard() {
     // anyClassAnonymous: if ANY enrolled class is anonymous, anonymize across the All tab
     const anyAnonymous = classes.some(c => c.leaderboard_anonymous);
     return buildEntries(Array.from(allIds), anyAnonymous);
-  }, [classes, membersByClass, profiles, coinsByStudent, user]);
+  }, [classes, membersByClass, profiles, coinsByStudent, user, streaks, sortBy]);
 
   const renderRow = (e: Entry, idx: number) => {
     const isMe = e.studentId === user?.id;
@@ -148,6 +162,7 @@ export default function StudentLeaderboard() {
             {e.display}{isMe && <span className="ml-2 text-xs text-primary">(You)</span>}
           </p>
         </div>
+        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" />}
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
           <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
           {e.coins}
@@ -172,6 +187,15 @@ export default function StudentLeaderboard() {
 
   return (
     <DashboardShell title="Leaderboard" subtitle="See who's earning the most Star Coins.">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-sm text-muted-foreground mr-1">Sort by:</span>
+        <Button size="sm" variant={sortBy === "coins" ? "default" : "outline"} onClick={() => setSortBy("coins")}>
+          <Star className="h-3.5 w-3.5 mr-1.5 fill-current" /> Coins
+        </Button>
+        <Button size="sm" variant={sortBy === "streak" ? "default" : "outline"} onClick={() => setSortBy("streak")}>
+          <Flame className="h-3.5 w-3.5 mr-1.5" /> Top Streaks
+        </Button>
+      </div>
       {loading ? (
         <Card><CardContent className="p-8 text-center text-muted-foreground">Loading...</CardContent></Card>
       ) : classes.length === 0 ? (

@@ -38,7 +38,7 @@ export function StreakWidget() {
       const classIds = enabled.map((m: any) => m.class_id);
       const today = new Date().toISOString().slice(0, 10);
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      const { error: shieldErr } = await supabase.rpc("auto_apply_streak_shields", { _class_id: null });
+      const { error: shieldErr } = await (supabase as any).rpc("auto_apply_streak_shields");
       if (shieldErr) console.warn("auto shield sync failed:", shieldErr.message);
 
       const { data: streaks } = await supabase

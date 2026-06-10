@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { Trophy, Star, ArrowRight, Crown, Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StreakFlame } from "@/components/StreakFlame";
+import { useStreakFlames } from "@/hooks/useStreakFlames";
 
 type Entry = { id: string; display: string; items: string[]; coins: number };
 
@@ -14,6 +16,7 @@ export function LeaderboardWidget() {
   const [top, setTop] = useState<Entry[]>([]);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myCoins, setMyCoins] = useState(0);
+  const streaks = useStreakFlames(top.map(t => t.id));
 
   const load = async () => {
     if (!user) return;
@@ -84,6 +87,9 @@ export function LeaderboardWidget() {
               <span className="flex-1 text-sm font-medium truncate">
                 {e.display}{isMe && <span className="ml-1.5 text-xs text-primary">(You)</span>}
               </span>
+              {(streaks.get(e.id) ?? 0) > 0 && (
+                <StreakFlame streak={streaks.get(e.id)!} size="sm" />
+              )}
               <span className="inline-flex items-center gap-1 text-sm font-semibold">
                 <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />{e.coins}
               </span>

@@ -658,7 +658,6 @@ export type Database = {
           read_at: string | null
           recipient_id: string | null
           sender_id: string
-          sender_role: string
         }
         Insert: {
           body: string
@@ -671,7 +670,6 @@ export type Database = {
           read_at?: string | null
           recipient_id?: string | null
           sender_id: string
-          sender_role?: string
         }
         Update: {
           body?: string
@@ -684,7 +682,6 @@ export type Database = {
           read_at?: string | null
           recipient_id?: string | null
           sender_id?: string
-          sender_role?: string
         }
         Relationships: [
           {
@@ -699,56 +696,6 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "message_groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      mood_checkins: {
-        Row: {
-          class_id: string
-          created_at: string
-          id: string
-          mood_key: string | null
-          note: string | null
-          prompt: string
-          responded_at: string | null
-          student_id: string
-          teacher_id: string
-          updated_at: string
-          wants_help: boolean
-        }
-        Insert: {
-          class_id: string
-          created_at?: string
-          id?: string
-          mood_key?: string | null
-          note?: string | null
-          prompt?: string
-          responded_at?: string | null
-          student_id: string
-          teacher_id: string
-          updated_at?: string
-          wants_help?: boolean
-        }
-        Update: {
-          class_id?: string
-          created_at?: string
-          id?: string
-          mood_key?: string | null
-          note?: string | null
-          prompt?: string
-          responded_at?: string | null
-          student_id?: string
-          teacher_id?: string
-          updated_at?: string
-          wants_help?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mood_checkins_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
@@ -1317,8 +1264,13 @@ export type Database = {
         Returns: Json
       }
       auto_apply_streak_shields: {
-        Args: { _class_id?: string | null }
-        Returns: Json
+        Args: never
+        Returns: {
+          class_id: string
+          class_name: string
+          current_streak: number
+          shields_used: number
+        }[]
       }
       award_ai_message_coins: { Args: { _student_id: string }; Returns: number }
       can_message: {
@@ -1369,6 +1321,13 @@ export type Database = {
           title: string
         }[]
       }
+      get_student_streaks: {
+        Args: { _student_ids: string[] }
+        Returns: {
+          current_streak: number
+          student_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1394,38 +1353,12 @@ export type Database = {
       }
       join_class_by_code: { Args: { _code: string }; Returns: string }
       reload_schema_cache: { Args: never; Returns: undefined }
-      student_respond_mood_checkin: {
-        Args: {
-          _checkin_id: string
-          _mood_key: string
-          _note?: string
-          _wants_help?: boolean
-        }
-        Returns: Database["public"]["Tables"]["mood_checkins"]["Row"]
-      }
       teacher_award_coins: {
         Args: {
           _amount: number
           _class_id: string
           _currency: string
           _reason: string
-          _student_ids: string[]
-        }
-        Returns: number
-      }
-      teacher_award_streak_shields: {
-        Args: {
-          _amount: number
-          _class_id: string
-          _reason: string
-          _student_ids: string[]
-        }
-        Returns: number
-      }
-      teacher_send_mood_checkins: {
-        Args: {
-          _class_id: string
-          _prompt?: string
           _student_ids: string[]
         }
         Returns: number
