@@ -325,7 +325,7 @@ export default function ParentDashboard() {
     if (!text) return;
     setSending(true);
     try {
-      const { data: insertedMessage, error } = await supabase.from("messages").insert({
+      const { data: insertedMessage, error } = await (supabase as any).from("messages").insert({
         class_id: selectedClassId,
         sender_id: user.id,
         recipient_id: selectedTeacher.id,
