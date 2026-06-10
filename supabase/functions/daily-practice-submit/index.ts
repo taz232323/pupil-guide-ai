@@ -155,24 +155,34 @@ ${JSON.stringify(
     let shieldsConsumed = autoAppliedShields;
     if (streak) {
       milestonesAwarded = Array.isArray(streak.milestones_awarded) ? [...streak.milestones_awarded] : [];
+      // Weekend-aware "consecutive" check: skip Sat/Sun gaps.
+      const isWeekend = (d: Date) => {
+        const w = d.getUTCDay();
+        return w === 0 || w === 6;
+      };
+      const weekdaysStrictlyBetween = (a: Date, b: Date): string[] => {
+        const out: string[] = [];
+        const cur = new Date(a);
+        cur.setUTCDate(cur.getUTCDate() + 1);
+        while (cur < b) {
+          if (!isWeekend(cur)) out.push(cur.toISOString().slice(0, 10));
+          cur.setUTCDate(cur.getUTCDate() + 1);
+        }
+        return out;
+      };
+      const lastDate = streak.last_practice_date
+        ? new Date(streak.last_practice_date + "T00:00:00Z")
+        : null;
+      const missingWeekdays = lastDate ? weekdaysStrictlyBetween(lastDate, todayDate) : [];
+
       if (streak.last_practice_date === today) {
         current = streak.current_streak;
-      } else if (streak.last_practice_date === yStr) {
+      } else if (streak.last_practice_date === yStr || missingWeekdays.length === 0) {
+        // Yesterday OR only weekend days were skipped — streak continues.
         current = streak.current_streak + 1;
       } else {
-        // Try to bridge the gap with active streak shields for the missing days
-        const last = streak.last_practice_date
-          ? new Date(streak.last_practice_date + "T00:00:00Z")
-          : null;
-        const missingDates: string[] = [];
-        if (last) {
-          const cursor = new Date(last);
-          cursor.setUTCDate(cursor.getUTCDate() + 1);
-          while (cursor < todayDate) {
-            missingDates.push(cursor.toISOString().slice(0, 10));
-            cursor.setUTCDate(cursor.getUTCDate() + 1);
-          }
-        }
+        // Bridge only the missed WEEKDAYS with shields.
+        const missingDates = missingWeekdays;
         if (missingDates.length > 0) {
           const { data: shields } = await admin
             .from("streak_freeze_activations")
