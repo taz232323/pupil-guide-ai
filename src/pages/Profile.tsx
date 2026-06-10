@@ -35,6 +35,8 @@ import { Lock, Sparkles, Check, Star, ShoppingBag, Gem, User } from "lucide-reac
 import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
+import { StreakFlame } from "@/components/StreakFlame";
+import { useStreakFlames } from "@/hooks/useStreakFlames";
 
 /* ------------------------------------------------------------------ *
  *  AVATAR BUILDER CATALOG
@@ -292,7 +294,10 @@ export default function Profile() {
                 className="mx-auto mt-2 h-2 w-32 rounded-full bg-foreground/20 blur-md"
               />
             </div>
-            <p className="relative mt-3 text-lg font-semibold tracking-tight">{name || "Unnamed student"}</p>
+            <p className="relative mt-3 text-lg font-semibold tracking-tight inline-flex items-center gap-2 justify-center">
+              {name || "Unnamed student"}
+              {user && <ProfileStreakFlame userId={user.id} />}
+            </p>
             <p className="relative text-xs text-muted-foreground mt-0.5 uppercase tracking-[0.18em]">Character preview</p>
           </div>
           <CardContent className="space-y-4 pt-5">
