@@ -125,9 +125,10 @@ export default function TeacherLeaderboard() {
   const CoinIcon = currency === "star" ? Star : Crown;
   const coinColor = currency === "star" ? "fill-amber-400 text-amber-500" : "fill-primary text-primary";
 
-  const renderRow = (e: Entry, idx: number) => {
+  const renderRow = (e: Entry, idx: number, champions?: Set<string>) => {
     const rank = idx + 1;
     const RankIcon = rank === 1 ? Crown : rank === 2 ? Medal : rank === 3 ? Trophy : null;
+    const isChampion = e.streak > 0 && (champions?.has(e.studentId) ?? false);
     return (
       <li
         key={e.studentId}
@@ -143,7 +144,7 @@ export default function TeacherLeaderboard() {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{e.display}</p>
         </div>
-        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" />}
+        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" isChampion={isChampion} />}
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
           <CoinIcon className={cn("h-4 w-4", coinColor)} />
           {e.coins}
@@ -206,7 +207,11 @@ export default function TeacherLeaderboard() {
                 {allEntries.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No students yet.</p>
                 ) : (
-                  <ul className="space-y-2">{allEntries.map(renderRow)}</ul>
+                  <ul className="space-y-2">{(() => {
+                    const top = allEntries.reduce((m, e) => Math.max(m, e.streak), 0);
+                    const champs = new Set(allEntries.filter(e => e.streak > 0 && e.streak === top).map(e => e.studentId));
+                    return allEntries.map((e, i) => renderRow(e, i, champs));
+                  })()}</ul>
                 )}
               </CardContent>
             </Card>
@@ -225,7 +230,11 @@ export default function TeacherLeaderboard() {
                     {entries.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No students in this class yet.</p>
                     ) : (
-                      <ul className="space-y-2">{entries.map(renderRow)}</ul>
+                      <ul className="space-y-2">{(() => {
+                        const top = entries.reduce((m, e) => Math.max(m, e.streak), 0);
+                        const champs = new Set(entries.filter(e => e.streak > 0 && e.streak === top).map(e => e.studentId));
+                        return entries.map((e, i) => renderRow(e, i, champs));
+                      })()}</ul>
                     )}
                   </CardContent>
                 </Card>
