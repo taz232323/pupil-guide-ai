@@ -138,11 +138,11 @@ export default function StudentLeaderboard() {
     return buildEntries(Array.from(allIds), anyAnonymous);
   }, [classes, membersByClass, profiles, coinsByStudent, user, streaks, sortBy]);
 
-  const renderRow = (e: Entry, idx: number) => {
+  const renderRow = (e: Entry, idx: number, champions?: Set<string>) => {
     const isMe = e.studentId === user?.id;
     const rank = idx + 1;
     const RankIcon = rank === 1 ? Crown : rank === 2 ? Medal : rank === 3 ? Trophy : null;
-    const isChampion = e.streak > 0 && idx === 0; // top streak holder in the rendered list
+    const isChampion = e.streak > 0 && (champions?.has(e.studentId) ?? false);
     return (
       <li
         key={e.studentId}
@@ -163,7 +163,7 @@ export default function StudentLeaderboard() {
             {e.display}{isMe && <span className="ml-2 text-xs text-primary">(You)</span>}
           </p>
         </div>
-        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" isChampion={sortBy === "streak" && isChampion} />}
+        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" isChampion={isChampion} />}
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
           <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
           {e.coins}
@@ -220,7 +220,11 @@ export default function StudentLeaderboard() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {allClassesEntries.map(renderRow)}
+                  {(() => {
+                    const top = allClassesEntries.reduce((m, e) => Math.max(m, e.streak), 0);
+                    const champs = new Set(allClassesEntries.filter(e => e.streak > 0 && e.streak === top).map(e => e.studentId));
+                    return allClassesEntries.map((e, i) => renderRow(e, i, champs));
+                  })()}
                 </ul>
               </CardContent>
             </Card>
@@ -246,7 +250,13 @@ export default function StudentLeaderboard() {
                     {entries.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No students yet.</p>
                     ) : (
-                      <ul className="space-y-2">{entries.map(renderRow)}</ul>
+                      <ul className="space-y-2">
+                        {(() => {
+                          const top = entries.reduce((m, e) => Math.max(m, e.streak), 0);
+                          const champs = new Set(entries.filter(e => e.streak > 0 && e.streak === top).map(e => e.studentId));
+                          return entries.map((e, i) => renderRow(e, i, champs));
+                        })()}
+                      </ul>
                     )}
                   </CardContent>
                 </Card>
