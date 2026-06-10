@@ -1,0 +1,8 @@
+const FALLBACK_SUPABASE_URL = "https://mgpzpufkohrbkvzauvty.supabase.co";
+const FALLBACK_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_6SOLGYnVD5XCTk5w-MAQdA_KHXf_kN7";
+
+export const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+
+export const SUPABASE_PUBLISHABLE_KEY =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_PUBLISHABLE_KEY;
