@@ -545,3 +545,33 @@ All colors MUST be HSL.
     .streak-flicker, .streak-pulse, .streak-particle { animation: none !important; }
   }
 }
+
+/* === Streak Flame: tier extras === */
+@layer utilities {
+  .streak-particle {
+    background: radial-gradient(circle, var(--pcolor, #FFE680) 0%, var(--pcolor, #FF8A1F) 70%, transparent 100%) !important;
+  }
+  @keyframes streak-evolve-kf {
+    0%   { transform: scale(1); filter: brightness(1); }
+    30%  { transform: scale(1.6); filter: brightness(1.8) saturate(1.4); }
+    100% { transform: scale(1); filter: brightness(1); }
+  }
+  .streak-evolve { animation: streak-evolve-kf 1.2s cubic-bezier(0.22, 1, 0.36, 1); }
+
+  @keyframes streak-champion-spin-kf {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .streak-champion-ring {
+    position: absolute; inset: -35%;
+    border-radius: 9999px;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 0%,  #FFD24A 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 100% 50%, #FFD24A 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 50% 100%, #FFD24A 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 0% 50%,   #FFD24A 0 1.5px, transparent 2.5px);
+    filter: drop-shadow(0 0 3px rgba(255,210,80,0.95));
+    animation: streak-champion-spin-kf 3.5s linear infinite;
+  }
+}
