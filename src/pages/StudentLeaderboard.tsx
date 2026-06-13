@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { STUDENT_COINS_CHANGED_EVENT } from "@/lib/studentRefreshEvents";
 
 type ClassRow = { id: string; name: string; subject: string; leaderboard_anonymous: boolean };
 type ProfileRow = { id: string; full_name: string | null; leaderboard_username: string | null; avatar_items: string[] };
@@ -102,10 +103,15 @@ export default function StudentLeaderboard() {
 
   // Realtime: refresh on any student_coins change
   useEffect(() => {
+    const onCoinsChanged = () => load();
+    window.addEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
     const ch = supabase.channel("leaderboard-coins")
       .on("postgres_changes", { event: "*", schema: "public", table: "student_coins" }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      window.removeEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
+      supabase.removeChannel(ch);
+    };
   }, [load]);
 
   const buildEntries = (studentIds: string[], anonymous: boolean): Entry[] => {

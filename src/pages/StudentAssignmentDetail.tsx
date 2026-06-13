@@ -13,6 +13,7 @@ import { SpinnerButton } from "@/components/SpinnerButton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { RewardOverlay, type RewardData } from "@/components/RewardOverlay";
+import { notifyStudentCoinsChanged } from "@/lib/studentRefreshEvents";
 
 type Status = "not_started" | "in_progress" | "submitted";
 type QType = "multiple_choice" | "short_answer" | "long_answer";
@@ -186,6 +187,7 @@ export default function StudentAssignmentDetail() {
         coins: 5,
         intensity: "small",
       });
+      notifyStudentCoinsChanged({ userId: user.id, reason: "assignment_submission" });
       setStatus("submitted");
       load();
     } finally {

@@ -37,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
 import { StreakFlame } from "@/components/StreakFlame";
 import { useStreakFlames } from "@/hooks/useStreakFlames";
+import { notifyStudentCoinsChanged } from "@/lib/studentRefreshEvents";
 
 /* ------------------------------------------------------------------ *
  *  AVATAR BUILDER CATALOG
@@ -234,6 +235,7 @@ export default function Profile() {
     setCoins((c) => c - opt.cost!);
     setPreviewAvatar((prev) => updateAvatarState(prev, opt.key));
     setJustUnlocked(opt.key);
+    notifyStudentCoinsChanged({ userId: user.id, reason: "profile_cosmetic_purchase" });
     setTimeout(() => setJustUnlocked((v) => (v === opt.key ? null : v)), 1800);
     toast.success(`Unlocked ${opt.name}!`);
   };

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Star, Crown, Sparkles, ShieldCheck, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { notifyStudentCoinsChanged } from "@/lib/studentRefreshEvents";
 import wizardHatImg from "@/assets/cosmetics/wizard-hat.png";
 import glassesImg from "@/assets/cosmetics/glasses.png";
 import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
@@ -99,6 +100,7 @@ export function Shop() {
       return;
     }
     toast.success(kind === "cosmetic" ? `Purchased ${item.item_name}` : `Requested ${item.item_name} — pending approval`);
+    notifyStudentCoinsChanged({ userId: user.id, reason: "shop_purchase" });
     refresh();
   };
 

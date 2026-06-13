@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { RewardOverlay, type RewardData } from "@/components/RewardOverlay";
+import { notifyStudentCoinsChanged } from "@/lib/studentRefreshEvents";
 
 type Claim = {
   reward_kind: string;
@@ -22,7 +23,11 @@ function rewardLabel(kind: string) {
   }
 }
 
-export function DailyLoginBox() {
+type Props = {
+  onClaimed?: () => void;
+};
+
+export function DailyLoginBox({ onClaimed }: Props) {
   const { user } = useAuth();
   const [today, setToday] = useState<Claim | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +69,10 @@ export function DailyLoginBox() {
         coins: r.coins,
         intensity: r.kind === "freeze" || r.kind === "big_coins" ? "big" : "small",
       });
+      if ((r.coins ?? 0) > 0) {
+        notifyStudentCoinsChanged({ userId: user?.id, reason: "daily_login_box" });
+      }
+      onClaimed?.();
     } catch (e: any) {
       toast.error(e.message || "Could not open box");
     } finally {

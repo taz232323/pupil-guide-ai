@@ -20,6 +20,11 @@ import { JoinClassCard } from "@/components/JoinClassCard";
 import { LeaderboardWidget } from "@/components/LeaderboardWidget";
 import { StreakWidget } from "@/components/StreakWidget";
 import { MoodCheckInCard } from "@/components/MoodCheckInCard";
+import {
+  STUDENT_COINS_CHANGED_EVENT,
+  STUDENT_STREAKS_CHANGED_EVENT,
+  isStudentRefreshForUser,
+} from "@/lib/studentRefreshEvents";
 
 type Row = {
   id: string;
@@ -62,33 +67,6 @@ function relTime(iso: string) {
   if (h < 24) return `${h}h ago`;
   const d = Math.round(h / 24);
   return `${d}d ago`;
-}
-
-/** Login streak via localStorage. Returns current consecutive day count. */
-function useStreak(userId?: string) {
-  const [streak, setStreak] = useState(0);
-  useEffect(() => {
-    if (!userId) return;
-    const key = `streak:${userId}`;
-    const today = startOfDay().toISOString().slice(0, 10);
-    try {
-      const raw = localStorage.getItem(key);
-      const data = raw ? JSON.parse(raw) as { last: string; count: number } : null;
-      if (!data) {
-        localStorage.setItem(key, JSON.stringify({ last: today, count: 1 }));
-        setStreak(1); return;
-      }
-      if (data.last === today) { setStreak(data.count); return; }
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-      const yKey = startOfDay(yesterday).toISOString().slice(0, 10);
-      const next = data.last === yKey ? data.count + 1 : 1;
-      localStorage.setItem(key, JSON.stringify({ last: today, count: next }));
-      setStreak(next);
-    } catch {
-      setStreak(1);
-    }
-  }, [userId]);
-  return streak;
 }
 
 /** XP derived from coins. Each star = 10 XP, each crown = 100 XP. Level curve quadratic. */
@@ -135,6 +113,57 @@ const Ring = ({ value, size = 64, stroke = 7, label }: { value: number; size?: n
   );
 };
 
+function useDailyPracticeStreak(userId?: string) {
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    if (!userId) {
+      setStreak(0);
+      return;
+    }
+
+    let active = true;
+    const load = async () => {
+      const { error: shieldErr } = await (supabase as any).rpc("auto_apply_streak_shields");
+      if (shieldErr) console.warn("auto shield sync failed:", shieldErr.message);
+
+      const { data, error } = await (supabase as any).rpc("get_student_streaks", {
+        _student_ids: [userId],
+      });
+      if (!active) return;
+      if (error) {
+        console.warn("get_student_streaks failed:", error.message);
+        setStreak(0);
+        return;
+      }
+      setStreak((data ?? [])[0]?.current_streak ?? 0);
+    };
+
+    void load();
+    const onStreaksChanged = (event: Event) => {
+      if (isStudentRefreshForUser(event, userId)) void load();
+    };
+    window.addEventListener(STUDENT_STREAKS_CHANGED_EVENT, onStreaksChanged);
+
+    const ch = supabase
+      .channel(`dashboard-streak:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "daily_practice_streaks", filter: `student_id=eq.${userId}` },
+        () => void load(),
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      window.removeEventListener(STUDENT_STREAKS_CHANGED_EVENT, onStreaksChanged);
+      supabase.removeChannel(ch);
+    };
+  }, [userId]);
+
+  return streak;
+}
+
 export default function StudentDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -147,7 +176,7 @@ export default function StudentDashboard() {
   const [name, setName] = useState("");
   const [notifs, setNotifs] = useState<NotifRow[]>([]);
   const [unreadMsgs, setUnreadMsgs] = useState(0);
-  const streak = useStreak(user?.id);
+  const streak = useDailyPracticeStreak(user?.id);
 
   const load = async () => {
     if (!user) return;
@@ -189,6 +218,39 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const loadCoins = async () => {
+      const { data } = await supabase
+        .from("student_coins")
+        .select("star_coins, crown_coins")
+        .eq("student_id", user.id)
+        .maybeSingle();
+      if (active && data) setCoins({ star: data.star_coins, crown: data.crown_coins });
+    };
+    const onCoinsChanged = (event: Event) => {
+      if (isStudentRefreshForUser(event, user.id)) void loadCoins();
+    };
+    window.addEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
+    const ch = supabase
+      .channel(`dashboard-coins:${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "student_coins", filter: `student_id=eq.${user.id}` },
+        (p) => {
+          const row = p.new as { star_coins: number; crown_coins: number } | null;
+          if (row) setCoins({ star: row.star_coins, crown: row.crown_coins });
+        },
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      window.removeEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
+      supabase.removeChannel(ch);
+    };
+  }, [user]);
 
   const todayEnd = endOfDay().getTime();
   const tomorrowEnd = endOfDay(new Date(Date.now() + 86_400_000)).getTime();

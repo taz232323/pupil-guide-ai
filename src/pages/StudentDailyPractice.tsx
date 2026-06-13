@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { RewardOverlay, type RewardData } from "@/components/RewardOverlay";
+import { notifyStudentCoinsChanged, notifyStudentStreaksChanged } from "@/lib/studentRefreshEvents";
 
 const MIN = 5;
 
@@ -138,6 +139,8 @@ export default function StudentDailyPractice() {
       if ((data as any)?.error) throw new Error((data as any).error);
       setResults(data);
       const r: any = data;
+      notifyStudentCoinsChanged({ userId: user?.id, reason: "daily_practice_submit" });
+      notifyStudentStreaksChanged({ userId: user?.id, reason: "daily_practice_submit" });
       const pct = r.answered ? Math.round((r.correct / r.answered) * 100) : 0;
       const shieldText = r.shieldsConsumed > 0
         ? `${r.shieldsConsumed} Streak Shield${r.shieldsConsumed === 1 ? "" : "s"} protected your streak.`

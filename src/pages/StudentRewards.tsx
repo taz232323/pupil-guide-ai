@@ -62,7 +62,7 @@ export default function StudentRewards() {
 
           <TabsContent value="rewards" className="mt-4 space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
-          <DailyLoginBox />
+          <DailyLoginBox onClaimed={refresh} />
           <StreakShieldPanel shields={shields} onChange={refresh} />
         </div>
 

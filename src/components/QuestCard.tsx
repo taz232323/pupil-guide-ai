@@ -7,6 +7,7 @@ import { AnimatedProgress } from "@/components/AnimatedProgress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RewardOverlay, type RewardData } from "@/components/RewardOverlay";
+import { notifyStudentCoinsChanged } from "@/lib/studentRefreshEvents";
 
 export type QuestRow = {
   quest_key: string;
@@ -44,6 +45,9 @@ export function QuestCard({ quest, onClaimed }: Props) {
         coins: r.coins,
         intensity: r.freezes ? "big" : "small",
       });
+      if ((r.coins ?? 0) > 0) {
+        notifyStudentCoinsChanged({ reason: "quest_claim" });
+      }
       onClaimed();
     } catch (e: any) {
       toast.error(e.message || "Could not claim");

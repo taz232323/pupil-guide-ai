@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { StudyBuddy } from "@/components/StudyBuddy";
 import grapheionMark from "@/assets/grapheion-mark.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { STUDENT_COINS_CHANGED_EVENT, isStudentRefreshForUser } from "@/lib/studentRefreshEvents";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -58,10 +59,19 @@ function useCoins(userId?: string) {
   useEffect(() => {
     if (!userId) return;
     let active = true;
-    supabase.from("student_coins").select("star_coins, crown_coins")
-      .eq("student_id", userId).maybeSingle().then(({ data }) => {
-        if (active && data) setCoins({ star: data.star_coins, crown: data.crown_coins });
-      });
+    const load = async () => {
+      const { data } = await supabase
+        .from("student_coins")
+        .select("star_coins, crown_coins")
+        .eq("student_id", userId)
+        .maybeSingle();
+      if (active && data) setCoins({ star: data.star_coins, crown: data.crown_coins });
+    };
+    void load();
+    const onCoinsChanged = (event: Event) => {
+      if (isStudentRefreshForUser(event, userId)) void load();
+    };
+    window.addEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
     const ch = supabase.channel("coins:" + userId)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "student_coins", filter: `student_id=eq.${userId}` },
@@ -69,7 +79,11 @@ function useCoins(userId?: string) {
           const row = p.new as { star_coins: number; crown_coins: number } | null;
           if (row) setCoins({ star: row.star_coins, crown: row.crown_coins });
         }).subscribe();
-    return () => { active = false; supabase.removeChannel(ch); };
+    return () => {
+      active = false;
+      window.removeEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
+      supabase.removeChannel(ch);
+    };
   }, [userId]);
   return coins;
 }

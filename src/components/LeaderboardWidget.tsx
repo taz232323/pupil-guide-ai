@@ -8,6 +8,7 @@ import { Trophy, Star, ArrowRight, Crown, Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StreakFlame } from "@/components/StreakFlame";
 import { useStreakFlames } from "@/hooks/useStreakFlames";
+import { STUDENT_COINS_CHANGED_EVENT } from "@/lib/studentRefreshEvents";
 
 type Entry = { id: string; display: string; items: string[]; coins: number };
 
@@ -54,10 +55,15 @@ export function LeaderboardWidget() {
   useEffect(() => { load(); }, [user]);
 
   useEffect(() => {
+    const onCoinsChanged = () => load();
+    window.addEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
     const ch = supabase.channel("dash-lb-coins")
       .on("postgres_changes", { event: "*", schema: "public", table: "student_coins" }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      window.removeEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
+      supabase.removeChannel(ch);
+    };
   }, [user]);
 
   if (!user || top.length === 0) return null;
