@@ -117,10 +117,10 @@ export function Shop() {
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium">
-              <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> {coins.star}
+              <Star className="h-3.5 w-3.5 fill-gold text-gold" /> {coins.star}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium">
-              <Crown className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" /> {coins.crown}
+              <Crown className="h-3.5 w-3.5 fill-plum text-plum" /> {coins.crown}
             </span>
           </div>
         </div>
@@ -161,8 +161,8 @@ export function Shop() {
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1 text-sm font-medium">
                         {c.currency === "star"
-                          ? <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                          : <Crown className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                          ? <Star className="h-4 w-4 fill-gold text-gold" />
+                          : <Crown className="h-4 w-4 fill-plum text-plum" />}
                         {c.cost}
                       </span>
                       <Button
@@ -210,8 +210,8 @@ export function Shop() {
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1 text-sm font-medium">
                         {p.currency === "star"
-                          ? <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                          : <Crown className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                          ? <Star className="h-4 w-4 fill-gold text-gold" />
+                          : <Crown className="h-4 w-4 fill-plum text-plum" />}
                         {p.cost}
                       </span>
                       <Button

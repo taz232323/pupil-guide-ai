@@ -4,7 +4,9 @@ import { StudentClasses } from "./StudentClasses";
 export default function StudentClassesPage() {
   return (
     <DashboardShell title="My classes" subtitle="Your enrolled classes and classmates.">
-      <StudentClasses />
+      <div className="animate-page-enter">
+        <StudentClasses />
+      </div>
     </DashboardShell>
   );
 }

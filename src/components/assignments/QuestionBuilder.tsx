@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Reveal } from "@/components/Reveal";
 
 export type QType = "multiple_choice" | "short_answer" | "long_answer";
 
@@ -55,12 +56,13 @@ export function QuestionBuilder({
   return (
     <div className="space-y-3">
       {questions.map((q, i) => (
-        <Card key={i} className="p-4 space-y-3 bg-muted/30">
+        <Reveal key={i} delay={i * 60}>
+        <Card className="p-4 space-y-3 bg-muted/30 transition-spring hover:border-primary/30">
           <div className="flex items-start gap-2">
             <GripVertical className="h-4 w-4 mt-2 text-muted-foreground" />
             <div className="flex-1 space-y-3">
               <div className="flex flex-wrap gap-3 items-center">
-                <span className="text-xs font-semibold text-muted-foreground">Q{i + 1}</span>
+                <span className="text-xs font-semibold text-muted-foreground font-tabular">Q{i + 1}</span>
                 <Select value={q.question_type} onValueChange={(v) => setType(i, v as QType)}>
                   <SelectTrigger className="w-[180px] h-8"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -137,6 +139,7 @@ export function QuestionBuilder({
             </div>
           </div>
         </Card>
+        </Reveal>
       ))}
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => add("multiple_choice")}>

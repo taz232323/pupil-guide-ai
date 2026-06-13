@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
-import { Download, ExternalLink, FileText, Inbox } from "lucide-react";
+import { Download, ExternalLink, FileText, Inbox, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { RelativeTime } from "@/components/RelativeTime";
+import { Reveal } from "@/components/Reveal";
+import { cn } from "@/lib/utils";
+
+const TILE = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+];
 
 type Submission = {
   id: string;
@@ -88,7 +97,10 @@ export const TeacherSubmissions = () => {
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Submissions</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle className="text-xl">Submissions</CardTitle>
+        <p className="text-sm text-muted-foreground mt-1">Review student work turned in across your classes.</p>
+      </CardHeader>
       <CardContent>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
@@ -100,15 +112,20 @@ export const TeacherSubmissions = () => {
           />
         ) : (
           <div className="space-y-5">
-            {groups.map((g) => (
-              <div key={g.assignmentId}>
-                <div className="mb-2">
-                  <p className="font-medium">{g.title}</p>
-                  <p className="text-xs text-muted-foreground">{g.className} · {g.items.length} submission{g.items.length !== 1 ? "s" : ""}</p>
+            {groups.map((g, gi) => (
+              <Reveal key={g.assignmentId} delay={gi * 60}>
+                <div className="mb-2 flex items-center gap-3">
+                  <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", TILE[gi % TILE.length])}>
+                    <ClipboardList className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{g.title}</p>
+                    <p className="text-xs text-muted-foreground">{g.className} · <span className="font-tabular">{g.items.length}</span> submission{g.items.length !== 1 ? "s" : ""}</p>
+                  </div>
                 </div>
-                <div className="divide-y divide-border border border-border rounded-md">
+                <div className="divide-y divide-border rounded-xl border border-border bg-card shadow-card">
                   {g.items.map((s) => (
-                    <div key={s.id} className="px-3 py-2 flex items-center justify-between gap-3">
+                    <div key={s.id} className="px-3 py-2 flex items-center justify-between gap-3 transition-colors hover:bg-muted/40">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{s.studentName}</p>
                         <p className="text-xs text-muted-foreground">
@@ -133,7 +150,7 @@ export const TeacherSubmissions = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         )}

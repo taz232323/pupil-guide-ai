@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { MissingStudentsDialog, type MissingEntry } from "@/components/teacher/MissingStudentsDialog";
+import { Reveal } from "@/components/Reveal";
+import { CountUp } from "@/components/CountUp";
+import { MountainSketch } from "@/components/MountainSketch";
 
 type ClassRow = { id: string; name: string; subject: string };
 type AsgnRow = { id: string; class_id: string; title: string; due_date: string | null };
@@ -386,31 +389,31 @@ export default function TeacherDashboard() {
     <DashboardShell>
       <div className="space-y-6">
         {/* Greeting */}
-        <div className="rounded-3xl bg-gradient-hero p-6 sm:p-8 text-white shadow-elevated relative overflow-hidden animate-fade-in">
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative overflow-hidden animate-fade-in">
+          <MountainSketch variant="range" className="pointer-events-none absolute -top-6 right-0 hidden sm:block w-72 text-muted-foreground/30" />
           <div className="relative flex flex-wrap items-end justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-medium opacity-80">{timeGreeting()}</p>
-              <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight truncate">
+              <p className="text-sm font-medium text-muted-foreground">{timeGreeting()}</p>
+              <h1 className="mt-1 font-display text-3xl sm:text-4xl font-semibold tracking-tight truncate">
                 {name || "Welcome back"} 👋
               </h1>
-              <p className="mt-2 text-sm sm:text-base opacity-95 max-w-xl">{summary}</p>
+              <p className="mt-2 text-sm sm:text-base text-muted-foreground max-w-xl">{summary}</p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
+              <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 shadow-card text-primary hover-lift">
                 <Users className="h-5 w-5" />
                 <div className="leading-tight">
-                  <p className="text-lg font-bold tabular-nums">
-                    {new Set(members.map(m => m.student_id)).size}
+                  <p className="text-lg font-bold font-tabular text-foreground">
+                    <CountUp value={new Set(members.map(m => m.student_id)).size} />
                   </p>
-                  <p className="text-[10px] uppercase tracking-wide opacity-80">Students</p>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Students</p>
                 </div>
               </div>
-              <div className="hidden sm:flex items-center gap-2 rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
+              <div className="hidden sm:flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 shadow-card text-primary hover-lift">
                 <ClipboardList className="h-5 w-5" />
                 <div className="leading-tight">
-                  <p className="text-lg font-bold tabular-nums">{classes.length}</p>
-                  <p className="text-[10px] uppercase tracking-wide opacity-80">Classes</p>
+                  <p className="text-lg font-bold font-tabular text-foreground"><CountUp value={classes.length} /></p>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Classes</p>
                 </div>
               </div>
             </div>
@@ -434,6 +437,8 @@ export default function TeacherDashboard() {
           </Card>
         ) : (
           <>
+            {/* Today + Needs Attention */}
+            <div className="grid gap-6 lg:grid-cols-2">
             {/* Today's Agenda */}
             <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
               <div className="flex items-center justify-between mb-3">
@@ -442,7 +447,7 @@ export default function TeacherDashboard() {
                     <CalendarDays className="h-5 w-5" />
                   </span>
                   <div>
-                    <h2 className="text-lg font-bold tracking-tight">Today's Agenda</h2>
+                    <h2 className="text-lg font-bold tracking-tight">Today</h2>
                     <p className="text-xs text-muted-foreground">Assignments due today across your classes.</p>
                   </div>
                 </div>
@@ -456,48 +461,53 @@ export default function TeacherDashboard() {
                 <p className="text-sm text-muted-foreground py-6 text-center">Nothing is due today.</p>
               ) : (
                 <ul className="space-y-2">
-                  {todaysAgenda.map(a => (
-                    <li key={a.id}>
-                      <Link to={`/teacher/assignments/${a.id}`}
-                        className="flex items-center gap-3 rounded-xl border border-border p-3 hover-lift">
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                          <ClipboardList className="h-4 w-4" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold truncate">{a.title}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {classNameMap[a.class_id]} · Due {new Date(a.due_date!).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                          </p>
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </Link>
-                    </li>
-                  ))}
+                  {todaysAgenda.map((a, i) => {
+                    const isPast = new Date(a.due_date!).getTime() < Date.now();
+                    return (
+                      <Reveal as="li" key={a.id} delay={i * 80}>
+                        <Link to={`/teacher/assignments/${a.id}`}
+                          className="flex items-center gap-3 rounded-xl border border-border p-3 hover-lift">
+                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                            <ClipboardList className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold truncate">
+                              {isPast ? <span className="strike-draw">{a.title}</span> : a.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {classNameMap[a.class_id]} · Due {new Date(a.due_date!).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </Link>
+                      </Reveal>
+                    );
+                  })}
                 </ul>
               )}
             </section>
 
-            {/* Needs Attention — most prominent */}
-            <section className="rounded-3xl border-2 border-warning/40 bg-gradient-to-br from-warning-soft/60 via-card to-card p-5 sm:p-6 shadow-elevated">
+            {/* Needs Attention */}
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
               <div className="flex items-center gap-2 mb-4">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-warning text-warning-foreground shadow-card">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-warning-soft text-warning">
                   <AlertTriangle className="h-5 w-5" />
                 </span>
                 <div>
-                  <h2 className="text-xl font-bold tracking-tight">Needs Attention</h2>
+                  <h2 className="text-lg font-bold tracking-tight">Needs attention</h2>
                   <p className="text-xs text-muted-foreground">Items that need your action.</p>
                 </div>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-3">
+              <div className="grid gap-4">
                 {/* Ungraded */}
-                <div className="rounded-2xl bg-card border border-border p-4">
+                <div className="rounded-2xl bg-card border border-border p-4 hover-lift">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold flex items-center gap-1.5">
                       <Inbox className="h-4 w-4 text-primary" /> Ungraded
                     </p>
-                    <span className="text-xs font-bold rounded-full bg-primary-soft text-primary px-2 py-0.5 tabular-nums">
-                      {ungradedSubs.length}
+                    <span className="text-xs font-bold rounded-full bg-primary-soft text-primary px-2 py-0.5 font-tabular">
+                      <CountUp value={ungradedSubs.length} />
                     </span>
                   </div>
                   {loading ? <Skeleton className="h-24 rounded-lg" /> : ungradedSubs.length === 0 ? (
@@ -506,19 +516,19 @@ export default function TeacherDashboard() {
                     </p>
                   ) : (
                     <ul className="space-y-1.5">
-                      {ungradedSubs.slice(0, 5).map(s => {
+                      {ungradedSubs.slice(0, 5).map((s, i) => {
                         const a = assignments.find(x => x.id === s.assignment_id);
                         return (
-                          <li key={s.id}>
+                          <Reveal as="li" key={s.id} delay={i * 60}>
                             <Link to={`/teacher/assignments/${s.assignment_id}`}
-                              className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
+                              className="grading-shimmer flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
                               <div className="min-w-0">
                                 <p className="font-medium truncate">{profiles[s.student_id] || "Student"}</p>
                                 <p className="text-[11px] text-muted-foreground truncate">{a?.title ?? "Assignment"}</p>
                               </div>
                               <span className="text-[10px] text-muted-foreground shrink-0">{relTime(s.submitted_at)}</span>
                             </Link>
-                          </li>
+                          </Reveal>
                         );
                       })}
                     </ul>
@@ -526,13 +536,13 @@ export default function TeacherDashboard() {
                 </div>
 
                 {/* Pending privileges */}
-                <div className="rounded-2xl bg-card border border-border p-4">
+                <div className="rounded-2xl bg-card border border-border p-4 hover-lift">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold flex items-center gap-1.5">
                       <ShieldCheck className="h-4 w-4 text-teal" /> Privilege requests
                     </p>
-                    <span className="text-xs font-bold rounded-full bg-teal-soft text-teal px-2 py-0.5 tabular-nums">
-                      {pendingPrivs.length}
+                    <span className="text-xs font-bold rounded-full bg-teal-soft text-teal px-2 py-0.5 font-tabular">
+                      <CountUp value={pendingPrivs.length} />
                     </span>
                   </div>
                   {loading ? <Skeleton className="h-24 rounded-lg" /> : pendingPrivs.length === 0 ? (
@@ -541,30 +551,30 @@ export default function TeacherDashboard() {
                     </p>
                   ) : (
                     <ul className="space-y-1.5">
-                      {pendingPrivs.slice(0, 5).map(p => (
-                        <li key={p.id}>
+                      {pendingPrivs.slice(0, 5).map((p, i) => (
+                        <Reveal as="li" key={p.id} delay={i * 60}>
                           <Link to="/teacher/shop"
-                            className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
+                            className="animate-border-pulse-orange flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm">
                             <div className="min-w-0">
                               <p className="font-medium truncate">{profiles[p.student_id] || "Student"}</p>
                               <p className="text-[11px] text-muted-foreground truncate">{p.item_name}</p>
                             </div>
                             <span className="text-[10px] text-muted-foreground shrink-0">{relTime(p.created_at)}</span>
                           </Link>
-                        </li>
+                        </Reveal>
                       ))}
                     </ul>
                   )}
                 </div>
 
                 {/* At risk */}
-                <div className="rounded-2xl bg-card border border-border p-4">
+                <div className="rounded-2xl bg-card border border-border p-4 hover-lift">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold flex items-center gap-1.5">
                       <AlertTriangle className="h-4 w-4 text-destructive" /> At-risk students
                     </p>
-                    <span className="text-xs font-bold rounded-full bg-destructive/10 text-destructive px-2 py-0.5 tabular-nums">
-                      {atRisk.length}
+                    <span className="text-xs font-bold rounded-full bg-destructive/10 text-destructive px-2 py-0.5 font-tabular">
+                      <CountUp value={atRisk.length} />
                     </span>
                   </div>
                   {loading ? <Skeleton className="h-24 rounded-lg" /> : atRisk.length === 0 ? (
@@ -573,12 +583,12 @@ export default function TeacherDashboard() {
                     </p>
                   ) : (
                     <ul className="space-y-1.5">
-                      {atRisk.map(s => (
-                        <li key={s.id}>
+                      {atRisk.map((s, i) => (
+                        <Reveal as="li" key={s.id} delay={i * 60}>
                           <button
                             type="button"
                             onClick={() => setMissingDialog({ kind: "student", studentId: s.id, studentName: s.name })}
-                            className="w-full flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm text-left"
+                            className="attention-pulse w-full flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted text-sm text-left"
                           >
                             <div className="min-w-0">
                               <p className="font-medium truncate">{s.name}</p>
@@ -592,138 +602,151 @@ export default function TeacherDashboard() {
                               At Risk
                             </span>
                           </button>
-                        </li>
+                        </Reveal>
                       ))}
                     </ul>
                   )}
                 </div>
               </div>
             </section>
+            </div>
 
-            {/* Quick Actions */}
-            <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {QUICK_ACTIONS.map(q => (
-                <Link key={q.to} to={q.to}
-                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 shadow-card hover-lift">
-                  <span className={cn("inline-flex h-12 w-12 items-center justify-center rounded-2xl", q.tone)}>
-                    <q.icon className="h-6 w-6" />
-                  </span>
-                  <p className="text-sm font-semibold text-center">{q.label}</p>
-                </Link>
-              ))}
-            </section>
-
-            {/* Class Pulse + Activity */}
+            {/* Classes + Quick Actions */}
             <div className="grid gap-6 lg:grid-cols-3">
-              <section className="lg:col-span-2 space-y-3">
+              <section className="lg:col-span-2 rounded-2xl border border-border bg-card p-5 shadow-card space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-primary" /> Class Pulse
+                  <h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-primary" /> Classes
                   </h2>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link to="/teacher/classes">All <ArrowRight className="h-4 w-4" /></Link>
+                    <Link to="/teacher/classes">View all classes <ArrowRight className="h-4 w-4" /></Link>
                   </Button>
                 </div>
                 {loading ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {[0, 1].map(i => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+                  <div className="space-y-3">
+                    {[0, 1].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
                   </div>
                 ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {pulse.map(c => {
+                  <div className="space-y-2.5">
+                    {pulse.map((c, i) => {
                       const avgTone = c.avg == null ? "text-muted-foreground"
                         : c.avg >= 80 ? "text-success" : c.avg >= 70 ? "text-warning" : "text-destructive";
+                      const barTone = c.avg == null ? "bg-muted-foreground/40"
+                        : c.avg >= 80 ? "bg-success" : c.avg >= 70 ? "bg-warning" : "bg-destructive";
+                      const tile = ["bg-primary-soft text-primary", "bg-success-soft text-success", "bg-plum-soft text-plum", "bg-warning-soft text-warning"][i % 4];
                       return (
-                        <Link key={c.id} to={`/teacher/classes/${c.id}`}
-                          className="block rounded-2xl border border-border bg-card p-4 shadow-card hover-lift">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-semibold truncate">{c.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">{c.subject}</p>
+                        <Reveal key={c.id} delay={i * 80}>
+                          <Link to={`/teacher/classes/${c.id}`}
+                            className="block rounded-xl border border-border bg-card p-3 shadow-card hover-lift">
+                            <div className="flex items-center gap-3">
+                              <span className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tile)}>
+                                <GraduationCap className="h-5 w-5" />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-semibold truncate">{c.name}</p>
+                                  <span className={cn("text-sm font-bold font-tabular shrink-0", avgTone)}>
+                                    {c.avg == null ? "—" : `${c.avg}%`}
+                                  </span>
+                                </div>
+                                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                  <div
+                                    className={cn("h-full rounded-full animate-bar-grow", barTone)}
+                                    style={{ width: `${c.avg ?? 0}%`, animationDelay: `${i * 80}ms` }}
+                                  />
+                                </div>
+                                <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+                                  <span className="inline-flex items-center gap-1 font-tabular">
+                                    <Users className="h-3 w-3" />{c.studentCount} students
+                                  </span>
+                                  {c.missing > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setMissingDialog({ kind: "class", classId: c.id, className: c.name });
+                                      }}
+                                      className="inline-flex items-center gap-1 font-tabular text-destructive hover:underline"
+                                      title="View missing students"
+                                    >
+                                      {c.missing} missing
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1 shrink-0">
-                              <Users className="h-3 w-3" />{c.studentCount}
-                            </span>
-                          </div>
-                          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                            <div className="rounded-lg bg-muted/50 p-2">
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Active 24h</p>
-                              <p className="mt-0.5 text-lg font-bold tabular-nums">{c.active}</p>
-                            </div>
-                            <div className="rounded-lg bg-muted/50 p-2">
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Avg</p>
-                              <p className={cn("mt-0.5 text-lg font-bold tabular-nums", avgTone)}>
-                                {c.avg == null ? "—" : `${c.avg}%`}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (c.missing === 0) return;
-                                setMissingDialog({ kind: "class", classId: c.id, className: c.name });
-                              }}
-                              className={cn(
-                                "rounded-lg bg-muted/50 p-2 text-center transition-colors",
-                                c.missing > 0 ? "hover:bg-destructive/10 cursor-pointer" : "cursor-default"
-                              )}
-                              title={c.missing > 0 ? "View missing students" : undefined}
-                            >
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Missing</p>
-                              <p className={cn("mt-0.5 text-lg font-bold tabular-nums", c.missing > 0 ? "text-destructive" : "")}>
-                                {c.missing}
-                              </p>
-                            </button>
-                          </div>
-                        </Link>
+                          </Link>
+                        </Reveal>
                       );
                     })}
                   </div>
                 )}
               </section>
 
-              <section className="space-y-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-teal" /> Recent Activity
+              {/* Quick actions */}
+              <section className="rounded-2xl border border-border bg-card p-5 shadow-card space-y-3">
+                <h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-warning" /> Quick actions
                 </h2>
-                {loading ? (
-                  <Skeleton className="h-64 rounded-2xl" />
-                ) : activity.length === 0 ? (
-                  <Card className="border-dashed">
-                    <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                      No recent activity yet.
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <ul className="space-y-2">
-                    {activity.map(a => {
-                      const Icon = a.type === "submission" ? FileText : a.type === "message" ? MessageSquare : ShoppingBag;
-                      const tone = a.type === "submission" ? "bg-primary-soft text-primary"
-                        : a.type === "message" ? "bg-teal-soft text-teal"
-                        : "bg-warning-soft text-warning";
-                      return (
-                        <li key={a.id}>
-                          <Link to={a.link}
-                            className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 hover-lift">
-                            <span className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tone)}>
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm leading-snug">
-                                <span className="font-semibold">{profiles[a.studentId] || "Student"}</span>{" "}
-                                <span className="text-muted-foreground">{a.text}</span>
-                              </p>
-                              <p className="mt-0.5 text-[11px] text-muted-foreground">{relTime(a.ts)}</p>
-                            </div>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                <ul className="space-y-2">
+                  {QUICK_ACTIONS.map((q, i) => (
+                    <Reveal as="li" key={q.to} delay={i * 60}>
+                      <Link to={q.to}
+                        className="flex items-center gap-3 rounded-xl border border-border p-3 hover-lift">
+                        <span className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", q.tone)}>
+                          <q.icon className="h-4 w-4" />
+                        </span>
+                        <p className="flex-1 text-sm font-semibold">{q.label}</p>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                    </Reveal>
+                  ))}
+                </ul>
               </section>
             </div>
+
+            {/* Recent Activity */}
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-card space-y-3">
+              <h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
+                <Activity className="h-5 w-5 text-teal" /> Recent activity
+              </h2>
+              {loading ? (
+                <Skeleton className="h-64 rounded-2xl" />
+              ) : activity.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                    No recent activity yet.
+                  </CardContent>
+                </Card>
+              ) : (
+                <ul className="grid gap-2 sm:grid-cols-2">
+                  {activity.map((a, i) => {
+                    const Icon = a.type === "submission" ? FileText : a.type === "message" ? MessageSquare : ShoppingBag;
+                    const tone = a.type === "submission" ? "bg-primary-soft text-primary"
+                      : a.type === "message" ? "bg-teal-soft text-teal"
+                      : "bg-warning-soft text-warning";
+                    return (
+                      <Reveal as="li" key={a.id} delay={i * 60}>
+                        <Link to={a.link}
+                          className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 hover-lift">
+                          <span className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tone)}>
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm leading-snug">
+                              <span className="font-semibold">{profiles[a.studentId] || "Student"}</span>{" "}
+                              <span className="text-muted-foreground">{a.text}</span>
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">{relTime(a.ts)}</p>
+                          </div>
+                        </Link>
+                      </Reveal>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
           </>
         )}
       </div>

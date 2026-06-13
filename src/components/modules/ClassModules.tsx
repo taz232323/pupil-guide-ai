@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus, Pencil, Trash2, ChevronDown, ChevronRight, GripVertical, CheckCircle2,
-  Download, ExternalLink, FileText, Megaphone, Paperclip, LinkIcon, ClipboardList,
+  Download, ExternalLink, FileText, Megaphone, Layers,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -19,6 +20,7 @@ import { IconButton } from "@/components/IconButton";
 import { EmptyState } from "@/components/EmptyState";
 import { SpinnerButton } from "@/components/SpinnerButton";
 import { CardListSkeleton } from "@/components/Skeletons";
+import { Reveal } from "@/components/Reveal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { RichContent } from "@/components/RichEditor";
@@ -54,6 +56,13 @@ type ItemRow = {
 };
 
 const FILES_BUCKET = "module-files";
+
+const MODULE_TILE = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+];
 
 function fileUrl(path: string) {
   return supabase.storage.from(FILES_BUCKET).getPublicUrl(path).data.publicUrl;
@@ -288,10 +297,11 @@ export function ClassModules({ classId, isTeacher }: { classId: string; isTeache
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onModuleDragEnd}>
           <SortableContext items={modules.map((m) => m.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
-              {modules.map((m) => (
+              {modules.map((m, mi) => (
                 <SortableModule
                   key={m.id}
                   module={m}
+                  index={mi}
                   isOpen={openModuleIds.has(m.id)}
                   onToggle={() => toggleOpen(m.id)}
                   onEdit={() => openEditModule(m)}
@@ -317,30 +327,43 @@ export function ClassModules({ classId, isTeacher }: { classId: string; isTeache
         </DndContext>
       ) : (
         <div className="space-y-3">
-          {modules.map((m) => {
+          {modules.map((m, mi) => {
             const list = itemsByModule.get(m.id) ?? [];
             const total = list.length;
             const done = list.filter((i) => completed.has(i.id)).length;
+            const pct = total ? Math.round((done / total) * 100) : 0;
             return (
-              <Card key={m.id} className="overflow-hidden">
+              <Reveal key={m.id} delay={mi * 60} flip>
+              <Card className="overflow-hidden hover-lift transition-spring">
                 <button
                   type="button"
                   onClick={() => toggleOpen(m.id)}
                   className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/40 transition-colors"
                 >
-                  {openModuleIds.has(m.id) ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                  <span className={cn(
+                    "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-spring",
+                    MODULE_TILE[mi % 4]
+                  )}>
+                    <Layers className="h-5 w-5" />
+                  </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{m.title}</p>
-                    {m.description && <p className="text-xs text-muted-foreground truncate">{m.description}</p>}
+                    {m.description ? (
+                      <p className="text-xs text-muted-foreground truncate">{m.description}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground font-tabular">{done} of {total} complete</p>
+                    )}
+                    {total > 0 && <Progress value={pct} className="mt-2 h-1.5" />}
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">{done}/{total}</span>
+                  <span className="shrink-0 font-tabular text-sm font-semibold text-muted-foreground">{pct}%</span>
+                  {openModuleIds.has(m.id) ? <ChevronDown className="h-4 w-4 shrink-0 transition-transform" /> : <ChevronRight className="h-4 w-4 shrink-0 transition-transform" />}
                 </button>
                 {openModuleIds.has(m.id) && (
                   <div className="border-t border-border">
                     {list.length === 0 ? (
                       <p className="px-4 py-3 text-sm text-muted-foreground">No items in this module yet.</p>
                     ) : (
-                      <ul className="divide-y divide-border">
+                      <ul className="divide-y divide-border stagger-children">
                         {list.map((it) => (
                           <li key={it.id}>
                             <StudentItemRow item={it} done={completed.has(it.id)} onOpen={() => openItem(it)} />
@@ -351,6 +374,7 @@ export function ClassModules({ classId, isTeacher }: { classId: string; isTeache
                   </div>
                 )}
               </Card>
+              </Reveal>
             );
           })}
         </div>
@@ -432,9 +456,10 @@ export function ClassModules({ classId, isTeacher }: { classId: string; isTeache
 /* ---------- Sortable wrappers ---------- */
 
 function SortableModule({
-  module: m, isOpen, onToggle, onEdit, onDelete, isTeacher, children,
+  module: m, index, isOpen, onToggle, onEdit, onDelete, isTeacher, children,
 }: {
   module: ModuleRow;
+  index: number;
   isOpen: boolean;
   onToggle: () => void;
   onEdit: () => void;
@@ -452,12 +477,18 @@ function SortableModule({
             <GripVertical className="h-4 w-4" />
           </button>
         )}
-        <button type="button" onClick={onToggle} className="flex-1 flex items-center gap-2 text-left min-w-0">
-          {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+        <button type="button" onClick={onToggle} className="flex-1 flex items-center gap-3 text-left min-w-0">
+          <span className={cn(
+            "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-spring",
+            MODULE_TILE[index % 4]
+          )}>
+            <Layers className="h-4 w-4" />
+          </span>
           <div className="min-w-0">
             <CardTitle className="text-base truncate">{m.title}</CardTitle>
             {m.description && <p className="text-xs text-muted-foreground truncate">{m.description}</p>}
           </div>
+          {isOpen ? <ChevronDown className="h-4 w-4 shrink-0 ml-auto" /> : <ChevronRight className="h-4 w-4 shrink-0 ml-auto" />}
         </button>
         {isTeacher && (
           <div className="flex items-center gap-1">
@@ -534,11 +565,11 @@ function SortableItem({
 
   if (isTeacher) {
     return (
-      <li ref={setNodeRef} style={style} className="flex items-center gap-2 px-3 py-2">
+      <li ref={setNodeRef} style={style} className="group flex items-center gap-2 px-3 py-2 hover:bg-muted/30 transition-colors">
         <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground touch-none" aria-label="Drag to reorder item">
           <GripVertical className="h-4 w-4" />
         </button>
-        <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md", meta.tone)}>
+        <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md transition-spring group-hover:scale-110", meta.tone)}>
           <Icon className="h-4 w-4" />
         </span>
         <div className="flex-1 min-w-0">
@@ -563,16 +594,16 @@ function StudentItemRow({ item, done, onOpen }: { item: ItemRow; done: boolean; 
     return (
       <Link
         to={`/student/assignments/${item.assignment_id}`}
-        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+        className="group flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
       >
-        <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-md", meta.tone)}>
+        <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-md transition-spring group-hover:scale-110", meta.tone)}>
           <Icon className="h-4 w-4" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{item.title}</p>
+          <p className={cn("text-sm font-medium truncate", done && "text-muted-foreground")}>{item.title}</p>
           <p className="text-xs text-muted-foreground">{meta.label}</p>
         </div>
-        {done && <CheckCircle2 className="h-5 w-5 text-success" aria-label="Completed" />}
+        {done && <CheckCircle2 className="h-5 w-5 text-success animate-check-pop" aria-label="Completed" />}
       </Link>
     );
   }
@@ -581,18 +612,18 @@ function StudentItemRow({ item, done, onOpen }: { item: ItemRow; done: boolean; 
     <button
       type="button"
       onClick={onOpen}
-      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
+      className="group w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
     >
-      <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-md", meta.tone)}>
+      <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-md transition-spring group-hover:scale-110", meta.tone)}>
         <Icon className="h-4 w-4" />
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{item.title}</p>
+        <p className={cn("text-sm font-medium truncate", done && "text-muted-foreground")}>{item.title}</p>
         <p className="text-xs text-muted-foreground">{meta.label}</p>
       </div>
       {item.item_type === "file" && <Download className="h-4 w-4 text-muted-foreground" />}
       {item.item_type === "link" && <ExternalLink className="h-4 w-4 text-muted-foreground" />}
-      {done && <CheckCircle2 className="h-5 w-5 text-success ml-1" aria-label="Completed" />}
+      {done && <CheckCircle2 className="h-5 w-5 text-success ml-1 animate-check-pop" aria-label="Completed" />}
     </button>
   );
 }

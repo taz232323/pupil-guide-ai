@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X, HelpCircle, Plus, Trash2, Loader2, ShieldCheck, HeartPulse, Send, Clock3, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X, HelpCircle, Plus, Trash2, Loader2, ShieldCheck, HeartPulse, Send, Clock3, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -17,10 +17,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
+import { AiPracticeQuestionDialog, type GeneratedQuestion } from "@/components/AiPracticeQuestionDialog";
 import { ClassModules } from "@/components/modules/ClassModules";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconButton } from "@/components/IconButton";
 import { getMoodOption } from "@/lib/moodCheckins";
+import { Reveal } from "@/components/Reveal";
+import { MountainSketch } from "@/components/MountainSketch";
+import { cn } from "@/lib/utils";
+import { celebrate } from "@/lib/confetti";
 import { toast } from "sonner";
 
 type ClassRow = {
@@ -35,6 +40,13 @@ type ClassRow = {
 };
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
+
+const ASSIGNMENT_TILE = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+];
 
 type PracticeQuestion = {
   id: string;
@@ -90,6 +102,7 @@ export default function ClassDetail() {
   const [practiceQuestions, setPracticeQuestions] = useState<PracticeQuestion[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<Partial<PracticeQuestion> | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [showPracticePrompt, setShowPracticePrompt] = useState(false);
 
   const isTeacher = !!cls && !!user && cls.teacher_id === user.id;
@@ -183,6 +196,7 @@ export default function ClassDetail() {
     const n = (data as number) ?? awardTargets.length;
     const label = awardKind === "star" ? "Star Coin" : awardKind === "crown" ? "Crown Coin" : "Streak Shield";
     toast.success(`Awarded ${amt} ${label}${amt === 1 ? "" : "s"} to ${n} student${n === 1 ? "" : "s"}`);
+    celebrate("small");
     setAwardOpen(false);
     setSelectedIds(new Set());
   };
@@ -350,6 +364,33 @@ export default function ClassDetail() {
     toast.success("Question deleted");
   };
 
+  const addGeneratedQuestions = async (questions: GeneratedQuestion[]) => {
+    if (!cls || !user || questions.length === 0) return;
+
+    const rows = questions.map((question) => ({
+      class_id: cls.id,
+      teacher_id: user.id,
+      question_type: "multiple_choice" as const,
+      prompt: question.prompt,
+      options: question.options,
+      correct_index: question.correctIndex,
+      expected_answer: null,
+    }));
+
+    const { data, error } = await (supabase as any)
+      .from("practice_question_bank")
+      .insert(rows)
+      .select();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    setPracticeQuestions((prev) => [...((data ?? []) as PracticeQuestion[]), ...prev]);
+    const count = data?.length ?? questions.length;
+    toast.success(`Added ${count} AI question${count === 1 ? "" : "s"} to the bank`);
+  };
+
   const dismissPracticePrompt = async () => {
     if (!cls || !user) return;
     await (supabase as any)
@@ -381,7 +422,7 @@ export default function ClassDetail() {
           {isTeacher && (
             <button
               onClick={copyCode}
-              className="font-mono text-xs px-2 py-1 rounded bg-secondary hover:bg-accent inline-flex items-center gap-1.5"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/15 bg-primary-soft px-2 py-1 font-mono text-xs font-semibold text-primary transition-spring hover-lift"
               aria-label={`Copy join code ${cls.join_code}`}
             >
               {cls.join_code}<Copy className="h-3 w-3" />
@@ -393,8 +434,15 @@ export default function ClassDetail() {
         </div>
       }
     >
+      <div className="relative mb-4 hidden h-0 overflow-visible sm:block">
+        <MountainSketch
+          variant="peak"
+          className="pointer-events-none absolute -top-16 right-0 w-56 text-muted-foreground/25"
+        />
+      </div>
+
       <Tabs defaultValue="modules" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview"><BookOpen className="h-4 w-4 mr-1.5" />Overview</TabsTrigger>
           <TabsTrigger value="modules"><Layers className="h-4 w-4 mr-1.5" />Modules</TabsTrigger>
           <TabsTrigger value="assignments"><ClipboardList className="h-4 w-4 mr-1.5" />Assignments</TabsTrigger>
@@ -403,7 +451,7 @@ export default function ClassDetail() {
         </TabsList>
 
         <TabsContent value="overview">
-          <Card>
+          <Card className="hover-lift animate-fade-up">
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div>
                 <CardTitle className="text-base">Welcome & syllabus</CardTitle>
@@ -451,7 +499,7 @@ export default function ClassDetail() {
           </Card>
 
           {isTeacher && (
-            <Card className="mt-4">
+            <Card className="mt-4 hover-lift animate-fade-up" style={{ animationDelay: "80ms" }}>
               <CardHeader>
                 <CardTitle className="text-base">Class settings</CardTitle>
                 <CardDescription>Control how this class appears to students.</CardDescription>
@@ -503,7 +551,7 @@ export default function ClassDetail() {
         </TabsContent>
 
         <TabsContent value="assignments">
-          <Card>
+          <Card className="hover-lift animate-fade-up">
             <CardHeader>
               <CardTitle className="text-base">Assignments</CardTitle>
               <CardDescription>All assignments for this class.</CardDescription>
@@ -513,19 +561,25 @@ export default function ClassDetail() {
                 <EmptyState icon={ClipboardList} title="No assignments yet" />
               ) : (
                 <ul className="divide-y divide-border">
-                  {assignments.map((a) => {
+                  {assignments.map((a, i) => {
                     const href = role === "teacher" ? `/teacher/assignments/${a.id}` : `/student/assignments/${a.id}`;
                     return (
-                      <li key={a.id}>
-                        <Link to={href} className="flex items-center justify-between py-3 -mx-2 px-2 rounded-md hover:bg-muted/40 transition-colors">
-                          <span className="font-medium truncate">{a.title}</span>
+                      <Reveal as="li" key={a.id} delay={i * 50}>
+                        <Link to={href} className="group flex items-center justify-between gap-3 py-3 -mx-2 px-2 rounded-xl hover:bg-muted/40 transition-spring">
+                          <span className={cn(
+                            "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-spring group-hover:scale-110",
+                            ASSIGNMENT_TILE[i % ASSIGNMENT_TILE.length],
+                          )}>
+                            <ClipboardList className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1 font-medium truncate">{a.title}</span>
                           {a.due_date && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="shrink-0 text-xs text-muted-foreground">
                               Due {new Date(a.due_date).toLocaleDateString()}
                             </span>
                           )}
                         </Link>
-                      </li>
+                      </Reveal>
                     );
                   })}
                 </ul>
@@ -536,7 +590,7 @@ export default function ClassDetail() {
 
         {isTeacher && (
           <TabsContent value="question-bank">
-            <Card>
+            <Card className="hover-lift animate-fade-up">
               <CardHeader className="flex flex-row items-center justify-between gap-2">
                 <div>
                   <CardTitle className="text-base">Practice Question Bank</CardTitle>
@@ -544,9 +598,14 @@ export default function ClassDetail() {
                     Add questions that will appear in students' daily practice sessions. AI will fill remaining slots with questions based on your lesson content.
                   </CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
-                  <Plus className="h-4 w-4 mr-1" />Add Question
-                </Button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>
+                    <Sparkles className="h-4 w-4 mr-1" />Generate with AI
+                  </Button>
+                  <Button size="sm" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
+                    <Plus className="h-4 w-4 mr-1" />Add Question
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {practiceQuestions.length === 0 ? (
@@ -555,18 +614,23 @@ export default function ClassDetail() {
                     title="No questions yet"
                     description="Add practice questions to give students targeted daily practice. AI will also generate questions from your lesson content."
                     action={
-                      <Button size="sm" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
-                        <Plus className="h-4 w-4 mr-1" />Add your first question
-                      </Button>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <Button size="sm" onClick={() => setAiOpen(true)}>
+                          <Sparkles className="h-4 w-4 mr-1" />Generate with AI
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
+                          <Plus className="h-4 w-4 mr-1" />Add manually
+                        </Button>
+                      </div>
                     }
                   />
                 ) : (
                   <ul className="divide-y divide-border">
-                    {practiceQuestions.map((q) => (
-                      <li key={q.id} className="py-3 flex items-start justify-between gap-3">
+                    {practiceQuestions.map((q, i) => (
+                      <Reveal as="li" key={q.id} delay={i * 50} className="py-3 flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted">
+                            <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
                               {q.question_type === "multiple_choice" ? "Multiple Choice" : "Short Answer"}
                             </span>
                           </div>
@@ -574,8 +638,8 @@ export default function ClassDetail() {
                           {q.question_type === "multiple_choice" && q.options && (
                             <ul className="mt-1 space-y-0.5">
                               {(q.options as string[]).map((opt, i) => (
-                                <li key={i} className={`text-xs ${i === q.correct_index ? "text-green-600 font-medium" : "text-muted-foreground"}`}>
-                                  {String.fromCharCode(65 + i)}. {opt} {i === q.correct_index && "✓"}
+                                <li key={i} className={cn("text-xs", i === q.correct_index ? "text-success font-medium" : "text-muted-foreground")}>
+                                  {String.fromCharCode(65 + i)}. {opt} {i === q.correct_index && "correct"}
                                 </li>
                               ))}
                             </ul>
@@ -592,7 +656,7 @@ export default function ClassDetail() {
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      </li>
+                      </Reveal>
                     ))}
                   </ul>
                 )}
@@ -602,7 +666,7 @@ export default function ClassDetail() {
         )}
 
         <TabsContent value="members">
-          <Card>
+          <Card className="hover-lift animate-fade-up">
             <CardHeader>
               <CardTitle className="text-base">Members</CardTitle>
               <CardDescription>{members.length} {members.length === 1 ? "person" : "people"} in this class.</CardDescription>
@@ -641,7 +705,7 @@ export default function ClassDetail() {
               )}
               <ul className="flex flex-wrap gap-3">
                 {members.map((m) => (
-                  <li key={m.id} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                  <li key={m.id} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 transition-spring hover-lift">
                     {isTeacher && !m.isTeacher && (
                       <Checkbox
                         checked={selectedIds.has(m.id)}
@@ -896,6 +960,15 @@ export default function ClassDetail() {
         onSave={savePracticeQuestion}
         saving={savingQuestion}
       />
+
+      {cls && (
+        <AiPracticeQuestionDialog
+          open={aiOpen}
+          onClose={() => setAiOpen(false)}
+          classId={cls.id}
+          onAdd={addGeneratedQuestions}
+        />
+      )}
 
       {/* First-time Daily Practice Prompt */}
       <Dialog open={showPracticePrompt} onOpenChange={setShowPracticePrompt}>

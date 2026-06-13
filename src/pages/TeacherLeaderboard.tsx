@@ -123,7 +123,7 @@ export default function TeacherLeaderboard() {
   }, [classes, membersByClass, profiles, starByStudent, crownByStudent, currency, streaks, sortBy]);
 
   const CoinIcon = currency === "star" ? Star : Crown;
-  const coinColor = currency === "star" ? "fill-amber-400 text-amber-500" : "fill-primary text-primary";
+  const coinColor = currency === "star" ? "fill-gold text-gold" : "fill-plum text-plum";
 
   const renderRow = (e: Entry, idx: number, champions?: Set<string>) => {
     const rank = idx + 1;
@@ -136,7 +136,7 @@ export default function TeacherLeaderboard() {
       >
         <div className={cn(
           "w-8 text-center font-bold tabular-nums",
-          rank === 1 ? "text-amber-500" : rank === 2 ? "text-slate-400" : rank === 3 ? "text-orange-500" : "text-muted-foreground"
+          rank === 1 ? "text-gold" : rank === 2 ? "text-muted-foreground" : rank === 3 ? "text-warning" : "text-muted-foreground"
         )}>
           {RankIcon ? <RankIcon className="h-5 w-5 mx-auto" /> : `#${rank}`}
         </div>

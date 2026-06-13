@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { SketchCard } from "@/components/study-buddy/SketchCard";
 import type { SketchPayload, StudyBuddyMessage } from "@/components/study-buddy/types";
+import { ThinkingDots } from "@/components/ThinkingDots";
 
 const MAX_MESSAGES_TO_SEND = 12;
 
@@ -123,7 +124,7 @@ export function StudyBuddy() {
           open && "opacity-0 pointer-events-none",
         )}
       >
-        <Brain className="h-7 w-7" />
+        <Brain className="h-7 w-7 animate-breathing" />
         <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold shadow ring-2 ring-background">
           <Sparkles className="h-3 w-3" />
         </span>
@@ -159,16 +160,12 @@ export function StudyBuddy() {
               <MessageBubble key={index} {...message} />
             ))}
             {sending && (
-              <div className="flex items-end gap-2">
+              <div className="flex items-end gap-2 animate-msg-in-left">
                 <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary to-teal text-primary-foreground inline-flex items-center justify-center shrink-0">
                   <Bot className="h-4 w-4" />
                 </div>
                 <div className="rounded-2xl rounded-bl-sm bg-card border px-3 py-2 shadow-sm">
-                  <div className="flex gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
+                  <ThinkingDots />
                 </div>
               </div>
             )}
@@ -220,7 +217,10 @@ function MessageBubble({ role, content, kind, sketch }: StudyBuddyMessage) {
   const isError = kind === "error";
 
   return (
-    <div className={cn("flex items-end gap-2", isUser && "flex-row-reverse")}>
+    <div className={cn(
+      "flex items-end gap-2",
+      isUser ? "flex-row-reverse animate-msg-in-right" : "animate-msg-in-left",
+    )}>
       <div
         className={cn(
           "h-7 w-7 rounded-full inline-flex items-center justify-center shrink-0 text-xs font-semibold",

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Tag, CheckCircle2, XCircle, Save, Pencil, BellRing, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CalendarDays, Tag, CheckCircle2, XCircle, Save, Pencil, BellRing, AlertTriangle, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,8 @@ import { SpinnerButton } from "@/components/SpinnerButton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { QuestionBuilder, DraftQuestion, validateQuestions } from "@/components/assignments/QuestionBuilder";
+import { Reveal } from "@/components/Reveal";
+import { MountainSketch } from "@/components/MountainSketch";
 
 type QType = "multiple_choice" | "short_answer" | "long_answer";
 type Question = {
@@ -220,13 +222,26 @@ export default function TeacherAssignmentDetail() {
 
   return (
     <DashboardShell title="Assignment Review">
-      <div className="space-y-4">
+      <div className="space-y-4 animate-page-enter">
         <Button variant="ghost" size="sm" onClick={() => navigate("/teacher/assignments")}>
           <ArrowLeft className="h-4 w-4 mr-1" />Back
         </Button>
 
-        <Card>
-          <CardContent className="p-6 space-y-3">
+        <Card className="relative overflow-hidden">
+          <MountainSketch
+            variant="range"
+            className="pointer-events-none absolute -top-4 right-0 hidden sm:block w-64 text-muted-foreground/30"
+          />
+          <CardContent className="relative p-6 space-y-3">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span>{className}</span>
+              {assignment.unit_tag && (
+                <>
+                  <ChevronRight className="h-3 w-3" />
+                  <span>{assignment.unit_tag}</span>
+                </>
+              )}
+            </div>
             <div className="flex items-start justify-between gap-4">
               <h1 className="text-3xl font-bold tracking-tight">{assignment.title}</h1>
               <Button variant="outline" size="sm" onClick={openEditQuestions}>
@@ -236,12 +251,12 @@ export default function TeacherAssignmentDetail() {
             <div className="flex flex-wrap gap-2">
               <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">{className}</span>
               {assignment.unit_tag && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-3 py-1 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 rounded-full bg-plum-soft px-3 py-1 text-xs font-medium text-plum">
                   <Tag className="h-3 w-3" />{assignment.unit_tag}
                 </span>
               )}
               {assignment.due_date && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs">
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                   <CalendarDays className="h-3 w-3" />Due {new Date(assignment.due_date).toLocaleDateString()}
                 </span>
               )}
@@ -267,13 +282,19 @@ export default function TeacherAssignmentDetail() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+        <div className="flex items-center gap-1 border-b border-border">
+          <span className="border-b-2 border-primary px-3 pb-2.5 text-sm font-medium text-primary">Review</span>
+          <span className="px-3 pb-2.5 text-sm text-muted-foreground">Overview</span>
+          <span className="px-3 pb-2.5 text-sm text-muted-foreground">Analytics</span>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[210px_1fr_300px] items-start">
           <Card>
-            <CardHeader className="space-y-2">
+            <CardHeader className="space-y-2 pb-3">
               <CardTitle className="text-sm flex items-center justify-between">
-                <span>Students</span>
-                <span className="text-[11px] font-normal text-muted-foreground">
-                  {submittedIds.size}/{students.length} submitted
+                <span>Submissions</span>
+                <span className="text-[11px] font-normal text-muted-foreground font-tabular">
+                  {submittedIds.size}/{students.length}
                 </span>
               </CardTitle>
               {missingStudents.length > 0 && (
@@ -292,27 +313,45 @@ export default function TeacherAssignmentDetail() {
             <CardContent className="p-2">
               {students.length === 0 ? (
                 <p className="text-xs text-muted-foreground p-2">No students yet</p>
-              ) : sortedStudents.map((s) => {
+              ) : sortedStudents.map((s, i) => {
                 const hasSub = submittedIds.has(s.id);
                 return (
+                  <Reveal key={s.id} delay={i * 40}>
                   <button
-                    key={s.id}
                     onClick={() => setActiveStudent(s.id)}
                     className={cn(
-                      "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between gap-2",
-                      activeStudent === s.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      "w-full text-left px-2 py-2 rounded-lg text-sm transition-spring flex items-center gap-2",
+                      activeStudent === s.id ? "bg-primary text-primary-foreground" : "hover:bg-muted hover:translate-x-0.5"
                     )}
                   >
-                    <span className="truncate">{s.full_name || "Unnamed"}</span>
+                    <span
+                      className={cn(
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold font-tabular",
+                        activeStudent === s.id ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary-soft text-primary"
+                      )}
+                    >
+                      {(s.full_name || "U").trim().charAt(0).toUpperCase()}
+                    </span>
+                    <span className="truncate flex-1">{s.full_name || "Unnamed"}</span>
                     {hasSub ? (
-                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold shrink-0",
+                          activeStudent === s.id
+                            ? "bg-primary-foreground/20 text-primary-foreground"
+                            : "bg-success-soft text-success"
+                        )}
+                      >
+                        <CheckCircle2 className="h-2.5 w-2.5" />
+                        Submitted
+                      </span>
                     ) : (
                       <span
                         className={cn(
                           "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold shrink-0",
                           activeStudent === s.id
                             ? "bg-primary-foreground/20 text-primary-foreground"
-                            : "bg-destructive/10 text-destructive"
+                            : "bg-destructive/10 text-destructive attention-pulse"
                         )}
                       >
                         <AlertTriangle className="h-2.5 w-2.5" />
@@ -320,18 +359,22 @@ export default function TeacherAssignmentDetail() {
                       </span>
                     )}
                   </button>
+                  </Reveal>
                 );
               })}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">
-                {students.find((s) => s.id === activeStudent)?.full_name || "Select a student"}
-              </CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Student work</p>
+                <CardTitle className="text-base mt-0.5">
+                  {students.find((s) => s.id === activeStudent)?.full_name || "Select a student"}
+                </CardTitle>
+              </div>
               {activeStudent && questions.length > 0 && (
-                <span className="text-sm font-semibold">{totalEarned} / {totalPossible}</span>
+                <span className="text-sm font-semibold font-tabular">{totalEarned} / {totalPossible}</span>
               )}
             </CardHeader>
             <CardContent className="space-y-5">
@@ -342,10 +385,10 @@ export default function TeacherAssignmentDetail() {
               ) : questions.map((q, i) => {
                 const a = studentAnswers.find((x) => x.question_id === q.id);
                 return (
-                  <div key={q.id} className="space-y-2 pb-4 border-b last:border-0">
+                  <Reveal key={q.id} delay={i * 60} className="space-y-2 pb-4 border-b last:border-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <p className="text-xs text-muted-foreground">Q{i + 1} · {q.max_score} pts</p>
+                        <p className="text-xs text-muted-foreground"><span className="font-tabular">Q{i + 1}</span> · <span className="font-tabular">{q.max_score}</span> pts</p>
                         <p className="font-medium whitespace-pre-wrap">{q.prompt}</p>
                       </div>
                     </div>
@@ -400,53 +443,117 @@ export default function TeacherAssignmentDetail() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </Reveal>
                 );
               })}
+            </CardContent>
+          </Card>
 
-              {activeStudent && (
-                <div className="rounded-lg border-2 border-primary/30 p-4 space-y-3 bg-primary-soft/30">
-                  <h3 className="font-semibold">Overall Grade</h3>
-                  <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
-                    <div>
-                      <Label className="text-xs">Overall score</Label>
-                      <Input
-                        type="number"
-                        value={grades[activeStudent]?.overall_score ?? ""}
-                        onChange={(e) =>
-                          setGrades({
-                            ...grades,
-                            [activeStudent]: {
-                              ...(grades[activeStudent] ?? { overall_feedback: null }),
-                              overall_score: e.target.value === "" ? null : Number(e.target.value),
-                            },
-                          })
-                        }
-                        placeholder={`/ ${totalPossible}`}
-                      />
+          {/* Right: Score panel */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Score</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!activeStudent ? (
+                <p className="text-sm text-muted-foreground">Pick a student to grade their work.</p>
+              ) : (
+                <>
+                  <div className="rounded-xl bg-muted/50 px-4 py-3">
+                    <div className="flex items-end justify-between gap-2">
+                      <div>
+                        <span className="font-tabular text-4xl font-bold tracking-tight">{totalEarned}</span>
+                        <span className="font-tabular text-lg text-muted-foreground"> / {totalPossible}</span>
+                      </div>
+                      {totalPossible > 0 && (
+                        <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success font-tabular">
+                          {Math.round((totalEarned / totalPossible) * 100)}%
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <Label className="text-xs">Overall feedback</Label>
-                      <Textarea
-                        rows={2}
-                        value={grades[activeStudent]?.overall_feedback ?? ""}
-                        onChange={(e) =>
-                          setGrades({
-                            ...grades,
-                            [activeStudent]: {
-                              ...(grades[activeStudent] ?? { overall_score: null }),
-                              overall_feedback: e.target.value,
-                            },
-                          })
-                        }
-                        placeholder="Comments for the student..."
-                      />
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {grades[activeStudent]?.overall_score != null ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success">
+                          <CheckCircle2 className="h-3 w-3" />Graded
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
+                          Not graded
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <Button size="sm" onClick={() => saveOverall(activeStudent)}>
-                    <Save className="h-4 w-4 mr-1" />Save & notify student
+
+                  {questions.length > 0 && (
+                    <ul className="space-y-1.5">
+                      {questions.map((q, i) => {
+                        const a = studentAnswers.find((x) => x.question_id === q.id);
+                        const earned = a?.score ?? 0;
+                        const full = earned >= q.max_score && q.max_score > 0;
+                        return (
+                          <li key={q.id} className="flex items-center gap-2 text-sm">
+                            {full ? (
+                              <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+                            ) : earned > 0 ? (
+                              <XCircle className="h-4 w-4 shrink-0 text-warning" />
+                            ) : (
+                              <span className="h-4 w-4 shrink-0 rounded-full border border-border" />
+                            )}
+                            <span className="flex-1 truncate text-muted-foreground">
+                              <span className="font-tabular">Q{i + 1}</span> · {q.prompt}
+                            </span>
+                            <span
+                              className={cn(
+                                "font-tabular shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
+                                full ? "bg-success-soft text-success" : "bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {earned} / {q.max_score}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                  <div className="space-y-2 border-t pt-3">
+                    <Label className="text-xs">Overall score</Label>
+                    <Input
+                      type="number"
+                      value={grades[activeStudent]?.overall_score ?? ""}
+                      onChange={(e) =>
+                        setGrades({
+                          ...grades,
+                          [activeStudent]: {
+                            ...(grades[activeStudent] ?? { overall_feedback: null }),
+                            overall_score: e.target.value === "" ? null : Number(e.target.value),
+                          },
+                        })
+                      }
+                      placeholder={`/ ${totalPossible}`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Feedback</Label>
+                    <Textarea
+                      rows={4}
+                      value={grades[activeStudent]?.overall_feedback ?? ""}
+                      onChange={(e) =>
+                        setGrades({
+                          ...grades,
+                          [activeStudent]: {
+                            ...(grades[activeStudent] ?? { overall_score: null }),
+                            overall_feedback: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder="Comments for the student..."
+                    />
+                  </div>
+                  <Button className="w-full" onClick={() => saveOverall(activeStudent)}>
+                    <Save className="h-4 w-4 mr-1" />Save feedback
                   </Button>
-                </div>
+                </>
               )}
             </CardContent>
           </Card>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { Download, Search, TrendingUp, Target, LifeBuoy, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,8 @@ import { CardListSkeleton } from "@/components/Skeletons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BookOpen } from "lucide-react";
+import { CountUp } from "@/components/CountUp";
+import { MountainSketch } from "@/components/MountainSketch";
 
 type ClassRow = { id: string; name: string };
 type Student = { id: string; full_name: string | null; avatar_items: string[] };
@@ -45,10 +47,13 @@ function pctColor(pct: number | null): string {
   return "text-destructive";
 }
 
-function cellClasses(state: CellState): string {
-  if (state === "missing") return "bg-destructive/10 text-destructive hover:bg-destructive/20";
-  if (state === "pending") return "bg-warning-soft text-warning hover:brightness-95";
-  return "bg-success-soft text-success hover:brightness-95";
+function cellClasses(state: CellState, pct: number | null): string {
+  if (state === "missing") return "bg-destructive/10 text-destructive hover:bg-destructive/20 hover:scale-[1.03]";
+  if (state === "pending") return "bg-warning-soft text-warning hover:brightness-95 hover:scale-[1.03] grading-shimmer";
+  // graded — color band by score
+  if (pct != null && pct < 70) return "bg-destructive/10 text-destructive hover:bg-destructive/20 hover:scale-[1.03]";
+  if (pct != null && pct < 80) return "bg-warning-soft text-warning hover:brightness-95 hover:scale-[1.03]";
+  return "bg-success-soft text-success hover:brightness-95 hover:scale-[1.03]";
 }
 
 export default function TeacherGradebook() {
@@ -179,6 +184,23 @@ export default function TeacherGradebook() {
     return Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
   }, [students, cellMap]);
 
+  // Summary stat chips derived from existing cell data.
+  const stats = useMemo(() => {
+    let meetingGoal = 0;
+    let needsSupport = 0;
+    students.forEach((s) => {
+      const avg = studentAvg(s.id);
+      if (avg == null) return;
+      if (avg >= 80) meetingGoal += 1;
+      else if (avg < 70) needsSupport += 1;
+    });
+    let missing = 0;
+    cellMap.forEach((c) => {
+      if (c.state === "missing") missing += 1;
+    });
+    return { meetingGoal, needsSupport, missing, totalStudents: students.length };
+  }, [students, cellMap]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return students;
@@ -254,7 +276,12 @@ export default function TeacherGradebook() {
 
   return (
     <DashboardShell title="Gradebook" subtitle="Spreadsheet view of student scores.">
-      <div className="space-y-4">
+      <div className="space-y-4 animate-page-enter">
+        {/* Header accent */}
+        <div className="relative overflow-hidden -mt-2">
+          <MountainSketch variant="range" className="pointer-events-none absolute -top-6 right-0 hidden sm:block w-56 text-muted-foreground/30" />
+        </div>
+
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[220px]">
             <Label className="text-xs">Class</Label>
@@ -284,6 +311,60 @@ export default function TeacherGradebook() {
           </Button>
         </div>
 
+        {/* Summary stat chips */}
+        {students.length > 0 && assignments.length > 0 && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="hover-lift">
+              <CardContent className="p-4 flex items-center gap-3">
+                <span className="h-9 w-9 rounded-xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs text-muted-foreground">Class average</p>
+                  <p className="text-xl font-bold font-tabular">
+                    {classAvg != null ? <CountUp value={classAvg} suffix="%" /> : "—"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover-lift">
+              <CardContent className="p-4 flex items-center gap-3">
+                <span className="h-9 w-9 rounded-xl bg-success-soft text-success flex items-center justify-center shrink-0">
+                  <Target className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs text-muted-foreground">Meeting goal</p>
+                  <p className="text-xl font-bold font-tabular">
+                    <CountUp value={stats.meetingGoal} /> / {stats.totalStudents}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover-lift">
+              <CardContent className="p-4 flex items-center gap-3">
+                <span className="h-9 w-9 rounded-xl bg-warning-soft text-warning flex items-center justify-center shrink-0">
+                  <LifeBuoy className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs text-muted-foreground">Needs support</p>
+                  <p className="text-xl font-bold font-tabular"><CountUp value={stats.needsSupport} /></p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover-lift">
+              <CardContent className="p-4 flex items-center gap-3">
+                <span className="h-9 w-9 rounded-xl bg-destructive/15 text-destructive flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs text-muted-foreground">Missing</p>
+                  <p className="text-xl font-bold font-tabular"><CountUp value={stats.missing} /></p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <Card>
           <CardContent className="p-0">
             {students.length === 0 ? (
@@ -305,7 +386,7 @@ export default function TeacherGradebook() {
                               <TooltipTrigger asChild>
                                 <div className="text-xs font-medium truncate text-left">
                                   {a.title}
-                                  <div className="text-[10px] text-muted-foreground font-normal">/ {a.total}</div>
+                                  <div className="text-[10px] text-muted-foreground font-normal font-tabular">/ {a.total}</div>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>{a.title}</TooltipContent>
@@ -340,8 +421,8 @@ export default function TeacherGradebook() {
                                   >
                                     <button
                                       className={cn(
-                                        "w-full h-10 rounded-md text-xs font-semibold transition-colors px-2",
-                                        cellClasses(c.state),
+                                        "w-full h-10 rounded-md text-xs font-semibold font-tabular transition-spring px-2",
+                                        cellClasses(c.state, c.pct),
                                       )}
                                     >
                                       {c.state === "graded" && `${c.score}/${c.total}`}
@@ -352,7 +433,7 @@ export default function TeacherGradebook() {
                                 </td>
                               );
                             })}
-                            <td className={cn("border-l px-2 py-2 text-right font-bold tabular-nums", pctColor(avg))}>
+                            <td className={cn("border-l px-2 py-2 text-right font-bold font-tabular", pctColor(avg))}>
                               {avg != null ? `${avg}%` : "—"}
                             </td>
                           </tr>
@@ -364,20 +445,20 @@ export default function TeacherGradebook() {
                         <td className={cn("sticky left-0 z-10 bg-muted/60 border-r border-t px-3 py-2 min-w-[220px]")}>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs uppercase tracking-wide">Class Average</span>
-                            <span className={cn("tabular-nums", pctColor(classAvg))}>
-                              {classAvg != null ? `${classAvg}%` : "—"}
+                            <span className={cn("font-tabular", pctColor(classAvg))}>
+                              {classAvg != null ? <CountUp value={classAvg} duration={800} suffix="%" /> : "—"}
                             </span>
                           </div>
                         </td>
                         {assignments.map((a) => {
                           const avg = assignmentAvg(a.id);
                           return (
-                            <td key={a.id} className={cn("border-t px-2 py-2 text-center text-xs tabular-nums", pctColor(avg))}>
+                            <td key={a.id} className={cn("border-t px-2 py-2 text-center text-xs font-tabular", pctColor(avg))}>
                               {avg != null ? `${avg}%` : "—"}
                             </td>
                           );
                         })}
-                        <td className={cn("border-t border-l px-2 py-2 text-right tabular-nums", pctColor(classAvg))}>
+                        <td className={cn("border-t border-l px-2 py-2 text-right font-tabular", pctColor(classAvg))}>
                           {classAvg != null ? `${classAvg}%` : "—"}
                         </td>
                       </tr>
@@ -431,6 +512,7 @@ function GradeCellPopover({
             value={score}
             onChange={(e) => setScore(e.target.value)}
             placeholder={`/ ${cell.total}`}
+            className="font-tabular"
           />
         </div>
         <div>

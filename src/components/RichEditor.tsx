@@ -58,7 +58,10 @@ export function RichEditor({ value, onChange, placeholder, className, minHeight 
       size="sm"
       onClick={onClick}
       aria-label={label}
-      className="h-8 w-8 p-0"
+      className={cn(
+        "h-8 w-8 p-0 transition-spring hover:scale-110 active:scale-95",
+        active && "text-primary"
+      )}
     >
       {children}
     </Button>
@@ -77,7 +80,7 @@ export function RichEditor({ value, onChange, placeholder, className, minHeight 
 
   return (
     <div className={cn("rounded-md border border-input bg-background", className)}>
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-border px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-primary/15 px-2 py-1.5">
         <Btn label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></Btn>
         <Btn label="Italic" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic className="h-4 w-4" /></Btn>
         <Btn label="Strikethrough" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough className="h-4 w-4" /></Btn>

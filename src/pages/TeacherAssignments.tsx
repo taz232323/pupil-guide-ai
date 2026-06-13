@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Plus, Trash2, CalendarDays, Tag, ClipboardList, BookOpen } from "lucide-react";
+import { Plus, Trash2, CalendarDays, Tag, ClipboardList, BookOpen, ClipboardCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,16 @@ import { IconButton } from "@/components/IconButton";
 import { CardListSkeleton } from "@/components/Skeletons";
 import { RelativeTime } from "@/components/RelativeTime";
 import { QuestionBuilder, DraftQuestion, validateQuestions } from "@/components/assignments/QuestionBuilder";
+import { Reveal } from "@/components/Reveal";
+import { ProgressRing } from "@/components/ProgressRing";
+import { cn } from "@/lib/utils";
+
+const TILE = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+];
 
 type ClassRow = { id: string; name: string; subject: string };
 type Assignment = {
@@ -128,10 +138,45 @@ export const TeacherAssignments = () => {
 
   const classNameFor = (id: string) => classes.find((c) => c.id === id)?.name ?? "Class";
 
+  // Derive a status pill from the due date only (real data — no fabricated state).
+  const statusFor = (a: Assignment) => {
+    if (!a.due_date) return { label: "Open", cls: "bg-primary-soft text-primary" };
+    const due = new Date(a.due_date).getTime();
+    const now = Date.now();
+    if (due < now) return { label: "Closed", cls: "bg-muted text-muted-foreground" };
+    const days = (due - now) / 86_400_000;
+    if (days <= 3) return { label: "Due soon", cls: "bg-warning-soft text-warning" };
+    return { label: "Active", cls: "bg-success-soft text-success" };
+  };
+
+  const stats = useMemo(() => {
+    let active = 0, soon = 0, closed = 0;
+    assignments.forEach((a) => {
+      const s = statusFor(a).label;
+      if (s === "Closed") closed++;
+      else if (s === "Due soon") soon++;
+      else active++;
+    });
+    return { active, soon, closed, total: assignments.length };
+  }, [assignments]);
+
+  const upcoming = useMemo(
+    () =>
+      assignments
+        .filter((a) => a.due_date && new Date(a.due_date).getTime() >= Date.now())
+        .sort((x, y) => new Date(x.due_date!).getTime() - new Date(y.due_date!).getTime())
+        .slice(0, 4),
+    [assignments]
+  );
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Assignments</CardTitle>
+    <div className="grid gap-4 lg:grid-cols-[1fr_300px] items-start">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+          <div>
+            <CardTitle className="text-xl">All assignments</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Track student work and grading across your classes.</p>
+          </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" disabled={classes.length === 0}>
@@ -210,19 +255,26 @@ export const TeacherAssignments = () => {
             description="Click Create to post your first assignment."
           />
         ) : (
-          <div className="divide-y divide-border">
-            {assignments.map((a) => (
-              <div
+          <div className="space-y-1.5">
+            {assignments.map((a, i) => {
+              const status = statusFor(a);
+              return (
+              <Reveal
                 key={a.id}
-                className="py-3 flex items-start justify-between gap-4 cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-md transition-colors"
+                delay={i * 60}
+                className="py-3 px-3 -mx-3 flex items-center gap-3 cursor-pointer rounded-xl border border-transparent hover:border-primary/15 hover:bg-muted/40 transition-spring hover-lift"
+              >
+              <div
+                className="flex items-center gap-3 w-full"
                 onClick={() => navigate(`/teacher/assignments/${a.id}`)}
               >
-                <div className="min-w-0">
+                <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", TILE[i % TILE.length])}>
+                  <ClipboardList className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">{a.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {classNameFor(a.class_id)} · posted <RelativeTime date={a.created_at} />
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="truncate">{classNameFor(a.class_id)}</span>
                     {a.unit_tag && (
                       <span className="inline-flex items-center gap-1"><Tag className="h-3 w-3" />{a.unit_tag}</span>
                     )}
@@ -233,16 +285,104 @@ export const TeacherAssignments = () => {
                     )}
                   </div>
                 </div>
+                <span className={cn("hidden sm:inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium", status.cls)}>
+                  {status.label}
+                </span>
                 <div onClick={(e) => e.stopPropagation()}>
                   <IconButton label="Delete assignment" onClick={() => setToDelete(a)}>
                     <Trash2 className="h-4 w-4 text-muted-foreground" />
                   </IconButton>
                 </div>
               </div>
-            ))}
+              </Reveal>
+              );
+            })}
           </div>
         )}
       </CardContent>
+      </Card>
+
+      {/* Right sidebar */}
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-4">
+            <ProgressRing
+              value={stats.total ? Math.round((stats.active / stats.total) * 100) : 0}
+              size={88}
+            >
+              <span className="font-tabular text-2xl font-bold tracking-tight">{stats.total}</span>
+              <span className="text-[10px] text-muted-foreground">total</span>
+            </ProgressRing>
+            <ul className="flex-1 space-y-2 text-sm">
+              <li className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-success" />Active
+                </span>
+                <span className="font-tabular font-medium">{stats.active}</span>
+              </li>
+              <li className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-warning" />Due soon
+                </span>
+                <span className="font-tabular font-medium">{stats.soon}</span>
+              </li>
+              <li className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/50" />Closed
+                </span>
+                <span className="font-tabular font-medium">{stats.closed}</span>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Upcoming</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {upcoming.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing due right now.</p>
+            ) : (
+              <ul className="space-y-2.5">
+                {upcoming.map((a, i) => (
+                  <li
+                    key={a.id}
+                    className="flex items-center gap-3 cursor-pointer rounded-lg -mx-1 px-1 py-1 hover:bg-muted/40 transition-base"
+                    onClick={() => navigate(`/teacher/assignments/${a.id}`)}
+                  >
+                    <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", TILE[i % TILE.length])}>
+                      <CalendarDays className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{a.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Due <RelativeTime date={a.due_date!} />
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="hover-lift">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-soft text-plum">
+              <ClipboardCheck className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Assignment bank</p>
+              <p className="text-xs text-muted-foreground">Reuse and adapt past work.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <ConfirmDialog
         open={!!toDelete}
         onOpenChange={(o) => !o && setToDelete(null)}
@@ -252,6 +392,6 @@ export const TeacherAssignments = () => {
         destructive
         onConfirm={async () => { if (toDelete) await handleDelete(toDelete.id); }}
       />
-    </Card>
+    </div>
   );
 };

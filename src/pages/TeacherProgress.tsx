@@ -11,6 +11,10 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { StudentConversationsDialog } from "@/components/StudentConversationsDialog";
+import { Reveal } from "@/components/Reveal";
+import { CountUp } from "@/components/CountUp";
+import { MountainSketch } from "@/components/MountainSketch";
+import { ProgressRing } from "@/components/ProgressRing";
 
 type ClassRow = { id: string; name: string };
 type Assignment = { id: string; class_id: string; unit_tag: string | null; title: string; due_date: string | null };
@@ -36,14 +40,14 @@ const UNTAGGED = "Untagged";
 
 const unitChipCls = (s: UnitStatus) =>
   s === "complete"
-    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+    ? "bg-success-soft text-success border-success/30"
     : s === "partial"
-    ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+    ? "bg-warning-soft text-warning border-warning/30"
     : "bg-destructive/15 text-destructive border-destructive/30";
 
 const barColor = (rate: number) => {
-  if (rate >= 0.8) return "bg-emerald-500";
-  if (rate >= 0.4) return "bg-amber-500";
+  if (rate >= 0.8) return "bg-success";
+  if (rate >= 0.4) return "bg-warning";
   return "bg-destructive";
 };
 
@@ -190,7 +194,32 @@ export const TeacherProgress = () => {
     const onTrack = filteredRows.filter((r) => r.total > 0 && r.rate >= 0.8).length;
     const behind = filteredRows.filter((r) => r.total > 0 && r.rate >= 0.4 && r.rate < 0.8).length;
     const missing = filteredRows.filter((r) => r.total > 0 && r.rate < 0.4).length;
-    return { onTrack, behind, missing };
+    const withWork = filteredRows.filter((r) => r.total > 0).length;
+    const noWork = filteredRows.length - withWork;
+    return { onTrack, behind, missing, noWork, total: filteredRows.length };
+  }, [filteredRows]);
+
+  // Class-wide completion % per unit (for the "Unit mastery" bars).
+  const unitMastery = useMemo(() => {
+    const agg = new Map<string, { submitted: number; total: number }>();
+    filteredRows.forEach((r) =>
+      r.units.forEach((u) => {
+        const t = agg.get(u.unit) ?? { submitted: 0, total: 0 };
+        t.submitted += u.submitted;
+        t.total += u.total;
+        agg.set(u.unit, t);
+      })
+    );
+    return Array.from(agg.entries())
+      .map(([unit, t]) => ({ unit, pct: t.total === 0 ? 0 : Math.round((t.submitted / t.total) * 100) }))
+      .sort((a, b) => b.pct - a.pct);
+  }, [filteredRows]);
+
+  // Average class completion across students with assigned work.
+  const classCompletion = useMemo(() => {
+    const active = filteredRows.filter((r) => r.total > 0);
+    if (!active.length) return 0;
+    return Math.round((active.reduce((s, r) => s + r.rate, 0) / active.length) * 100);
   }, [filteredRows]);
 
   const toggleRow = (id: string) =>
@@ -201,19 +230,21 @@ export const TeacherProgress = () => {
     });
 
   return (
-    <Card className="border-border/60 shadow-sm">
-      <CardHeader className="gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
+    <Card className="hover-lift">
+      <CardHeader className="relative overflow-hidden gap-4">
+        <MountainSketch variant="range" className="pointer-events-none absolute -top-4 right-0 hidden sm:block w-56 text-muted-foreground/30" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <CardTitle className="text-base">Student progress</CardTitle>
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-medium">
-              On track · {summary.onTrack}
+            <span className="px-2.5 py-1 rounded-full bg-success-soft text-success font-medium transition-spring hover:scale-105">
+              On track · <CountUp value={summary.onTrack} />
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 font-medium">
-              Behind · {summary.behind}
+            <span className="px-2.5 py-1 rounded-full bg-warning-soft text-warning font-medium transition-spring hover:scale-105">
+              Behind · <CountUp value={summary.behind} />
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-destructive/15 text-destructive font-medium">
-              Missing · {summary.missing}
+            <span className="px-2.5 py-1 rounded-full bg-destructive/15 text-destructive font-medium transition-spring hover:scale-105">
+              Missing · <CountUp value={summary.missing} />
             </span>
           </div>
         </div>
@@ -266,11 +297,11 @@ export const TeacherProgress = () => {
           </p>
         ) : (
           <div className="divide-y divide-border/60 rounded-lg border border-border/60 overflow-hidden">
-            {filteredRows.map((r) => {
+            {filteredRows.map((r, i) => {
               const isOpen = expanded.has(r.id);
               const pct = Math.round(r.rate * 100);
               return (
-                <div key={r.id} className="bg-card">
+                <Reveal key={r.id} delay={Math.min(i, 8) * 60} as="div" className="bg-card">
                   <button
                     type="button"
                     onClick={() => toggleRow(r.id)}
@@ -284,8 +315,8 @@ export const TeacherProgress = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="font-medium truncate">{r.name}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                          {r.submitted}/{r.total} · {pct}%
+                        <span className="text-xs text-muted-foreground font-tabular shrink-0">
+                          {r.submitted}/{r.total} · <CountUp value={pct} suffix="%" />
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
@@ -302,7 +333,7 @@ export const TeacherProgress = () => {
                             r.units.map((u) => (
                               <span
                                 key={u.unit}
-                                className={`text-[10px] px-1.5 py-0.5 rounded border ${unitChipCls(u.status)}`}
+                                className={`text-[10px] px-1.5 py-0.5 rounded border transition-transform hover:scale-110 ${unitChipCls(u.status)}`}
                                 title={`${u.submitted}/${u.total} submitted`}
                               >
                                 {u.unit}
@@ -345,7 +376,7 @@ export const TeacherProgress = () => {
                               <span
                                 className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full font-medium ${
                                   a.submitted
-                                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                                    ? "bg-success-soft text-success"
                                     : "bg-destructive/15 text-destructive"
                                 }`}
                               >
@@ -367,7 +398,7 @@ export const TeacherProgress = () => {
                       </div>
                     </div>
                   )}
-                </div>
+                </Reveal>
               );
             })}
           </div>
@@ -382,5 +413,98 @@ export const TeacherProgress = () => {
         />
       )}
     </Card>
+
+      {/* Right sidebar — class overview, unit mastery, follow-up */}
+      <div className="space-y-4">
+        {/* Class overview donut */}
+        <Card className="hover-lift">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Class overview</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <ProgressRing value={classCompletion} size={132} strokeWidth={11}>
+              <span className="font-tabular text-3xl font-bold leading-none">
+                <CountUp value={summary.total} />
+              </span>
+              <span className="text-[11px] text-muted-foreground mt-0.5">students</span>
+            </ProgressRing>
+            <ul className="w-full space-y-2 text-sm">
+              <li className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-success" />
+                  On track
+                </span>
+                <span className="font-tabular text-muted-foreground"><CountUp value={summary.onTrack} /></span>
+              </li>
+              <li className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-warning" />
+                  Needs support
+                </span>
+                <span className="font-tabular text-muted-foreground"><CountUp value={summary.behind} /></span>
+              </li>
+              <li className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-destructive" />
+                  Missing
+                </span>
+                <span className="font-tabular text-muted-foreground"><CountUp value={summary.missing} /></span>
+              </li>
+              {summary.noWork > 0 && (
+                <li className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
+                    No data yet
+                  </span>
+                  <span className="font-tabular text-muted-foreground"><CountUp value={summary.noWork} /></span>
+                </li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* Unit mastery bars */}
+        {unitMastery.length > 0 && (
+          <Card className="hover-lift">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Unit mastery</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {unitMastery.map((u) => (
+                <div key={u.unit}>
+                  <div className="flex items-center justify-between mb-1 text-sm">
+                    <span className="truncate font-medium">{u.unit}</span>
+                    <span className="font-tabular text-xs text-muted-foreground">{u.pct}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${barColor(u.pct / 100)}`}
+                      style={{ width: `${u.pct}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Follow up with care */}
+        <Card className="bg-primary-soft border-primary/20">
+          <CardContent className="p-4 flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <span className="h-9 w-9 rounded-xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+                <MessagesSquare className="h-4 w-4" />
+              </span>
+              <div>
+                <h3 className="text-base">Follow up with care</h3>
+                <p className="text-sm text-muted-foreground">
+                  Expand a student row to review their work and start a supportive conversation.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };

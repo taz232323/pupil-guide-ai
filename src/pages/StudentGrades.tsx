@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronRight, Award, BookOpen, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, BookOpen, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,24 @@ import { EmptyState } from "@/components/EmptyState";
 import { CardListSkeleton } from "@/components/Skeletons";
 import { GradePredictorModal } from "@/components/GradePredictorModal";
 import { cn } from "@/lib/utils";
+import { Reveal } from "@/components/Reveal";
+import { CountUp } from "@/components/CountUp";
+import { ProgressRing } from "@/components/ProgressRing";
+import { MountainSketch } from "@/components/MountainSketch";
+
+const TILE_STYLES = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+];
+
+function barColor(pct: number | null): string {
+  if (pct == null) return "bg-muted";
+  if (pct >= 80) return "bg-success";
+  if (pct >= 70) return "bg-warning";
+  return "bg-destructive";
+}
 
 type ClassRow = { id: string; name: string; subject: string };
 type Assignment = {
@@ -50,9 +68,9 @@ function pctColor(pct: number | null): string {
 
 function StateBadge({ row }: { row: AssignmentRow }) {
   if (row.state === "missing")
-    return <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">Missing</span>;
+    return <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive attention-pulse">Missing</span>;
   if (row.state === "pending")
-    return <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">Pending</span>;
+    return <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning grading-shimmer">Pending</span>;
   return <span className={cn("rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", "text-success")}>Graded</span>;
 }
 
@@ -177,79 +195,112 @@ export default function StudentGrades() {
   }, [perClass]);
 
   return (
-    <DashboardShell title="Grades" subtitle="Your performance across all classes.">
+    <DashboardShell title="Grades" subtitle="See your progress and keep growing.">
+      {/* Header accent */}
+      <div className="relative overflow-hidden -mt-2 mb-2">
+        <MountainSketch variant="range" className="pointer-events-none absolute -top-6 right-0 hidden sm:block w-56 text-muted-foreground/30" />
+      </div>
+
       {loading ? (
         <CardListSkeleton count={3} />
       ) : classes.length === 0 ? (
         <EmptyState icon={BookOpen} title="No classes yet" description="Join a class to start tracking your grades." />
       ) : (
         <div className="space-y-6">
-          {/* GPA Summary */}
-          <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary-soft/40 to-transparent">
+          {/* Overall donut */}
+          <Card className="animate-pop-in hover-lift">
             <CardContent className="p-6 flex flex-wrap items-center gap-6">
-              <div className="rounded-full bg-primary/15 p-4">
-                <Award className="h-8 w-8 text-primary" />
-              </div>
+              {gpaPct != null ? (
+                <ProgressRing value={gpaPct} size={108} strokeWidth={10}>
+                  <span className={cn("font-tabular text-2xl font-bold", pctColor(gpaPct))}>
+                    <CountUp value={gpaPct} duration={1000} suffix="%" />
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Overall</span>
+                </ProgressRing>
+              ) : (
+                <ProgressRing value={0} size={108} strokeWidth={10}>
+                  <span className="font-tabular text-2xl font-bold text-muted-foreground">—</span>
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Overall</span>
+                </ProgressRing>
+              )}
               <div className="flex-1 min-w-0">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Overall Average</p>
-                <p className="text-sm text-muted-foreground">Across {classes.length} {classes.length === 1 ? "class" : "classes"}</p>
-              </div>
-              <div className="text-right">
-                <p className={cn("text-5xl font-bold tabular-nums", pctColor(gpaPct))}>
-                  {gpaPct != null ? `${gpaPct}%` : "—"}
+                <h2 className="text-xl">
+                  {gpaPct != null && gpaPct >= 80
+                    ? "Great work!"
+                    : gpaPct != null
+                    ? "Keep going!"
+                    : "Let's get started"}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your average is <span className={cn("font-semibold font-tabular", pctColor(gpaPct))}>{gpaPct != null ? `${gpaPct}%` : "—"}</span>
+                  {" "}across <span className="font-tabular">{classes.length}</span> {classes.length === 1 ? "class" : "classes"}.
                 </p>
-                <p className={cn("text-lg font-semibold", pctColor(gpaPct))}>
+                <span className={cn("mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-semibold font-tabular", pctColor(gpaPct), gpaPct != null && gpaPct >= 80 ? "bg-success-soft" : gpaPct != null && gpaPct >= 70 ? "bg-warning-soft" : "bg-muted")}>
                   {letterGrade(gpaPct)}
-                </p>
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Class cards */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {perClass.map(({ class: c, overall }) => {
-              const open = expanded === c.id;
-              return (
-                <div
-                  key={c.id}
-                  className={cn(
-                    "relative rounded-xl border bg-card p-4 shadow-card transition-base hover:shadow-md",
-                    open ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
-                  )}
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPredictorClass(c.id);
-                    }}
-                    className="absolute top-2 right-2 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-medium rounded-lg px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-all duration-150 ease-out hover:scale-105"
+          {/* Breakdown */}
+          <div className="space-y-3">
+            <h2 className="text-lg">Breakdown</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {perClass.map(({ class: c, overall }, i) => {
+                const open = expanded === c.id;
+                const tile = TILE_STYLES[i % TILE_STYLES.length];
+                return (
+                  <Reveal
+                    key={c.id}
+                    delay={i * 60}
+                    className={cn(
+                      "relative rounded-2xl border bg-card p-4 shadow-card transition-spring hover-lift",
+                      open ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+                    )}
                   >
-                    <Sparkles className="h-3 w-3" />
-                    What if?
-                  </button>
-                  <button
-                    onClick={() => setExpanded(open ? null : c.id)}
-                    className="text-left w-full"
-                  >
-                    <div className="flex items-start justify-between gap-2 pr-16">
-                      <div className="min-w-0">
-                        <p className="font-semibold truncate">{c.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{c.subject}</p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPredictorClass(c.id);
+                      }}
+                      className="absolute top-2 right-2 flex items-center gap-1 bg-gradient-primary text-primary-foreground text-xs font-medium rounded-lg px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-spring hover:scale-105"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      What if?
+                    </button>
+                    <button
+                      onClick={() => setExpanded(open ? null : c.id)}
+                      className="text-left w-full"
+                    >
+                      <div className="flex items-start gap-3 pr-16">
+                        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tile)}>
+                          <BookOpen className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold truncate">{c.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{c.subject}</p>
+                        </div>
+                        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
                       </div>
-                      {open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
-                    </div>
-                    <div className="mt-3 flex items-end gap-2">
-                      <p className={cn("text-3xl font-bold tabular-nums leading-none", pctColor(overall))}>
-                        {overall != null ? `${overall}%` : "—"}
-                      </p>
-                      <p className={cn("text-base font-semibold pb-0.5", pctColor(overall))}>
-                        {letterGrade(overall)}
-                      </p>
-                    </div>
-                  </button>
-                </div>
-              );
-            })}
+                      <div className="mt-3 flex items-end justify-between gap-2">
+                        <p className={cn("text-3xl font-bold font-tabular leading-none", pctColor(overall))}>
+                          {overall != null ? <CountUp value={overall} duration={900} suffix="%" /> : "—"}
+                        </p>
+                        <span className={cn("text-base font-semibold font-tabular pb-0.5", pctColor(overall))}>
+                          {letterGrade(overall)}
+                        </span>
+                      </div>
+                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn("h-full rounded-full transition-all", barColor(overall))}
+                          style={{ width: `${overall ?? 0}%` }}
+                        />
+                      </div>
+                    </button>
+                  </Reveal>
+                );
+              })}
+            </div>
           </div>
 
           {/* Grade Predictor Modal */}
@@ -272,9 +323,9 @@ export default function StudentGrades() {
             const data = perClass.find((p) => p.class.id === expanded);
             if (!data) return null;
             return (
-              <Card>
+              <Card className="animate-fade-up">
                 <CardHeader>
-                  <CardTitle className="text-base">{data.class.name} — Breakdown</CardTitle>
+                  <CardTitle className="text-lg">Assignment grades · {data.class.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {data.units.length === 0 ? (
@@ -285,7 +336,7 @@ export default function StudentGrades() {
                         <div key={u.name} className="space-y-2">
                           <div className="flex items-center justify-between border-b pb-2">
                             <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">{u.name}</h3>
-                            <span className={cn("text-sm font-bold tabular-nums", pctColor(u.avg))}>
+                            <span className={cn("text-sm font-bold font-tabular", pctColor(u.avg))}>
                               {u.avg != null ? `${u.avg}%` : "—"}
                             </span>
                           </div>
@@ -315,10 +366,10 @@ export default function StudentGrades() {
                                     <td className="py-2 px-2 text-muted-foreground hidden sm:table-cell">
                                       {row.submitted_at ? new Date(row.submitted_at).toLocaleDateString() : "—"}
                                     </td>
-                                    <td className="py-2 px-2 text-right tabular-nums text-muted-foreground">
+                                    <td className="py-2 px-2 text-right font-tabular text-muted-foreground">
                                       {row.earned != null ? `${row.earned} / ${row.total}` : `— / ${row.total}`}
                                     </td>
-                                    <td className={cn("py-2 pl-2 text-right font-semibold tabular-nums", pctColor(row.pct))}>
+                                    <td className={cn("py-2 pl-2 text-right font-semibold font-tabular", pctColor(row.pct))}>
                                       {row.pct != null ? `${row.pct}%` : "—"}
                                     </td>
                                   </tr>
@@ -328,9 +379,9 @@ export default function StudentGrades() {
                           </div>
                         </div>
                       ))}
-                      <div className="flex items-center justify-between rounded-lg border-2 border-primary/30 bg-primary-soft/30 px-4 py-3">
+                      <div className="flex items-center justify-between rounded-lg border-2 border-primary/30 bg-gradient-to-br from-primary-soft/40 to-plum-soft/10 px-4 py-3">
                         <span className="font-bold uppercase tracking-wide text-sm">Class Average</span>
-                        <span className={cn("text-2xl font-bold tabular-nums", pctColor(data.overall))}>
+                        <span className={cn("text-2xl font-bold font-tabular", pctColor(data.overall))}>
                           {data.overall != null ? `${data.overall}% · ${letterGrade(data.overall)}` : "—"}
                         </span>
                       </div>

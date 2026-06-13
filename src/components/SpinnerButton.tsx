@@ -18,10 +18,10 @@ export const SpinnerButton = React.forwardRef<HTMLButtonElement, SpinnerButtonPr
       <Button
         ref={ref}
         disabled={loading || disabled}
-        className={cn(className)}
+        className={cn("transition-spring hover:scale-[1.02] active:scale-[0.98]", className)}
         {...rest}
       >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+        {loading && <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />}
         <span>{loading && loadingText ? loadingText : children}</span>
       </Button>
     );

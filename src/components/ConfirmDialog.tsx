@@ -52,10 +52,13 @@ export function ConfirmDialog({
             disabled={busy}
             onClick={(e) => { e.preventDefault(); handleConfirm(); }}
             className={cn(
+              "transition-spring hover:scale-[1.02] active:scale-[0.98]",
               destructive && buttonVariants({ variant: "destructive" })
             )}
           >
-            {busy && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+            {busy && (
+              <Loader2 className={cn("h-4 w-4 animate-spin mr-1.5", !destructive && "text-primary")} />
+            )}
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

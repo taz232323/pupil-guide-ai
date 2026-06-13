@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Flame, ShieldCheck, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { ShieldActivation } from "@/components/ShieldActivation";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type Row = {
   class_id: string;
@@ -18,6 +20,7 @@ export function StreakWidget() {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shieldSave, setShieldSave] = useState<{ className: string; streak: number } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -43,8 +46,17 @@ export function StreakWidget() {
         prev.setUTCDate(prev.getUTCDate() - 1);
       }
       const prevWeekday = prev.toISOString().slice(0, 10);
-      const { error: shieldErr } = await (supabase as any).rpc("auto_apply_streak_shields");
+      const { data: saves, error: shieldErr } = await (supabase as any).rpc("auto_apply_streak_shields");
       if (shieldErr) console.warn("auto shield sync failed:", shieldErr.message);
+      const shieldSaves = (saves as any[]) ?? [];
+      if (shieldSaves.length > 0) {
+        const first = shieldSaves[0];
+        setShieldSave({
+          className: first.class_name,
+          streak: first.current_streak,
+        });
+        toast.success(`Streak Shield used — ${first.class_name} streak protected`);
+      }
 
       const { data: streaks } = await supabase
         .from("daily_practice_streaks")
@@ -86,23 +98,34 @@ export function StreakWidget() {
   if (loading || rows.length === 0) return null;
 
   return (
+    <>
+    <ShieldActivation
+      show={!!shieldSave}
+      onDone={() => setShieldSave(null)}
+      title="Streak Shield Used!"
+      subtitle={shieldSave ? `Your ${shieldSave.streak}-day streak in ${shieldSave.className} has been protected.` : undefined}
+    />
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Flame className="h-4 w-4 text-orange-500" /> Daily Practice Streaks
+          <Flame className="h-4 w-4 text-gold animate-flame-pulse" /> Daily Practice Streaks
         </CardTitle>
         <CardDescription>Practice daily. Streak Shields apply automatically after a missed day.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        {rows.map((r) => (
-          <div key={r.class_id} className="flex items-center justify-between rounded-lg border p-3">
+        {rows.map((r) => {
+          const milestone = [3, 7, 30].includes(r.current_streak);
+          return (
+          <div key={r.class_id} className="flex items-center justify-between rounded-xl border border-primary/10 bg-background/40 p-3 transition-spring hover:-translate-y-0.5 hover:border-primary/30">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Flame className={`h-5 w-5 shrink-0 ${r.current_streak > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
+              <span className={cn("inline-flex shrink-0 items-center justify-center", milestone && "streak-milestone-glow p-0.5")}>
+                <Flame className={cn("h-5 w-5", r.current_streak > 0 ? "text-gold animate-flame-pulse" : "text-muted-foreground")} />
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium line-clamp-2">{r.class_name}</p>
                 <p className="text-xs text-muted-foreground">
                   {r.current_streak} day{r.current_streak === 1 ? "" : "s"}
-                  {r.practiced_today ? " · done today" : " · practice today"}
+                  {r.practiced_today ? " · done today" : " · practice today!"}
                 </p>
               </div>
             </div>
@@ -112,12 +135,14 @@ export function StreakWidget() {
               </Link>
             </Button>
           </div>
-        ))}
+          );
+        })}
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" />
           One shield protects one missed daily-practice day when available.
         </p>
       </CardContent>
     </Card>
+    </>
   );
 }

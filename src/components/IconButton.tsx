@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button, ButtonProps } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Props = ButtonProps & {
   /** Tooltip text + accessible label. */
@@ -14,11 +15,18 @@ type Props = ButtonProps & {
  * Use anywhere we previously rendered a bare <Button size="icon">.
  */
 export const IconButton = React.forwardRef<HTMLButtonElement, Props>(
-  ({ label, children, size = "icon", variant = "ghost", ...rest }, ref) => {
+  ({ label, children, size = "icon", variant = "ghost", className, ...rest }, ref) => {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button ref={ref} size={size} variant={variant} aria-label={label} {...rest}>
+          <Button
+            ref={ref}
+            size={size}
+            variant={variant}
+            aria-label={label}
+            className={cn("transition-spring hover:scale-105 active:scale-95", className)}
+            {...rest}
+          >
             {children}
           </Button>
         </TooltipTrigger>

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Grapheion pre-commit gate: run the unit test suite before allowing a commit.
+# Enable once per clone with:  git config core.hooksPath .githooks
+# Bypass a single commit with:  git commit --no-verify
+
+echo "▶ Running tests before commit (npm test)…"
+if ! npm test --silent; then
+  echo ""
+  echo "✖ Tests failed — commit aborted."
+  echo "  Fix the failing tests, or bypass with: git commit --no-verify"
+  exit 1
+fi
+echo "✓ Tests passed."

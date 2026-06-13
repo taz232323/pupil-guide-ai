@@ -39,9 +39,9 @@ export function JoinClassCard({ onJoined, variant = "compact", className }: Prop
 
   if (variant === "hero") {
     return (
-      <Card className={cn("overflow-hidden border-0 shadow-elevated", className)}>
+      <Card className={cn("overflow-hidden border-0 shadow-elevated hover-lift animate-fade-up", className)}>
         <div className="bg-gradient-soft px-6 py-14 sm:py-20 text-center">
-          <div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-card text-primary shadow-card">
+          <div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-card text-primary shadow-card animate-breathing">
             <KeyRound className="h-10 w-10" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome aboard! 👋</h2>
@@ -67,25 +67,25 @@ export function JoinClassCard({ onJoined, variant = "compact", className }: Prop
   }
 
   return (
-    <Card className={cn("p-4", className)}>
+    <Card className={cn("p-4 sm:p-5 hover-lift transition-spring animate-fade-up", className)}>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary transition-spring">
           <KeyRound className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Join another class</p>
-          <p className="text-xs text-muted-foreground">Enter a 6-character join code from your teacher.</p>
+          <h3 className="font-display text-base font-semibold tracking-tight">Join a class</h3>
+          <p className="text-xs text-muted-foreground">Enter a join code from your teacher.</p>
         </div>
         <div className="flex w-full sm:w-auto gap-2">
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="ABC123"
-            className="h-10 w-full sm:w-40 text-center font-mono tracking-[0.3em]"
+            placeholder="Join code"
+            className="h-10 w-full sm:w-44 text-center font-mono tracking-[0.3em]"
             maxLength={6}
           />
           <Button onClick={join} disabled={busy || code.trim().length < 4} className="h-10">
-            {busy ? "Joining..." : "Join"}
+            {busy ? "Joining..." : "Join class"}
           </Button>
         </div>
       </div>

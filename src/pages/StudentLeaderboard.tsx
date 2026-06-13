@@ -159,7 +159,7 @@ export default function StudentLeaderboard() {
       >
         <div className={cn(
           "w-8 text-center font-bold tabular-nums",
-          rank === 1 ? "text-amber-500" : rank === 2 ? "text-slate-400" : rank === 3 ? "text-orange-500" : "text-muted-foreground"
+          rank === 1 ? "text-gold" : rank === 2 ? "text-muted-foreground" : rank === 3 ? "text-warning" : "text-muted-foreground"
         )}>
           {RankIcon ? <RankIcon className="h-5 w-5 mx-auto" /> : `#${rank}`}
         </div>
@@ -171,7 +171,7 @@ export default function StudentLeaderboard() {
         </div>
         {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" isChampion={isChampion} />}
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
-          <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
+          <Star className="h-4 w-4 fill-gold text-gold" />
           {e.coins}
         </div>
       </li>

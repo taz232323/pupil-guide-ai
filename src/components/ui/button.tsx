@@ -5,21 +5,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "relative overflow-hidden inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "btn-spring relative overflow-hidden inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] text-sm font-medium ring-offset-background hover:scale-[1.04] active:scale-[0.96] active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-[3px] focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 disabled:hover:scale-100 disabled:hover:brightness-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        default:
+          "bg-primary text-primary-foreground shadow-[0_1px_2px_hsl(221_83%_30%/0.2),0_4px_12px_hsl(221_83%_53%/0.25)] hover:bg-primary-deep hover:shadow-[0_8px_24px_hsl(221_83%_53%/0.35)]",
+        destructive:
+          "bg-destructive text-destructive-foreground shadow-[0_1px_2px_hsl(0_60%_30%/0.2)] hover:brightness-110 hover:shadow-[0_8px_24px_hsl(0_72%_51%/0.3)]",
+        outline:
+          "border border-border bg-card text-foreground hover:border-primary/60 hover:bg-primary/5 hover:text-primary",
+        secondary:
+          "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/70",
+        ghost: "hover:bg-primary/10 hover:text-primary",
+        link: "text-primary underline-offset-4 hover:underline hover:scale-100 hover:no-underline nav-underline",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
+        sm: "h-9 rounded-[8px] px-3",
+        lg: "h-11 rounded-[8px] px-8",
         icon: "h-10 w-10",
       },
     },

@@ -689,31 +689,35 @@ export const StudentAvatar = ({
           frameDecor
         )}
       >
-        {/* Aura background */}
+        {/* Aura background — keyed so a swap crossfades in */}
         {auraSrc && (
           <img
+            key={state.aura}
             src={auraSrc}
             alt=""
             draggable={false}
-            className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
+            className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none animate-fade-up"
             style={{ zIndex: 0, opacity: 0.95 }}
           />
         )}
-        {/* Cartoon animal character */}
+        {/* Cartoon animal character — keyed by its rendered parts so each
+            part swap (species/eyes/clothes/...) gently fades the new look in. */}
         <img
+          key={dataUri}
           src={dataUri}
           alt=""
           draggable={false}
-          className="relative h-full w-full object-contain object-bottom select-none pointer-events-none"
+          className="relative h-full w-full object-contain object-bottom select-none pointer-events-none animate-fade-up"
           style={{ zIndex: 10 }}
         />
-        {/* Cosmetic headwear overlay */}
+        {/* Cosmetic headwear overlay — keyed so a swap crossfades in */}
         {headwear && (
           <img
+            key={state.headwear}
             src={headwear.src}
             alt=""
             draggable={false}
-            className="absolute left-1/2 -translate-x-1/2 select-none pointer-events-none"
+            className="absolute left-1/2 -translate-x-1/2 select-none pointer-events-none animate-pop-in"
             style={{
               top: headwear.top,
               width: `${headwear.widthPct}%`,

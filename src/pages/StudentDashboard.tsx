@@ -20,6 +20,10 @@ import { JoinClassCard } from "@/components/JoinClassCard";
 import { LeaderboardWidget } from "@/components/LeaderboardWidget";
 import { StreakWidget } from "@/components/StreakWidget";
 import { MoodCheckInCard } from "@/components/MoodCheckInCard";
+import { Reveal } from "@/components/Reveal";
+import { CountUp } from "@/components/CountUp";
+import { ProgressRing } from "@/components/ProgressRing";
+import { MountainSketch } from "@/components/MountainSketch";
 import {
   STUDENT_COINS_CHANGED_EVENT,
   STUDENT_STREAKS_CHANGED_EVENT,
@@ -36,6 +40,13 @@ type Row = {
 };
 
 type NotifRow = { id: string; type: string; message: string; link: string | null; created_at: string };
+
+const CLASS_TILE = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+];
 
 function timeGreeting() {
   const h = new Date().getHours();
@@ -308,32 +319,31 @@ export default function StudentDashboard() {
     <DashboardShell>
       <div className="space-y-6 stagger-children">
         {/* Hero greeting */}
-        <div className="rounded-3xl bg-gradient-hero p-6 sm:p-8 text-white shadow-elevated animate-fade-in relative overflow-hidden">
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-          <div className="absolute -right-20 bottom-0 h-32 w-32 rounded-full bg-white/5 blur-2xl" />
+        <div className="relative overflow-hidden animate-fade-in">
+          <MountainSketch variant="range" className="pointer-events-none absolute -top-6 right-0 hidden w-72 text-muted-foreground/30 sm:block" />
           <div className="relative flex flex-wrap items-end justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-medium opacity-80">{timeGreeting()}</p>
-              <h1 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight truncate">
+              <p className="text-sm font-medium text-muted-foreground">{timeGreeting()}</p>
+              <h1 className="mt-1 truncate font-display text-3xl font-semibold tracking-tight sm:text-4xl">
                 {name || "Welcome back"} 👋
               </h1>
-              <p className="mt-2 text-sm sm:text-base opacity-95 max-w-xl">{heroTagline}</p>
+              <p className="mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">{heroTagline}</p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-2 rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
-                <Flame className="h-5 w-5 text-warning" />
+              <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 shadow-card transition-spring hover-lift">
+                <Flame className="h-5 w-5 animate-flame-pulse text-gold" />
                 <div className="leading-tight">
-                  <p className="text-lg font-bold tabular-nums">{streak}</p>
-                  <p className="text-[10px] uppercase tracking-wide opacity-80">Day streak</p>
+                  <p className="font-tabular text-lg font-bold"><CountUp value={streak} /></p>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Day streak</p>
                 </div>
               </div>
-              <div className="hidden sm:flex items-center gap-2 rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
-                <Star className="h-5 w-5 text-warning fill-warning" />
-                <p className="text-lg font-bold tabular-nums">{coins.star}</p>
+              <div className="hidden items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 shadow-card transition-spring hover-lift shimmer-gold sm:flex">
+                <Star className="h-5 w-5 fill-gold text-gold" />
+                <p className="font-tabular text-lg font-bold text-gold"><CountUp value={coins.star} /></p>
               </div>
-              <div className="hidden sm:flex items-center gap-2 rounded-2xl bg-white/15 backdrop-blur px-3 py-2">
-                <Crown className="h-5 w-5" />
-                <p className="text-lg font-bold tabular-nums">{coins.crown}</p>
+              <div className="hidden items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 shadow-card transition-spring hover-lift shimmer-purple sm:flex">
+                <Crown className="h-5 w-5 text-plum" />
+                <p className="font-tabular text-lg font-bold text-plum"><CountUp value={coins.crown} /></p>
               </div>
             </div>
           </div>
@@ -371,15 +381,19 @@ export default function StudentDashboard() {
                 </div>
               ) : (
                 <ul className="space-y-2">
-                  {focusItems.map(r => {
+                  {focusItems.map((r, i) => {
                     const due = new Date(r.due_date!);
                     const isToday = due.getTime() <= todayEnd;
                     return (
                       <li key={r.id}
-                        className="group flex items-center gap-3 rounded-xl bg-card border border-border p-3 sm:p-4 hover-lift cursor-pointer"
+                        className={cn(
+                          "group flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-3 transition-spring hover-lift sm:p-4 animate-fade-up",
+                          isToday ? "border-destructive/30" : "border-primary/15",
+                        )}
+                        style={{ animationDelay: `${i * 60}ms` }}
                         onClick={() => navigate(`/student/assignments/${r.id}`)}>
                         <span className={cn(
-                          "shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-xl",
+                          "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-spring group-hover:scale-110",
                           isToday ? "bg-destructive/10 text-destructive" : "bg-warning-soft text-warning"
                         )}>
                           <ClipboardList className="h-5 w-5" />
@@ -404,13 +418,13 @@ export default function StudentDashboard() {
             <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
               {QUICK_LINKS.map(q => (
                 <Link key={q.to} to={q.to}
-                  className="group relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 shadow-card transition-base hover-lift">
-                  <span className={cn("inline-flex h-12 w-12 items-center justify-center rounded-2xl", q.tone)}>
+                  className="group relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-primary/15 bg-card p-4 shadow-card transition-spring hover-lift">
+                  <span className={cn("inline-flex h-12 w-12 items-center justify-center rounded-2xl transition-spring group-hover:scale-110", q.tone)}>
                     <q.icon className="h-6 w-6" />
                   </span>
                   <p className="text-sm font-semibold">{q.label}</p>
                   {!!q.badge && q.badge > 0 && (
-                    <span className="absolute top-2 right-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                    <span className="absolute top-2 right-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold font-tabular text-destructive-foreground animate-badge-pop">
                       {q.badge}
                     </span>
                   )}
@@ -420,37 +434,37 @@ export default function StudentDashboard() {
 
             {/* Level + Coins compact row */}
             <section className="grid gap-3 sm:grid-cols-3">
-              <Card className="sm:col-span-2 border-0 shadow-card">
+              <Card className="sm:col-span-2 border-0 shadow-card hover-lift">
                 <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-primary text-primary-foreground shadow-glow">
                         <Zap className="h-5 w-5" />
                       </span>
                       <div>
                         <p className="text-xs uppercase tracking-wide text-muted-foreground">Level</p>
-                        <p className="text-lg font-bold leading-none">Lv {lvl.level}</p>
+                        <p className="text-lg font-bold leading-none">Lv <CountUp value={lvl.level} className="text-gradient-primary" /></p>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground tabular-nums">{lvl.into} / {lvl.span} XP</p>
+                    <p className="text-xs text-muted-foreground font-tabular">{lvl.into} / {lvl.span} XP</p>
                   </div>
                   <Progress value={lvl.pct} className="h-3" />
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-card">
+              <Card className="border-0 shadow-card hover-lift">
                 <CardContent className="p-4 sm:p-5 flex items-center justify-around">
-                  <div className="flex flex-col items-center">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-warning-soft text-warning">
-                      <Star className="h-5 w-5 fill-warning" />
+                  <div className="flex flex-col items-center shimmer-gold rounded-xl px-2">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold-soft text-gold transition-spring hover:scale-110">
+                      <Star className="h-5 w-5 fill-gold" />
                     </span>
-                    <p className="mt-1 text-xl font-bold tabular-nums">{coins.star}</p>
+                    <p className="mt-1 text-xl font-bold font-tabular text-gold"><CountUp value={coins.star} /></p>
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Stars</p>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                  <div className="flex flex-col items-center shimmer-purple rounded-xl px-2">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-plum-soft text-plum transition-spring hover:scale-110">
                       <Crown className="h-5 w-5" />
                     </span>
-                    <p className="mt-1 text-xl font-bold tabular-nums">{coins.crown}</p>
+                    <p className="mt-1 text-xl font-bold font-tabular text-plum"><CountUp value={coins.crown} /></p>
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Crowns</p>
                   </div>
                 </CardContent>
@@ -478,22 +492,34 @@ export default function StudentDashboard() {
                   </Card>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {weeklyByClass.map(w => (
-                      <Card key={w.id} className="border-0 shadow-card hover-lift cursor-pointer"
-                        onClick={() => navigate(`/student/classes/${w.id}`)}>
-                        <CardContent className="p-4 flex items-center gap-4">
-                          <Ring value={w.pct} label={`${w.done}/${w.total}`} />
-                          <div className="min-w-0">
-                            <p className="font-semibold truncate">{w.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {w.done === w.total ? "Week complete 🎉" : `${w.total - w.done} to go this week`}
-                            </p>
-                            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold text-primary">
-                              <BookOpen className="h-3 w-3" /> {w.pct}% done
+                    {weeklyByClass.map((w, i) => (
+                      <Reveal key={w.id} delay={i * 60}>
+                        <Card className="group border-0 shadow-card hover-lift cursor-pointer"
+                          onClick={() => navigate(`/student/classes/${w.id}`)}>
+                          <CardContent className="p-4 flex items-center gap-4">
+                            <ProgressRing value={w.pct} size={64} strokeWidth={7}>
+                              <span className="font-tabular text-sm font-bold">{w.done}/{w.total}</span>
+                            </ProgressRing>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-spring group-hover:scale-110",
+                                  CLASS_TILE[i % 4],
+                                )}>
+                                  <BookOpen className="h-4 w-4" />
+                                </span>
+                                <p className="font-semibold truncate">{w.name}</p>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {w.done === w.total ? "Week complete 🎉" : `${w.total - w.done} to go this week`}
+                              </p>
+                              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                <BookOpen className="h-3 w-3" /> <span className="font-tabular">{w.pct}%</span> done
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </CardContent>
+                        </Card>
+                      </Reveal>
                     ))}
                   </div>
                 )}
@@ -514,14 +540,14 @@ export default function StudentDashboard() {
                   </Card>
                 ) : (
                   <ul className="space-y-2">
-                    {notifs.map(n => {
+                    {notifs.map((n, i) => {
                       const Icon = notifIcon(n.type);
                       const target = n.link || "/student";
                       return (
-                        <li key={n.id}>
+                        <Reveal as="li" key={n.id} delay={i * 60}>
                           <Link to={target}
-                            className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 hover-lift">
-                            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                            className="group unread-accent flex items-start gap-3 rounded-xl border border-primary/15 bg-card p-3 hover-lift">
+                            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary transition-spring group-hover:scale-110">
                               <Icon className="h-4 w-4" />
                             </span>
                             <div className="min-w-0 flex-1">
@@ -529,7 +555,7 @@ export default function StudentDashboard() {
                               <p className="mt-0.5 text-[11px] text-muted-foreground">{relTime(n.created_at)}</p>
                             </div>
                           </Link>
-                        </li>
+                        </Reveal>
                       );
                     })}
                   </ul>
