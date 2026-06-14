@@ -143,7 +143,7 @@ export default function Index() {
           </nav>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost">
-              <Link to="/auth">Log in</Link>
+              <Link to="/auth" onClick={startAuthZoom}>Log in</Link>
             </Button>
             <Button asChild>
               <Link to="/auth" onClick={startAuthZoom}>Get started</Link>
