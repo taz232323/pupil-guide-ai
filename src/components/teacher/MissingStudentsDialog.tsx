@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowRight, AlertTriangle } from "lucide-react";
+import { Reveal } from "@/components/Reveal";
 
 export type MissingEntry = {
   studentId: string;
@@ -37,10 +38,10 @@ export function MissingStudentsDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <AlertTriangle className="h-5 w-5 text-destructive animate-flame-pulse" />
             {title}
           </DialogTitle>
-          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          {subtitle && <p className="text-sm text-muted-foreground font-tabular">{subtitle}</p>}
         </DialogHeader>
         {entries.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
@@ -49,10 +50,10 @@ export function MissingStudentsDialog({
         ) : (
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-4 pr-3">
-              {sorted.map(([heading, items]) => (
-                <div key={heading}>
+              {sorted.map(([heading, items], gi) => (
+                <Reveal key={heading} delay={gi * 80}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-                    {heading} <span className="text-destructive">· {items.length}</span>
+                    {heading} <span className="text-destructive font-tabular">· {items.length}</span>
                   </p>
                   <ul className="space-y-1">
                     {items.map((e, i) => (
@@ -60,7 +61,7 @@ export function MissingStudentsDialog({
                         <Link
                           to={`/teacher/assignments/${e.assignmentId}`}
                           onClick={() => onOpenChange(false)}
-                          className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm hover-lift hover:bg-muted"
+                          className="attention-pulse flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm hover-lift hover:bg-muted"
                         >
                           <div className="min-w-0">
                             <p className="font-medium truncate">
@@ -77,7 +78,7 @@ export function MissingStudentsDialog({
                       </li>
                     ))}
                   </ul>
-                </div>
+                </Reveal>
               ))}
             </div>
           </ScrollArea>

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Coins, Flame, Sparkles, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoldCoinBurst } from "@/components/GoldCoinBurst";
+import { CountUp } from "@/components/CountUp";
 
 export type RewardData = {
   title: string;
@@ -54,7 +55,7 @@ export function RewardOverlay({ open, data, onClose }: Props) {
         className="absolute inset-0 opacity-60"
         style={{
           background:
-            "radial-gradient(60% 50% at 50% 40%, hsl(var(--primary) / 0.35), transparent 70%)",
+            "radial-gradient(60% 50% at 50% 40%, hsl(var(--plum) / 0.35), transparent 70%)",
         }}
       />
 
@@ -68,7 +69,7 @@ export function RewardOverlay({ open, data, onClose }: Props) {
           className="relative h-28 overflow-hidden"
           style={{
             background:
-              "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--teal)) 60%, hsl(var(--warning)) 100%)",
+              "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--plum)) 60%, hsl(var(--gold)) 100%)",
           }}
         >
           <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/20 blur-2xl reward-blob-a" />
@@ -111,10 +112,10 @@ export function RewardOverlay({ open, data, onClose }: Props) {
 
           {totalCoins > 0 && (
             <div className="reward-stagger flex items-center justify-center gap-3">
-              <div className="flex items-center gap-2 rounded-full border border-warning/30 bg-warning-soft px-4 py-2 shadow-card">
-                <Coins className="h-5 w-5 text-warning" />
-                <span className="font-semibold text-warning-foreground">
-                  +{totalCoins} Star Coins
+              <div className="flex items-center gap-2 rounded-full border border-gold/30 bg-gold-soft px-4 py-2 shadow-card shimmer-gold">
+                <Coins className="h-5 w-5 text-gold" />
+                <span className="font-semibold text-gold">
+                  +<CountUp value={totalCoins} className="font-tabular" /> Star Coins
                 </span>
               </div>
             </div>
@@ -122,16 +123,16 @@ export function RewardOverlay({ open, data, onClose }: Props) {
 
           {(data.bonusCoins ?? 0) > 0 && (
             <p className="reward-stagger text-xs text-muted-foreground">
-              Includes <span className="font-medium text-foreground">+{data.bonusCoins}</span> bonus
+              Includes <span className="font-medium text-foreground font-tabular">+{data.bonusCoins}</span> bonus
             </p>
           )}
 
           {data.streak ? (
             <div className="reward-stagger inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5 text-sm">
-              <Flame className="h-4 w-4 text-orange-500" />
-              <span className="font-medium">{data.streak}-day streak</span>
+              <Flame className="h-4 w-4 text-gold animate-flame-pulse" />
+              <span className="font-medium font-tabular">{data.streak}-day streak</span>
               {data.milestone && (
-                <span className="ml-1 rounded-full bg-warning/20 px-2 py-0.5 text-[11px] font-semibold text-warning">
+                <span className="ml-1 rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-semibold text-gold">
                   {data.milestone}-day milestone!
                 </span>
               )}

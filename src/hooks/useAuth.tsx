@@ -68,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error("signOut error", err);
     }
+    sessionStorage.removeItem("access_mode");
     setSession(null);
     setUser(null);
     setRole(null);

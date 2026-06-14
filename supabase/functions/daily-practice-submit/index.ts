@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       (a: any) => a.question_type === "short_answer" && a.is_correct === null,
     );
     if (ungradedShort.length) {
-      const apiKey = Deno.env.get("GEMINI_API_KEY");
+      const apiKey = Deno.env.get("GEMINI_API_KEY") ?? Deno.env.get("gemini_api_key");
       if (apiKey) {
         const prompt = `Grade these short-answer questions. Return ONLY JSON: {"results":[{"id":"...","is_correct":true|false}]}.
 Mark a response correct if it captures the key idea of the expected answer (allow reasonable wording differences).
@@ -131,6 +131,16 @@ ${JSON.stringify(
     const yesterday = new Date(todayDate);
     yesterday.setUTCDate(todayDate.getUTCDate() - 1);
     const yStr = yesterday.toISOString().slice(0, 10);
+    let autoAppliedShields = 0;
+
+    const { data: autoApplyResult, error: autoApplyError } = await supabase.rpc("auto_apply_streak_shields", {
+      _class_id: session.class_id,
+    });
+    if (autoApplyError) {
+      console.warn("auto_apply_streak_shields failed:", autoApplyError.message);
+    } else {
+      autoAppliedShields = Number((autoApplyResult as any)?.shieldsConsumed ?? 0);
+    }
 
     const { data: streak } = await admin
       .from("daily_practice_streaks")
@@ -142,27 +152,37 @@ ${JSON.stringify(
     let current = 1;
     let longest = 1;
     let milestonesAwarded: number[] = [];
-    let shieldsConsumed = 0;
+    let shieldsConsumed = autoAppliedShields;
     if (streak) {
       milestonesAwarded = Array.isArray(streak.milestones_awarded) ? [...streak.milestones_awarded] : [];
+      // Weekend-aware "consecutive" check: skip Sat/Sun gaps.
+      const isWeekend = (d: Date) => {
+        const w = d.getUTCDay();
+        return w === 0 || w === 6;
+      };
+      const weekdaysStrictlyBetween = (a: Date, b: Date): string[] => {
+        const out: string[] = [];
+        const cur = new Date(a);
+        cur.setUTCDate(cur.getUTCDate() + 1);
+        while (cur < b) {
+          if (!isWeekend(cur)) out.push(cur.toISOString().slice(0, 10));
+          cur.setUTCDate(cur.getUTCDate() + 1);
+        }
+        return out;
+      };
+      const lastDate = streak.last_practice_date
+        ? new Date(streak.last_practice_date + "T00:00:00Z")
+        : null;
+      const missingWeekdays = lastDate ? weekdaysStrictlyBetween(lastDate, todayDate) : [];
+
       if (streak.last_practice_date === today) {
         current = streak.current_streak;
-      } else if (streak.last_practice_date === yStr) {
+      } else if (streak.last_practice_date === yStr || missingWeekdays.length === 0) {
+        // Yesterday OR only weekend days were skipped — streak continues.
         current = streak.current_streak + 1;
       } else {
-        // Try to bridge the gap with active streak shields for the missing days
-        const last = streak.last_practice_date
-          ? new Date(streak.last_practice_date + "T00:00:00Z")
-          : null;
-        const missingDates: string[] = [];
-        if (last) {
-          const cursor = new Date(last);
-          cursor.setUTCDate(cursor.getUTCDate() + 1);
-          while (cursor < todayDate) {
-            missingDates.push(cursor.toISOString().slice(0, 10));
-            cursor.setUTCDate(cursor.getUTCDate() + 1);
-          }
-        }
+        // Bridge only the missed WEEKDAYS with shields.
+        const missingDates = missingWeekdays;
         if (missingDates.length > 0) {
           const { data: shields } = await admin
             .from("streak_freeze_activations")
@@ -178,7 +198,7 @@ ${JSON.stringify(
               .from("streak_freeze_activations")
               .update({ consumed: true, consumed_at: new Date().toISOString() })
               .in("id", shields.map((s: any) => s.id));
-            shieldsConsumed = shields.length;
+            shieldsConsumed += shields.length;
             current = streak.current_streak + missingDates.length + 1;
           } else {
             current = 1;

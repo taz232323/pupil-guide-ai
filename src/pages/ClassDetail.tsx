@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X, HelpCircle, Plus, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, BookOpen, ClipboardList, Coins, Layers, Pencil, Save, Users, Copy, X, HelpCircle, Plus, Trash2, Loader2, ShieldCheck, HeartPulse, Send, Clock3, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -12,13 +12,20 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { EmptyState } from "@/components/EmptyState";
+import { AiPracticeQuestionDialog, type GeneratedQuestion } from "@/components/AiPracticeQuestionDialog";
 import { ClassModules } from "@/components/modules/ClassModules";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconButton } from "@/components/IconButton";
+import { getMoodOption } from "@/lib/moodCheckins";
+import { Reveal } from "@/components/Reveal";
+import { MountainSketch } from "@/components/MountainSketch";
+import { cn } from "@/lib/utils";
+import { celebrate } from "@/lib/confetti";
 import { toast } from "sonner";
 
 type ClassRow = {
@@ -34,6 +41,13 @@ type ClassRow = {
 
 type Member = { id: string; name: string; items: string[]; isTeacher?: boolean };
 
+const ASSIGNMENT_TILE = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+];
+
 type PracticeQuestion = {
   id: string;
   class_id: string;
@@ -42,6 +56,21 @@ type PracticeQuestion = {
   options: string[] | null;
   correct_index: number | null;
   expected_answer: string | null;
+};
+
+type AwardKind = "star" | "crown" | "shield";
+
+type MoodCheckIn = {
+  id: string;
+  class_id: string;
+  teacher_id: string;
+  student_id: string;
+  prompt: string;
+  mood_key: string | null;
+  note: string | null;
+  wants_help: boolean;
+  created_at: string;
+  responded_at: string | null;
 };
 
 export default function ClassDetail() {
@@ -59,24 +88,82 @@ export default function ClassDetail() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [awardOpen, setAwardOpen] = useState(false);
   const [awardTargets, setAwardTargets] = useState<Member[]>([]);
-  const [awardCurrency, setAwardCurrency] = useState<"star" | "crown">("star");
+  const [awardKind, setAwardKind] = useState<AwardKind>("star");
   const [awardAmount, setAwardAmount] = useState<string>("1");
   const [awardReason, setAwardReason] = useState("");
   const [awarding, setAwarding] = useState(false);
+  const [moodCheckIns, setMoodCheckIns] = useState<MoodCheckIn[]>([]);
+  const [moodOpen, setMoodOpen] = useState(false);
+  const [moodTargets, setMoodTargets] = useState<Member[]>([]);
+  const [moodPrompt, setMoodPrompt] = useState("How are you feeling today?");
+  const [sendingMood, setSendingMood] = useState(false);
   
   // Practice Question Bank state
   const [practiceQuestions, setPracticeQuestions] = useState<PracticeQuestion[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<Partial<PracticeQuestion> | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [showPracticePrompt, setShowPracticePrompt] = useState(false);
 
   const isTeacher = !!cls && !!user && cls.teacher_id === user.id;
 
   const studentMembers = members.filter((m) => !m.isTeacher);
 
+  const getMember = (studentId: string) => members.find((m) => m.id === studentId);
+
+  const loadMoodCheckIns = async (classId: string) => {
+    const { data, error } = await (supabase as any)
+      .from("mood_checkins")
+      .select("*")
+      .eq("class_id", classId)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (error) {
+      console.warn("mood check-ins load failed:", error.message);
+      return;
+    }
+
+    setMoodCheckIns((data ?? []) as unknown as MoodCheckIn[]);
+  };
+
+  const openMoodCheckIn = (targets: Member[]) => {
+    setMoodTargets(targets);
+    setMoodPrompt("How are you feeling today?");
+    setMoodOpen(true);
+  };
+
+  const sendMoodCheckIn = async () => {
+    if (!cls || moodTargets.length === 0) return;
+    const prompt = moodPrompt.trim() || "How are you feeling today?";
+    if (prompt.length > 240) {
+      toast.error("Keep the prompt under 240 characters");
+      return;
+    }
+
+    setSendingMood(true);
+    const { data, error } = await (supabase as any).rpc("teacher_send_mood_checkins", {
+      _class_id: cls.id,
+      _student_ids: moodTargets.map((target) => target.id),
+      _prompt: prompt,
+    });
+    setSendingMood(false);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    const count = (data as number) ?? moodTargets.length;
+    toast.success(`Sent check-in to ${count} student${count === 1 ? "" : "s"}`);
+    setMoodOpen(false);
+    setSelectedIds(new Set());
+    void loadMoodCheckIns(cls.id);
+  };
+
   const openAward = (targets: Member[]) => {
     setAwardTargets(targets);
-    setAwardCurrency("star");
+    setAwardKind("star");
     setAwardAmount("1");
     setAwardReason("");
     setAwardOpen(true);
@@ -90,18 +177,26 @@ export default function ClassDetail() {
       return;
     }
     setAwarding(true);
-    const { data, error } = await supabase.rpc("teacher_award_coins", {
-      _class_id: cls.id,
-      _student_ids: awardTargets.map((t) => t.id),
-      _currency: awardCurrency,
-      _amount: amt,
-      _reason: awardReason.trim() || null,
-    });
+    const { data, error } = awardKind === "shield"
+      ? await (supabase as any).rpc("teacher_award_streak_shields", {
+          _class_id: cls.id,
+          _student_ids: awardTargets.map((t) => t.id),
+          _amount: amt,
+          _reason: awardReason.trim() || null,
+        })
+      : await supabase.rpc("teacher_award_coins", {
+          _class_id: cls.id,
+          _student_ids: awardTargets.map((t) => t.id),
+          _currency: awardKind,
+          _amount: amt,
+          _reason: awardReason.trim() || null,
+        });
     setAwarding(false);
     if (error) { toast.error(error.message); return; }
     const n = (data as number) ?? awardTargets.length;
-    const label = awardCurrency === "star" ? "Star" : "Crown";
-    toast.success(`Awarded ${amt} ${label} Coin${amt === 1 ? "" : "s"} to ${n} student${n === 1 ? "" : "s"}`);
+    const label = awardKind === "star" ? "Star Coin" : awardKind === "crown" ? "Crown Coin" : "Streak Shield";
+    toast.success(`Awarded ${amt} ${label}${amt === 1 ? "" : "s"} to ${n} student${n === 1 ? "" : "s"}`);
+    celebrate("small");
     setAwardOpen(false);
     setSelectedIds(new Set());
   };
@@ -167,9 +262,14 @@ export default function ClassDetail() {
             setShowPracticePrompt(true);
           }
         }
+
+        await loadMoodCheckIns(id);
+      } else {
+        setMoodCheckIns([]);
       }
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user]);
 
   const saveSyllabus = async () => {
@@ -264,6 +364,33 @@ export default function ClassDetail() {
     toast.success("Question deleted");
   };
 
+  const addGeneratedQuestions = async (questions: GeneratedQuestion[]) => {
+    if (!cls || !user || questions.length === 0) return;
+
+    const rows = questions.map((question) => ({
+      class_id: cls.id,
+      teacher_id: user.id,
+      question_type: "multiple_choice" as const,
+      prompt: question.prompt,
+      options: question.options,
+      correct_index: question.correctIndex,
+      expected_answer: null,
+    }));
+
+    const { data, error } = await (supabase as any)
+      .from("practice_question_bank")
+      .insert(rows)
+      .select();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    setPracticeQuestions((prev) => [...((data ?? []) as PracticeQuestion[]), ...prev]);
+    const count = data?.length ?? questions.length;
+    toast.success(`Added ${count} AI question${count === 1 ? "" : "s"} to the bank`);
+  };
+
   const dismissPracticePrompt = async () => {
     if (!cls || !user) return;
     await (supabase as any)
@@ -295,7 +422,7 @@ export default function ClassDetail() {
           {isTeacher && (
             <button
               onClick={copyCode}
-              className="font-mono text-xs px-2 py-1 rounded bg-secondary hover:bg-accent inline-flex items-center gap-1.5"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/15 bg-primary-soft px-2 py-1 font-mono text-xs font-semibold text-primary transition-spring hover-lift"
               aria-label={`Copy join code ${cls.join_code}`}
             >
               {cls.join_code}<Copy className="h-3 w-3" />
@@ -307,8 +434,15 @@ export default function ClassDetail() {
         </div>
       }
     >
+      <div className="relative mb-4 hidden h-0 overflow-visible sm:block">
+        <MountainSketch
+          variant="peak"
+          className="pointer-events-none absolute -top-16 right-0 w-56 text-muted-foreground/25"
+        />
+      </div>
+
       <Tabs defaultValue="modules" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview"><BookOpen className="h-4 w-4 mr-1.5" />Overview</TabsTrigger>
           <TabsTrigger value="modules"><Layers className="h-4 w-4 mr-1.5" />Modules</TabsTrigger>
           <TabsTrigger value="assignments"><ClipboardList className="h-4 w-4 mr-1.5" />Assignments</TabsTrigger>
@@ -317,7 +451,7 @@ export default function ClassDetail() {
         </TabsList>
 
         <TabsContent value="overview">
-          <Card>
+          <Card className="hover-lift animate-fade-up">
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div>
                 <CardTitle className="text-base">Welcome & syllabus</CardTitle>
@@ -365,7 +499,7 @@ export default function ClassDetail() {
           </Card>
 
           {isTeacher && (
-            <Card className="mt-4">
+            <Card className="mt-4 hover-lift animate-fade-up" style={{ animationDelay: "80ms" }}>
               <CardHeader>
                 <CardTitle className="text-base">Class settings</CardTitle>
                 <CardDescription>Control how this class appears to students.</CardDescription>
@@ -417,7 +551,7 @@ export default function ClassDetail() {
         </TabsContent>
 
         <TabsContent value="assignments">
-          <Card>
+          <Card className="hover-lift animate-fade-up">
             <CardHeader>
               <CardTitle className="text-base">Assignments</CardTitle>
               <CardDescription>All assignments for this class.</CardDescription>
@@ -427,19 +561,25 @@ export default function ClassDetail() {
                 <EmptyState icon={ClipboardList} title="No assignments yet" />
               ) : (
                 <ul className="divide-y divide-border">
-                  {assignments.map((a) => {
+                  {assignments.map((a, i) => {
                     const href = role === "teacher" ? `/teacher/assignments/${a.id}` : `/student/assignments/${a.id}`;
                     return (
-                      <li key={a.id}>
-                        <Link to={href} className="flex items-center justify-between py-3 -mx-2 px-2 rounded-md hover:bg-muted/40 transition-colors">
-                          <span className="font-medium truncate">{a.title}</span>
+                      <Reveal as="li" key={a.id} delay={i * 50}>
+                        <Link to={href} className="group flex items-center justify-between gap-3 py-3 -mx-2 px-2 rounded-xl hover:bg-muted/40 transition-spring">
+                          <span className={cn(
+                            "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-spring group-hover:scale-110",
+                            ASSIGNMENT_TILE[i % ASSIGNMENT_TILE.length],
+                          )}>
+                            <ClipboardList className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1 font-medium truncate">{a.title}</span>
                           {a.due_date && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="shrink-0 text-xs text-muted-foreground">
                               Due {new Date(a.due_date).toLocaleDateString()}
                             </span>
                           )}
                         </Link>
-                      </li>
+                      </Reveal>
                     );
                   })}
                 </ul>
@@ -450,7 +590,7 @@ export default function ClassDetail() {
 
         {isTeacher && (
           <TabsContent value="question-bank">
-            <Card>
+            <Card className="hover-lift animate-fade-up">
               <CardHeader className="flex flex-row items-center justify-between gap-2">
                 <div>
                   <CardTitle className="text-base">Practice Question Bank</CardTitle>
@@ -458,9 +598,14 @@ export default function ClassDetail() {
                     Add questions that will appear in students' daily practice sessions. AI will fill remaining slots with questions based on your lesson content.
                   </CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
-                  <Plus className="h-4 w-4 mr-1" />Add Question
-                </Button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>
+                    <Sparkles className="h-4 w-4 mr-1" />Generate with AI
+                  </Button>
+                  <Button size="sm" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
+                    <Plus className="h-4 w-4 mr-1" />Add Question
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {practiceQuestions.length === 0 ? (
@@ -469,18 +614,23 @@ export default function ClassDetail() {
                     title="No questions yet"
                     description="Add practice questions to give students targeted daily practice. AI will also generate questions from your lesson content."
                     action={
-                      <Button size="sm" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
-                        <Plus className="h-4 w-4 mr-1" />Add your first question
-                      </Button>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <Button size="sm" onClick={() => setAiOpen(true)}>
+                          <Sparkles className="h-4 w-4 mr-1" />Generate with AI
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingQuestion({ question_type: "multiple_choice", options: ["", "", "", ""], correct_index: 0 })}>
+                          <Plus className="h-4 w-4 mr-1" />Add manually
+                        </Button>
+                      </div>
                     }
                   />
                 ) : (
                   <ul className="divide-y divide-border">
-                    {practiceQuestions.map((q) => (
-                      <li key={q.id} className="py-3 flex items-start justify-between gap-3">
+                    {practiceQuestions.map((q, i) => (
+                      <Reveal as="li" key={q.id} delay={i * 50} className="py-3 flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted">
+                            <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
                               {q.question_type === "multiple_choice" ? "Multiple Choice" : "Short Answer"}
                             </span>
                           </div>
@@ -488,8 +638,8 @@ export default function ClassDetail() {
                           {q.question_type === "multiple_choice" && q.options && (
                             <ul className="mt-1 space-y-0.5">
                               {(q.options as string[]).map((opt, i) => (
-                                <li key={i} className={`text-xs ${i === q.correct_index ? "text-green-600 font-medium" : "text-muted-foreground"}`}>
-                                  {String.fromCharCode(65 + i)}. {opt} {i === q.correct_index && "✓"}
+                                <li key={i} className={cn("text-xs", i === q.correct_index ? "text-success font-medium" : "text-muted-foreground")}>
+                                  {String.fromCharCode(65 + i)}. {opt} {i === q.correct_index && "correct"}
                                 </li>
                               ))}
                             </ul>
@@ -506,7 +656,7 @@ export default function ClassDetail() {
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      </li>
+                      </Reveal>
                     ))}
                   </ul>
                 )}
@@ -516,7 +666,7 @@ export default function ClassDetail() {
         )}
 
         <TabsContent value="members">
-          <Card>
+          <Card className="hover-lift animate-fade-up">
             <CardHeader>
               <CardTitle className="text-base">Members</CardTitle>
               <CardDescription>{members.length} {members.length === 1 ? "person" : "people"} in this class.</CardDescription>
@@ -534,18 +684,28 @@ export default function ClassDetail() {
                     />
                     <span>{selectedIds.size} selected</span>
                   </div>
-                  <Button
-                    size="sm"
-                    disabled={selectedIds.size === 0}
-                    onClick={() => openAward(studentMembers.filter((m) => selectedIds.has(m.id)))}
-                  >
-                    <Coins className="h-4 w-4 mr-1.5" />Give coins to selected
-                  </Button>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => openMoodCheckIn(studentMembers.filter((m) => selectedIds.has(m.id)))}
+                    >
+                      <HeartPulse className="h-4 w-4 mr-1.5" />Check in selected
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => openAward(studentMembers.filter((m) => selectedIds.has(m.id)))}
+                    >
+                      <Coins className="h-4 w-4 mr-1.5" />Give reward
+                    </Button>
+                  </div>
                 </div>
               )}
               <ul className="flex flex-wrap gap-3">
                 {members.map((m) => (
-                  <li key={m.id} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                  <li key={m.id} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 transition-spring hover-lift">
                     {isTeacher && !m.isTeacher && (
                       <Checkbox
                         checked={selectedIds.has(m.id)}
@@ -569,9 +729,19 @@ export default function ClassDetail() {
                         size="sm"
                         variant="outline"
                         className="h-7 px-2"
+                        onClick={() => openMoodCheckIn([m])}
+                      >
+                        <HeartPulse className="h-3.5 w-3.5 mr-1" />Check in
+                      </Button>
+                    )}
+                    {isTeacher && !m.isTeacher && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2"
                         onClick={() => openAward([m])}
                       >
-                        <Coins className="h-3.5 w-3.5 mr-1" />Give coins
+                        <Coins className="h-3.5 w-3.5 mr-1" />Reward
                       </Button>
                     )}
                     {isTeacher && !m.isTeacher && (
@@ -582,6 +752,83 @@ export default function ClassDetail() {
                   </li>
                 ))}
               </ul>
+
+              {isTeacher && (
+                <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-semibold">Recent check-ins</h3>
+                      <p className="text-xs text-muted-foreground">Private responses from students in this class.</p>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => loadMoodCheckIns(cls.id)}>
+                      Refresh
+                    </Button>
+                  </div>
+                  {moodCheckIns.length === 0 ? (
+                    <div className="mt-4 rounded-lg border border-dashed bg-card p-5 text-center text-sm text-muted-foreground">
+                      No check-ins sent yet.
+                    </div>
+                  ) : (
+                    <ul className="mt-4 divide-y divide-border rounded-lg border bg-card">
+                      {moodCheckIns.map((row) => {
+                        const student = getMember(row.student_id);
+                        const mood = getMoodOption(row.mood_key);
+                        return (
+                          <li key={row.id} className="p-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex min-w-0 items-start gap-3">
+                                <StudentAvatar size="sm" name={student?.name ?? "Student"} items={student?.items ?? []} />
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-sm font-semibold">{student?.name ?? "Student"}</p>
+                                    {row.responded_at ? (
+                                      <Badge variant="outline" className="gap-1 text-success">
+                                        <CheckCircle2 className="h-3 w-3" /> Responded
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="secondary" className="gap-1">
+                                        <Clock3 className="h-3 w-3" /> Pending
+                                      </Badge>
+                                    )}
+                                    {row.wants_help && (
+                                      <Badge variant="destructive" className="gap-1">
+                                        <AlertTriangle className="h-3 w-3" /> Wants help
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{row.prompt}</p>
+                                  {row.note && (
+                                    <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-sm leading-relaxed">
+                                      {row.note}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-left sm:text-right">
+                                {mood ? (
+                                  <Badge variant="outline" className="text-sm">
+                                    <span className="mr-1" aria-hidden="true">{mood.emoji}</span>{mood.label}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">No answer yet</Badge>
+                                )}
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  {new Date(row.responded_at ?? row.created_at).toLocaleString([], {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -595,23 +842,68 @@ export default function ClassDetail() {
         destructive
         onConfirm={async () => { if (toRemove) await removeStudent(toRemove); }}
       />
+      <Dialog open={moodOpen} onOpenChange={setMoodOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send check-in</DialogTitle>
+            <DialogDescription>
+              {moodTargets.length === 1
+                ? `Ask ${moodTargets[0]?.name} how they are feeling.`
+                : `Ask ${moodTargets.length} students how they are feeling.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/40 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Students</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {moodTargets.map((target) => (
+                  <span key={target.id} className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-medium">
+                    <StudentAvatar size="sm" name={target.name} items={target.items} />
+                    {target.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="mood-prompt" className="text-sm">Prompt</Label>
+              <Textarea
+                id="mood-prompt"
+                rows={3}
+                value={moodPrompt}
+                maxLength={240}
+                onChange={(event) => setMoodPrompt(event.target.value)}
+                placeholder="How are you feeling today?"
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">{moodPrompt.length}/240</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setMoodOpen(false)} disabled={sendingMood}>Cancel</Button>
+            <Button onClick={sendMoodCheckIn} disabled={sendingMood || moodTargets.length === 0}>
+              {sendingMood ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
+              {sendingMood ? "Sending..." : "Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={awardOpen} onOpenChange={setAwardOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Give coins</DialogTitle>
+            <DialogTitle>Give reward</DialogTitle>
             <DialogDescription>
               {awardTargets.length === 1
-                ? `Award coins to ${awardTargets[0]?.name}.`
-                : `Award the same coins to ${awardTargets.length} students.`}
+                ? `Award a classroom reward to ${awardTargets[0]?.name}.`
+                : `Award the same classroom reward to ${awardTargets.length} students.`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-sm">Coin type</Label>
+              <Label className="text-sm">Reward type</Label>
               <RadioGroup
-                value={awardCurrency}
-                onValueChange={(v) => setAwardCurrency(v as "star" | "crown")}
-                className="flex gap-4 mt-2"
+                value={awardKind}
+                onValueChange={(v) => setAwardKind(v as AwardKind)}
+                className="grid gap-2 mt-2 sm:grid-cols-3"
               >
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <RadioGroupItem value="star" id="award-star" />
@@ -620,6 +912,12 @@ export default function ClassDetail() {
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <RadioGroupItem value="crown" id="award-crown" />
                   <span>👑 Crown Coins</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <RadioGroupItem value="shield" id="award-shield" />
+                  <span className="inline-flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Streak Shields
+                  </span>
                 </label>
               </RadioGroup>
             </div>
@@ -662,6 +960,15 @@ export default function ClassDetail() {
         onSave={savePracticeQuestion}
         saving={savingQuestion}
       />
+
+      {cls && (
+        <AiPracticeQuestionDialog
+          open={aiOpen}
+          onClose={() => setAiOpen(false)}
+          classId={cls.id}
+          onAdd={addGeneratedQuestions}
+        />
+      )}
 
       {/* First-time Daily Practice Prompt */}
       <Dialog open={showPracticePrompt} onOpenChange={setShowPracticePrompt}>

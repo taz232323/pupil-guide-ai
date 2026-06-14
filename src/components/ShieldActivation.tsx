@@ -8,15 +8,6 @@ type Props = {
   subtitle?: string;
 };
 
-/**
- * Fullscreen premium "streak shield activated" effect.
- * - Pop-in shield with elastic bounce
- * - Side-to-side wiggle
- * - Blue/gold energy pulse rings
- * - Orbiting sparkle particles
- * - Diagonal shimmer sweep
- * - Subtle camera shake on the whole overlay
- */
 export function ShieldActivation({ show, onDone, title = "Shield Activated", subtitle }: Props) {
   const [mounted, setMounted] = useState(false);
 
@@ -41,38 +32,26 @@ export function ShieldActivation({ show, onDone, title = "Shield Activated", sub
         const gold = i % 2 === 0;
         return { angle, radius, size, delay, duration, gold };
       }),
-    [mounted]
+    [mounted],
   );
 
   if (!mounted || typeof document === "undefined") return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
       aria-hidden
     >
-      {/* Camera shake wrapper */}
       <div className="relative shield-shake" style={{ width: 0, height: 0 }}>
-        {/* Soft backdrop glow */}
         <div className="shield-backdrop" />
-
-        {/* Expanding energy pulse rings */}
         <div className="shield-pulse shield-pulse-1" />
         <div className="shield-pulse shield-pulse-2" />
         <div className="shield-pulse shield-pulse-3" />
-
-        {/* Conic gold rays */}
         <div className="shield-rays" />
 
-        {/* Shield with wiggle */}
         <div className="shield-wiggle">
           <div className="shield-pop">
-            <svg
-              width="180"
-              height="200"
-              viewBox="0 0 180 200"
-              className="shield-svg"
-            >
+            <svg width="180" height="200" viewBox="0 0 180 200" className="shield-svg">
               <defs>
                 <linearGradient id="sh-fill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#9bd2ff" />
@@ -96,7 +75,6 @@ export function ShieldActivation({ show, onDone, title = "Shield Activated", sub
                 </clipPath>
               </defs>
 
-              {/* Shield body */}
               <path
                 d="M90 6 L168 32 L168 96 C168 142 134 178 90 194 C46 178 12 142 12 96 L12 32 Z"
                 fill="url(#sh-fill)"
@@ -104,16 +82,12 @@ export function ShieldActivation({ show, onDone, title = "Shield Activated", sub
                 strokeWidth="5"
                 strokeLinejoin="round"
               />
-
-              {/* Inner highlight */}
               <path
                 d="M90 22 L150 42 L150 96 C150 134 122 164 90 178 C58 164 30 134 30 96 L30 42 Z"
                 fill="none"
                 stroke="rgba(255,255,255,0.35)"
                 strokeWidth="2"
               />
-
-              {/* Checkmark */}
               <path
                 d="M60 96 L84 120 L124 76"
                 fill="none"
@@ -123,23 +97,13 @@ export function ShieldActivation({ show, onDone, title = "Shield Activated", sub
                 strokeLinejoin="round"
                 style={{ filter: "drop-shadow(0 0 6px rgba(255,235,160,0.85))" }}
               />
-
-              {/* Shimmer sweep clipped to shield */}
               <g clipPath="url(#sh-clip)">
-                <rect
-                  className="shield-shimmer"
-                  x="-220"
-                  y="-20"
-                  width="160"
-                  height="260"
-                  fill="url(#sh-shimmer)"
-                />
+                <rect className="shield-shimmer" x="-220" y="-20" width="160" height="260" fill="url(#sh-shimmer)" />
               </g>
             </svg>
           </div>
         </div>
 
-        {/* Orbiting sparkles */}
         {orbiters.map((o, idx) => (
           <span
             key={idx}
@@ -150,8 +114,8 @@ export function ShieldActivation({ show, onDone, title = "Shield Activated", sub
                 height: `${o.size}px`,
                 animationDelay: `${o.delay}ms`,
                 animationDuration: `${o.duration}ms`,
-                ["--angle" as any]: `${o.angle}deg`,
-                ["--radius" as any]: `${o.radius}px`,
+                "--angle": `${o.angle}deg`,
+                "--radius": `${o.radius}px`,
                 background: o.gold
                   ? "radial-gradient(circle, #fffbe6 0%, #ffd24a 55%, transparent 75%)"
                   : "radial-gradient(circle, #ffffff 0%, #7fc1ff 55%, transparent 75%)",
@@ -164,19 +128,18 @@ export function ShieldActivation({ show, onDone, title = "Shield Activated", sub
         ))}
       </div>
 
-      {/* Title / subtitle */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-[calc(50%+140px)] text-center px-6 shield-text">
-        <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(255,210,74,0.65)]">
+      <div className="absolute left-1/2 top-[calc(50%+140px)] -translate-x-1/2 px-6 text-center shield-text">
+        <div className="text-2xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(255,210,74,0.65)] sm:text-3xl">
           {title}
         </div>
         {subtitle && (
-          <div className="mt-1 text-sm sm:text-base text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
+          <div className="mt-1 text-sm text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)] sm:text-base">
             {subtitle}
           </div>
         )}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
 

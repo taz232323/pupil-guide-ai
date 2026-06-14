@@ -3,7 +3,7 @@ import { Shop } from "./Shop";
 
 export default function ShopPage() {
   return (
-    <DashboardShell title="Shop" subtitle="Spend Star and Crown coins on rewards.">
+    <DashboardShell title="Shop" subtitle="Spend your coins on rewards that inspire your learning.">
       <Shop />
     </DashboardShell>
   );

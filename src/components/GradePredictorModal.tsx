@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { CountUp } from "@/components/CountUp";
 
 type GradePredictorModalProps = {
   open: boolean;
@@ -114,7 +115,7 @@ export function GradePredictorModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
-            {className}
+            <span className="text-gradient-primary">{className}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -125,8 +126,8 @@ export function GradePredictorModal({
               Current Grade
             </p>
             <div className="flex items-baseline justify-center gap-2">
-              <span className={cn("text-4xl font-bold tabular-nums", pctColor(currentPct))}>
-                {currentPct != null ? `${currentPct}%` : "—"}
+              <span className={cn("text-4xl font-bold font-tabular", pctColor(currentPct))}>
+                {currentPct != null ? <CountUp value={currentPct} duration={800} suffix="%" /> : "—"}
               </span>
               <span className={cn("text-xl font-semibold", pctColor(currentPct))}>
                 {letterGrade(currentPct)}
@@ -150,7 +151,7 @@ export function GradePredictorModal({
                   max={outOf}
                   value={yourScore}
                   onChange={(e) => handleScoreChange(e.target.value)}
-                  className="tabular-nums"
+                  className="font-tabular"
                 />
               </div>
               <div className="space-y-1.5">
@@ -161,7 +162,7 @@ export function GradePredictorModal({
                   min={1}
                   value={outOf}
                   onChange={(e) => handleOutOfChange(e.target.value)}
-                  className="tabular-nums"
+                  className="font-tabular"
                 />
               </div>
             </div>
@@ -174,7 +175,7 @@ export function GradePredictorModal({
                 step={1}
                 className="py-2"
               />
-              <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+              <div className="flex justify-between text-[10px] text-muted-foreground font-tabular">
                 <span>0</span>
                 <span>{outOf}</span>
               </div>
@@ -182,19 +183,19 @@ export function GradePredictorModal({
 
             {/* Result */}
             <div className={cn(
-              "flex items-center justify-between rounded-md border-2 px-4 py-3 transition-all duration-200",
+              "flex items-center justify-between rounded-md border-2 px-4 py-3 transition-spring",
               change === "up" && "border-success/50 bg-success/10",
               change === "down" && "border-destructive/50 bg-destructive/10",
               change === "same" && "border-border bg-muted/50"
             )}>
               <div className="flex items-center gap-2">
-                {change === "up" && <ArrowUp className="h-5 w-5 text-success" />}
-                {change === "down" && <ArrowDown className="h-5 w-5 text-destructive" />}
+                {change === "up" && <ArrowUp className="h-5 w-5 text-success animate-pop-in" />}
+                {change === "down" && <ArrowDown className="h-5 w-5 text-destructive animate-pop-in" />}
                 {change === "same" && <Minus className="h-5 w-5 text-muted-foreground" />}
                 <span className="text-sm font-medium">New Grade</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className={cn("text-2xl font-bold tabular-nums", pctColor(newPct))}>
+                <span className={cn("text-2xl font-bold font-tabular", pctColor(newPct))}>
                   {newPct != null ? `${newPct}%` : "—"}
                 </span>
                 <span className={cn("text-lg font-semibold", pctColor(newPct))}>
@@ -231,7 +232,7 @@ export function GradePredictorModal({
             )}>
               {achievable ? (
                 <p className="text-sm">
-                  Score at least <span className="font-bold text-primary tabular-nums">{minScore}</span> out of {outOf}
+                  Score at least <span className="font-bold text-primary font-tabular">{minScore}</span> out of <span className="font-tabular">{outOf}</span>
                 </p>
               ) : (
                 <p className="text-sm text-destructive font-medium">

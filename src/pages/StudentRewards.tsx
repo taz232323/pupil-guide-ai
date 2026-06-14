@@ -46,7 +46,7 @@ export default function StudentRewards() {
             <Sparkles className="h-6 w-6 text-warning" /> Rewards & Shop
           </h1>
           <p className="text-sm text-muted-foreground">
-            Open your daily box, finish quests, stockpile rare Streak Shields, and spend coins in the shop.
+            Open your daily box, finish quests, earn automatic Streak Shields, and spend coins in the shop.
           </p>
         </header>
 
@@ -62,7 +62,7 @@ export default function StudentRewards() {
 
           <TabsContent value="rewards" className="mt-4 space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
-          <DailyLoginBox />
+          <DailyLoginBox onClaimed={refresh} />
           <StreakShieldPanel shields={shields} onChange={refresh} />
         </div>
 

@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Typewriter } from "@/components/Typewriter";
 
 function timeGreeting() {
   const h = new Date().getHours();
@@ -29,12 +30,16 @@ export const Greeting = ({ subtitle }: { subtitle?: string }) => {
   }, [user]);
 
   return (
-    <div className="rounded-2xl bg-gradient-hero p-6 text-primary-foreground shadow-elevated animate-fade-in">
-      <p className="text-sm font-medium opacity-80">{timeGreeting()}</p>
-      <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">
-        {name || "Welcome back"} 👋
+    <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-hero p-6 text-foreground shadow-card animate-fade-in">
+      {/* soft ambient glow */}
+      <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-plum/20 blur-3xl animate-blob-slow" />
+      <p className="text-sm font-medium text-muted-foreground">
+        <Typewriter text={timeGreeting()} speed={55} caret={false} />
+      </p>
+      <h1 className="mt-1 font-display text-2xl sm:text-3xl font-semibold tracking-tight">
+        <span className="text-gradient-primary">{name || "Welcome back"}</span> 👋
       </h1>
-      {subtitle && <p className="mt-1 text-sm opacity-90 max-w-2xl">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-sm text-muted-foreground max-w-2xl">{subtitle}</p>}
     </div>
   );
 };

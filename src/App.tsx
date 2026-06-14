@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import StudentDashboard from "./pages/StudentDashboard.tsx";
 import TeacherDashboard from "./pages/TeacherDashboard.tsx";
+import ParentDashboard from "./pages/ParentDashboard.tsx";
 import Profile from "./pages/Profile.tsx";
 import StudentClassesPage from "./pages/StudentClassesPage.tsx";
 import StudentAssignmentsPage from "./pages/StudentAssignmentsPage.tsx";
@@ -31,6 +32,7 @@ import ShopPage from "./pages/ShopPage.tsx";
 import TeacherShopPage from "./pages/TeacherShopPage.tsx";
 import TeacherLeaderboard from "./pages/TeacherLeaderboard.tsx";
 import ClassDetail from "./pages/ClassDetail.tsx";
+import LessonLibrary from "./pages/LessonLibrary.tsx";
 import { reloadSchemaCache } from "@/lib/supabaseRest";
 
 const queryClient = new QueryClient();
@@ -66,6 +68,7 @@ const App = () => (
             <Route path="/student/practice/:classId" element={<ProtectedRoute requiredRole="student"><StudentDailyPractice /></ProtectedRoute>} />
             <Route path="/student/rewards" element={<ProtectedRoute requiredRole="student"><StudentRewards /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute requiredRole="student"><ShopPage /></ProtectedRoute>} />
+            <Route path="/parent-dashboard" element={<ProtectedRoute requiredRole="student"><ParentDashboard /></ProtectedRoute>} />
             <Route
               path="/profile"
               element={
@@ -92,6 +95,7 @@ const App = () => (
             <Route path="/teacher/shop" element={<ProtectedRoute requiredRole="teacher"><TeacherShopPage /></ProtectedRoute>} />
             <Route path="/teacher/leaderboard" element={<ProtectedRoute requiredRole="teacher"><TeacherLeaderboard /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+            <Route path="/library" element={<ProtectedRoute><LessonLibrary /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
             </Routes>

@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   GraduationCap, LayoutDashboard, BookOpen, ClipboardList, MessageSquare, Award,
   ShoppingBag, User, LineChart, Star, Crown, LogOut, Calendar, Trophy, Sparkles,
+  Library,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { StudyBuddy } from "@/components/StudyBuddy";
 import grapheionMark from "@/assets/grapheion-mark.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { STUDENT_COINS_CHANGED_EVENT, isStudentRefreshForUser } from "@/lib/studentRefreshEvents";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -36,6 +38,7 @@ const STUDENT_NAV: NavItem[] = [
   { to: "/student/grades", label: "Grades", icon: Award },
   { to: "/student/leaderboard", label: "Leaderboard", shortLabel: "Ranks", icon: Trophy },
   { to: "/student/rewards", label: "Rewards & Shop", shortLabel: "Rewards", icon: Sparkles },
+  { to: "/library", label: "Lesson Library", shortLabel: "Library", icon: Library },
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/profile", label: "Profile", icon: User },
 ];
@@ -49,6 +52,7 @@ const TEACHER_NAV: NavItem[] = [
   { to: "/teacher/progress", label: "Progress", icon: LineChart },
   { to: "/teacher/leaderboard", label: "Leaderboard", shortLabel: "Ranks", icon: Trophy },
   { to: "/teacher/shop", label: "Shop", icon: ShoppingBag },
+  { to: "/library", label: "Lesson Library", shortLabel: "Library", icon: Library },
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/profile", label: "Profile", icon: User },
 ];
@@ -58,10 +62,19 @@ function useCoins(userId?: string) {
   useEffect(() => {
     if (!userId) return;
     let active = true;
-    supabase.from("student_coins").select("star_coins, crown_coins")
-      .eq("student_id", userId).maybeSingle().then(({ data }) => {
-        if (active && data) setCoins({ star: data.star_coins, crown: data.crown_coins });
-      });
+    const load = async () => {
+      const { data } = await supabase
+        .from("student_coins")
+        .select("star_coins, crown_coins")
+        .eq("student_id", userId)
+        .maybeSingle();
+      if (active && data) setCoins({ star: data.star_coins, crown: data.crown_coins });
+    };
+    void load();
+    const onCoinsChanged = (event: Event) => {
+      if (isStudentRefreshForUser(event, userId)) void load();
+    };
+    window.addEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
     const ch = supabase.channel("coins:" + userId)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "student_coins", filter: `student_id=eq.${userId}` },
@@ -69,7 +82,11 @@ function useCoins(userId?: string) {
           const row = p.new as { star_coins: number; crown_coins: number } | null;
           if (row) setCoins({ star: row.star_coins, crown: row.crown_coins });
         }).subscribe();
-    return () => { active = false; supabase.removeChannel(ch); };
+    return () => {
+      active = false;
+      window.removeEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
+      supabase.removeChannel(ch);
+    };
   }, [userId]);
   return coins;
 }
@@ -139,7 +156,7 @@ export const DashboardShell = ({
     to === pathname || (to !== "/student" && to !== "/teacher" && pathname.startsWith(to));
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen flex">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-border bg-card">
         <div className="px-5 py-5 border-b border-border">
@@ -149,10 +166,10 @@ export const DashboardShell = ({
               alt="Grapheion"
               width={36}
               height={36}
-              className="h-9 w-9 object-contain"
+              className="h-9 w-9 object-contain transition-spring group-hover:rotate-3 group-hover:scale-105"
               style={{ background: "transparent" }}
             />
-            <span className="font-bold tracking-tight text-lg text-primary">Grapheion</span>
+            <span className="font-display font-semibold tracking-tight text-xl text-foreground">Grapheion</span>
           </Link>
         </div>
 
@@ -164,13 +181,13 @@ export const DashboardShell = ({
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-base",
+                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-spring",
                   active
-                    ? "bg-primary text-primary-foreground shadow-card"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    ? "bg-primary-soft text-primary"
+                    : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground hover:translate-x-0.5"
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className={cn("h-4 w-4 transition-transform", active && "scale-110")} />
                 <span>{item.label}</span>
                 {item.to === "/messages" && unread > 0 && (
                   <Badge
@@ -189,11 +206,11 @@ export const DashboardShell = ({
         <div className="border-t border-border p-3 space-y-2">
           {role === "student" && coins && (
             <div className="flex gap-2">
-              <span className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-warning-soft px-2 py-1.5 text-xs font-semibold text-warning">
+              <span className="shimmer-gold flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-gold-soft px-2 py-1.5 text-xs font-semibold text-gold font-tabular">
                 <Star className="h-3.5 w-3.5 fill-current" />
                 <span key={`s-${coins.star}`} className="inline-block animate-bounce-pop tabular-nums">{coins.star}</span>
               </span>
-              <span className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-primary-soft px-2 py-1.5 text-xs font-semibold text-primary">
+              <span className="shimmer-purple flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-plum-soft px-2 py-1.5 text-xs font-semibold text-plum font-tabular">
                 <Crown className="h-3.5 w-3.5 fill-current" />
                 <span key={`c-${coins.crown}`} className="inline-block animate-bounce-pop tabular-nums">{coins.crown}</span>
               </span>
@@ -201,7 +218,7 @@ export const DashboardShell = ({
           )}
           <Link
             to="/profile"
-            className="flex items-center gap-3 rounded-xl p-2 hover:bg-secondary transition-base"
+            className="flex items-center gap-3 rounded-xl p-2 transition-spring hover:bg-secondary/80 hover:translate-x-0.5"
           >
             <StudentAvatar size="sm" name={profile?.name || user?.email} items={profile?.items} />
             <div className="min-w-0 flex-1">
@@ -224,7 +241,7 @@ export const DashboardShell = ({
       {/* Main column */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile top bar */}
-        <header className="lg:hidden sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
+        <header className="lg:hidden sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
           <div className="px-4 h-14 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
               <img
@@ -235,17 +252,17 @@ export const DashboardShell = ({
                 className="h-7 w-7 object-contain"
                 style={{ background: "transparent" }}
               />
-              <span className="font-bold text-primary">Grapheion</span>
+              <span className="font-display font-semibold text-foreground">Grapheion</span>
             </Link>
             <div className="flex items-center gap-1.5">
               <GlobalSearch />
               {role === "student" && coins && (
                 <>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning">
+                  <span className="shimmer-gold inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-xs font-semibold text-gold font-tabular">
                     <Star className="h-3 w-3 fill-current" />
                     <span key={`ms-${coins.star}`} className="inline-block animate-bounce-pop tabular-nums">{coins.star}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
+                  <span className="shimmer-purple inline-flex items-center gap-1 rounded-full bg-plum-soft px-2 py-0.5 text-xs font-semibold text-plum font-tabular">
                     <Crown className="h-3 w-3 fill-current" />
                     <span key={`mc-${coins.crown}`} className="inline-block animate-bounce-pop tabular-nums">{coins.crown}</span>
                   </span>
@@ -295,9 +312,24 @@ export const DashboardShell = ({
         </header>
 
         {/* Desktop top bar */}
-        <header className="hidden lg:flex sticky top-0 z-30 h-14 items-center justify-end gap-2 border-b border-border bg-card/80 backdrop-blur px-6">
+        <header className="hidden lg:flex sticky top-0 z-30 h-14 items-center justify-end gap-2.5 border-b border-border bg-background/70 backdrop-blur px-6">
           <GlobalSearch />
+          {role === "student" && coins && (
+            <>
+              <span className="shimmer-gold inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-xs font-semibold text-gold font-tabular">
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <span key={`ds-${coins.star}`} className="inline-block animate-bounce-pop tabular-nums">{coins.star}</span>
+              </span>
+              <span className="shimmer-purple inline-flex items-center gap-1 rounded-full bg-plum-soft px-2.5 py-1 text-xs font-semibold text-plum font-tabular">
+                <Crown className="h-3.5 w-3.5 fill-current" />
+                <span key={`dc-${coins.crown}`} className="inline-block animate-bounce-pop tabular-nums">{coins.crown}</span>
+              </span>
+            </>
+          )}
           <NotificationBell />
+          <Link to="/profile" aria-label="Profile" className="transition-spring hover:scale-105">
+            <StudentAvatar size="sm" name={profile?.name || user?.email} items={profile?.items} />
+          </Link>
         </header>
 
         <main
@@ -319,7 +351,7 @@ export const DashboardShell = ({
         {/* Mobile bottom tab bar */}
         <nav
           className={cn(
-            "lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-card/95 backdrop-blur transition-all duration-200"
+            "lg:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-card/90 backdrop-blur-xl transition-all duration-200"
           )}
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
@@ -335,16 +367,16 @@ export const DashboardShell = ({
                     to={item.to}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "relative flex flex-col items-center justify-center gap-1 px-2 py-2 h-full text-[10px] leading-tight font-medium transition-base w-full min-w-[44px]",
+                      "relative flex flex-col items-center justify-center gap-1 px-2 py-2 h-full text-[10px] leading-tight font-medium transition-spring w-full min-w-[44px]",
                       keyboardOpen ? "min-h-[44px]" : "min-h-[56px]",
                       active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {active && (
-                      <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-primary" />
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.4)]" />
                     )}
                     <span className="relative">
-                      <item.icon className={cn("h-5 w-5", active && "drop-shadow")} />
+                      <item.icon className={cn("h-5 w-5 transition-transform", active && "scale-110 drop-shadow")} />
                       {item.to === "/messages" && unread > 0 && (
                         <span className="absolute -top-1.5 -right-2 h-4 min-w-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-semibold flex items-center justify-center tabular-nums">
                           {unread > 9 ? "9+" : unread}

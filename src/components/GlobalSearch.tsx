@@ -221,7 +221,7 @@ export function GlobalSearch() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="mx-auto mt-[10vh] w-[min(720px,92vw)] rounded-2xl border border-border bg-card shadow-xl overflow-hidden animate-scale-in"
+            className="mx-auto mt-[10vh] w-[min(720px,92vw)] rounded-2xl glass-card shadow-elevated overflow-hidden animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 px-4 h-14 border-b border-border">
@@ -276,19 +276,24 @@ export function GlobalSearch() {
                           )}
                         </div>
                         <ul>
-                          {shown.map((r) => (
-                            <li key={`${s.key}-${r.id}`}>
+                          {shown.map((r, i) => (
+                            <li
+                              key={`${s.key}-${r.id}`}
+                              className="animate-fade-up"
+                              style={{ animationDelay: `${i * 50}ms` }}
+                            >
                               <button
                                 onClick={() => go(r.to)}
                                 className={cn(
-                                  "w-full flex items-start gap-3 px-4 py-2.5 text-left hover:bg-secondary transition-base"
+                                  "group w-full flex items-start gap-3 px-4 py-2.5 text-left border-l-2 border-transparent",
+                                  "hover:bg-primary/10 hover:border-primary focus:bg-primary/10 focus:border-primary focus:outline-none transition-base"
                                 )}
                               >
-                                <span className="mt-0.5 h-8 w-8 rounded-lg bg-primary-soft text-primary flex items-center justify-center shrink-0">
+                                <span className="mt-0.5 h-8 w-8 rounded-lg bg-primary-soft text-primary flex items-center justify-center shrink-0 transition-spring group-hover:scale-110">
                                   <Icon className="h-4 w-4" />
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                  <span className="block text-sm text-muted-foreground truncate">
+                                  <span className="block text-sm text-foreground truncate">
                                     {highlight(r.title, q)}
                                   </span>
                                   <span className="block text-xs text-muted-foreground/80 truncate">

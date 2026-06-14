@@ -115,6 +115,19 @@ export const NotificationBell = ({ className }: { className?: string }) => {
 
   const unreadCount = useMemo(() => items.filter((n) => !n.read).length, [items]);
 
+  // Ring the bell when a new unread notification arrives
+  const prevUnread = useRef(unreadCount);
+  const [ringing, setRinging] = useState(false);
+  useEffect(() => {
+    if (unreadCount > prevUnread.current) {
+      setRinging(true);
+      const t = setTimeout(() => setRinging(false), 600);
+      prevUnread.current = unreadCount;
+      return () => clearTimeout(t);
+    }
+    prevUnread.current = unreadCount;
+  }, [unreadCount]);
+
   // Mark all unread as read when panel opens
   useEffect(() => {
     if (!open || !user) return;
@@ -158,10 +171,14 @@ export const NotificationBell = ({ className }: { className?: string }) => {
           className={cn("relative rounded-full", className)}
           aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
         >
-          <Bell className={cn("h-5 w-5", unreadCount > 0 && "animate-pulse text-primary")} />
+          <Bell className={cn("h-5 w-5", unreadCount > 0 && "text-primary", ringing && "animate-bell-ring")} />
           {unreadCount > 0 && (
             <span
-              className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground ring-2 ring-background animate-pulse-ring"
+              key={ringing ? "pop" : "pulse"}
+              className={cn(
+                "absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground ring-2 ring-background font-tabular",
+                ringing ? "animate-badge-pop" : "animate-badge-pulse",
+              )}
               aria-hidden
             >
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -189,15 +206,16 @@ export const NotificationBell = ({ className }: { className?: string }) => {
             </div>
           ) : (
             <ul className="py-1">
-              {items.map((n) => {
+              {items.map((n, i) => {
                 const Icon = iconFor(n.type);
                 const inner = (
                   <div
                     className={cn(
-                      "flex items-start gap-3 px-4 py-3 transition-colors",
+                      "flex items-start gap-3 px-4 py-3 transition-colors animate-msg-in-left",
                       !n.read && "bg-primary/5",
-                      n.link && "hover:bg-accent cursor-pointer"
+                      n.link && "hover:bg-primary/10 cursor-pointer"
                     )}
+                    style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
                   >
                     <span
                       className={cn(

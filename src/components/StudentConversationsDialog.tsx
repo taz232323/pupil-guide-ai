@@ -137,8 +137,8 @@ export const StudentConversationsDialog = ({
         {loading ? (
           <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>
         ) : conversations.length === 0 ? (
-          <div className="py-12 text-center">
-            <MessagesSquare className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+          <div className="py-12 text-center animate-fade-up">
+            <MessagesSquare className="h-8 w-8 mx-auto text-muted-foreground mb-2 animate-pop-in" />
             <p className="text-sm text-muted-foreground">
               {studentName} hasn't messaged any classmates yet.
             </p>
@@ -154,7 +154,7 @@ export const StudentConversationsDialog = ({
                       <button
                         key={c.key}
                         onClick={() => setActiveKey(c.key)}
-                        className={`w-full text-left px-3 py-2 hover:bg-accent transition-colors ${
+                        className={`w-full text-left px-3 py-2 hover:bg-accent transition-spring ${
                           (active?.key === c.key) ? "bg-accent" : ""
                         }`}
                       >
@@ -179,11 +179,11 @@ export const StudentConversationsDialog = ({
                   const fromStudent = m.sender_id === studentId;
                   const senderProfile = profiles.get(m.sender_id);
                   return (
-                    <div key={m.id} className={`flex items-end gap-2 ${fromStudent ? "justify-end" : "justify-start"}`}>
+                    <div key={m.id} className={`flex items-end gap-2 ${fromStudent ? "justify-end animate-msg-in-right" : "justify-start animate-msg-in-left"}`}>
                       {!fromStudent && (
                         <StudentAvatar size="xs" name={senderProfile?.full_name || "Student"} items={senderProfile?.avatar_items ?? []} />
                       )}
-                      <div className={`max-w-[75%] rounded-lg px-3 py-2 ${
+                      <div className={`max-w-[75%] rounded-lg px-3 py-2 shadow-card ${
                         fromStudent ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
                       }`}>
                         <p className="text-[10px] opacity-70 mb-0.5">

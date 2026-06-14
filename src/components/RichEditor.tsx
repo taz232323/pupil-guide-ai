@@ -2,7 +2,8 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import LinkExt from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect } from "react";
+import DOMPurify from "dompurify";
+import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Bold, Italic, Strikethrough, List, ListOrdered, Heading2, Heading3,
@@ -57,7 +58,10 @@ export function RichEditor({ value, onChange, placeholder, className, minHeight 
       size="sm"
       onClick={onClick}
       aria-label={label}
-      className="h-8 w-8 p-0"
+      className={cn(
+        "h-8 w-8 p-0 transition-spring hover:scale-110 active:scale-95",
+        active && "text-primary"
+      )}
     >
       {children}
     </Button>
@@ -76,7 +80,7 @@ export function RichEditor({ value, onChange, placeholder, className, minHeight 
 
   return (
     <div className={cn("rounded-md border border-input bg-background", className)}>
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-border px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-primary/15 px-2 py-1.5">
         <Btn label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></Btn>
         <Btn label="Italic" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic className="h-4 w-4" /></Btn>
         <Btn label="Strikethrough" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough className="h-4 w-4" /></Btn>
@@ -98,10 +102,33 @@ export function RichEditor({ value, onChange, placeholder, className, minHeight 
 }
 
 export function RichContent({ html, className }: { html: string; className?: string }) {
+  const cleanHtml = useMemo(
+    () => DOMPurify.sanitize(html || "", {
+      ALLOWED_TAGS: [
+        "a",
+        "blockquote",
+        "br",
+        "code",
+        "em",
+        "h2",
+        "h3",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "s",
+        "strong",
+        "ul",
+      ],
+      ALLOWED_ATTR: ["class", "href", "rel", "target"],
+    }),
+    [html],
+  );
+
   return (
     <div
       className={cn("prose prose-sm max-w-none prose-headings:font-semibold prose-a:text-primary", className)}
-      dangerouslySetInnerHTML={{ __html: html || "" }}
+      dangerouslySetInnerHTML={{ __html: cleanHtml }}
     />
   );
 }

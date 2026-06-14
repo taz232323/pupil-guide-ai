@@ -149,8 +149,7 @@ Deno.serve(async (req) => {
     const teacherQsToUse = availableTeacherQs.slice(0, batchSize);
     const aiQsNeeded = Math.max(0, batchSize - teacherQsToUse.length);
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) return json({ error: "LOVABLE_API_KEY not configured" }, 500);
+    const apiKey = Deno.env.get("GEMINI_API_KEY") ?? Deno.env.get("gemini_api_key");
 
     let aiQuestions: any[] = [];
     
@@ -188,37 +187,49 @@ Return ONLY valid JSON matching this schema, no prose, no markdown:
   ]
 }`;
 
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: "You generate practice quizzes based on actual class content. Always return valid JSON only. Questions must be specific to the provided lesson material." },
-            { role: "user", content: prompt },
-          ],
-          response_format: { type: "json_object" },
-        }),
-      });
-      if (!aiResp.ok) {
-        const t = await aiResp.text();
-        console.error("AI gateway error:", aiResp.status, t);
-        if (aiResp.status === 429) return json({ error: "Rate limit exceeded, please retry shortly" }, 429);
-        if (aiResp.status === 402) return json({ error: "AI credits exhausted. Add credits in workspace settings." }, 402);
-        // If AI fails but we have teacher questions, continue with those
-        if (teacherQsToUse.length === 0) {
-          return json({ error: "Failed to generate questions" }, 500);
-        }
+      if (!apiKey) {
+        console.warn("GEMINI_API_KEY/gemini_api_key is missing. Returning deterministic daily-practice fallback.");
+        aiQuestions = buildFallbackQuestions(context, aiQsNeeded);
       } else {
-        const gj = await aiResp.json();
-        const text = gj?.choices?.[0]?.message?.content || "{}";
-        let parsed: any;
-        try { parsed = JSON.parse(text); } catch { parsed = { questions: [] }; }
-        aiQuestions = Array.isArray(parsed.questions) ? parsed.questions : [];
+        const aiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{
+                text: "You generate practice quizzes based on actual class content. Always return valid JSON only. Questions must be specific to the provided lesson material.",
+              }],
+            },
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.45,
+              maxOutputTokens: 1400,
+              responseMimeType: "application/json",
+            },
+          }),
+        });
+        if (!aiResp.ok) {
+          const t = await aiResp.text();
+          console.error("Gemini error:", aiResp.status, t);
+          aiQuestions = buildFallbackQuestions(context, aiQsNeeded);
+        } else {
+          const gj = await aiResp.json();
+          const text = gj?.candidates?.[0]?.content?.parts
+            ?.map((part: any) => part.text)
+            .filter(Boolean)
+            .join("\n") || "{}";
+          let parsed: any;
+          try { parsed = JSON.parse(text); } catch { parsed = { questions: [] }; }
+          aiQuestions = Array.isArray(parsed.questions) ? parsed.questions : [];
+        }
       }
+    }
+
+    if (aiQuestions.length < aiQsNeeded) {
+      aiQuestions = [
+        ...aiQuestions,
+        ...buildFallbackQuestions(context, aiQsNeeded - aiQuestions.length, aiQuestions.length),
+      ];
     }
 
     // Combine teacher questions first, then AI questions
@@ -269,3 +280,88 @@ Return ONLY valid JSON matching this schema, no prose, no markdown:
     });
   }
 });
+
+function buildFallbackQuestions(context: any, count: number, offset = 0) {
+  const className = clean(context?.class?.name) || "this class";
+  const subject = clean(context?.class?.subject) || "the subject";
+  const assignments = Array.isArray(context?.assignments) ? context.assignments : [];
+  const modules = Array.isArray(context?.modules) ? context.modules : [];
+  const lessonContent = Array.isArray(context?.lesson_content) ? context.lesson_content : [];
+
+  const topicPool = [
+    ...assignments.map((item: any) => ({
+      kind: "assignment",
+      title: clean(item.title),
+      detail: clean(item.description || item.unit),
+    })),
+    ...modules.map((item: any) => ({
+      kind: "module",
+      title: clean(item.title),
+      detail: clean(item.description),
+    })),
+    ...lessonContent.map((item: any) => ({
+      kind: "lesson",
+      title: clean(item.title),
+      detail: clean(item.content),
+    })),
+  ].filter((item) => item.title || item.detail);
+
+  const baseTopics = topicPool.length
+    ? topicPool
+    : [{ kind: "class", title: className, detail: subject }];
+
+  const templates = [
+    (topic: any) => ({
+      type: "short_answer",
+      prompt: `In one or two sentences, explain the main idea of ${topic.title || subject}.`,
+      expected_answer: `A good answer should name the main idea and connect it to ${subject}.`,
+    }),
+    (topic: any) => ({
+      type: "multiple_choice",
+      prompt: `Which choice best describes what ${topic.title || className} is about?`,
+      options: [
+        topic.detail ? shorten(topic.detail, 90) : `A key topic in ${subject}`,
+        "A completely unrelated topic",
+        "Only a classroom rule",
+        "A random detail with no connection to the lesson",
+      ],
+      correct_index: 0,
+    }),
+    (topic: any) => ({
+      type: "short_answer",
+      prompt: `What is one detail from ${topic.title || className} that a student should remember?`,
+      expected_answer: topic.detail || `One important detail should connect back to ${subject}.`,
+    }),
+    (topic: any) => ({
+      type: "multiple_choice",
+      prompt: `If you were reviewing ${topic.title || subject}, what should you focus on first?`,
+      options: [
+        "The central idea and evidence from the lesson",
+        "The color of the page",
+        "A topic from a different class",
+        "Only the due date",
+      ],
+      correct_index: 0,
+    }),
+    (topic: any) => ({
+      type: "short_answer",
+      prompt: `How does ${topic.title || "today's topic"} connect to what you are learning in ${className}?`,
+      expected_answer: `A good answer should explain a clear connection to the class content.`,
+    }),
+  ];
+
+  return Array.from({ length: count }, (_, index) => {
+    const topic = baseTopics[(index + offset) % baseTopics.length];
+    const template = templates[(index + offset) % templates.length];
+    return template(topic);
+  });
+}
+
+function clean(value: unknown) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function shorten(value: string, maxLength: number) {
+  const cleanValue = clean(value);
+  return cleanValue.length <= maxLength ? cleanValue : `${cleanValue.slice(0, maxLength - 1).trim()}…`;
+}

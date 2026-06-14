@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Flame, Sparkles } from "lucide-react";
+import { Flame, ShieldCheck, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ShieldActivation } from "@/components/ShieldActivation";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type Row = {
   class_id: string;
@@ -25,22 +25,6 @@ export function StreakWidget() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      // Auto-apply streak shields for any missed days before reading streaks
-      try {
-        const { data: saves } = await supabase.rpc("auto_apply_streak_shields");
-        const list = (saves as any[]) ?? [];
-        if (list.length > 0) {
-          const first = list[0];
-          setShieldSave({
-            className: first.class_name,
-            streak: first.current_streak,
-          });
-          toast.success(`🛡 Streak Shield used — ${first.class_name} streak protected`);
-        }
-      } catch (e) {
-        // non-fatal
-      }
-
       // Get classes with daily practice enabled that the student is in
       const { data: memberships } = await supabase
         .from("class_members")
@@ -56,7 +40,24 @@ export function StreakWidget() {
       }
       const classIds = enabled.map((m: any) => m.class_id);
       const today = new Date().toISOString().slice(0, 10);
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      // Compute the most recent weekday on or before yesterday (so Mon's "previous" is Fri).
+      const prev = new Date(Date.now() - 86400000);
+      while (prev.getUTCDay() === 0 || prev.getUTCDay() === 6) {
+        prev.setUTCDate(prev.getUTCDate() - 1);
+      }
+      const prevWeekday = prev.toISOString().slice(0, 10);
+      const { data: saves, error: shieldErr } = await (supabase as any).rpc("auto_apply_streak_shields");
+      if (shieldErr) console.warn("auto shield sync failed:", shieldErr.message);
+      const shieldSaves = (saves as any[]) ?? [];
+      if (shieldSaves.length > 0) {
+        const first = shieldSaves[0];
+        setShieldSave({
+          className: first.class_name,
+          streak: first.current_streak,
+        });
+        toast.success(`Streak Shield used — ${first.class_name} streak protected`);
+      }
+
       const { data: streaks } = await supabase
         .from("daily_practice_streaks")
         .select("class_id, current_streak, last_practice_date")
@@ -78,8 +79,8 @@ export function StreakWidget() {
       const list: Row[] = enabled.map((m: any) => {
         const s = map.get(m.class_id);
         let cur = s?.current_streak || 0;
-        // If they didn't practice yesterday or today, streak is broken
-        if (s && s.last_practice_date && s.last_practice_date !== today && s.last_practice_date !== yesterday) {
+        // Weekend-aware: streak alive if last practice was today, or on/after the most recent weekday.
+        if (s && s.last_practice_date && s.last_practice_date < prevWeekday && s.last_practice_date !== today) {
           cur = 0;
         }
         return {
@@ -107,20 +108,24 @@ export function StreakWidget() {
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Flame className="h-4 w-4 text-orange-500" /> Daily Practice Streaks
+          <Flame className="h-4 w-4 text-gold animate-flame-pulse" /> Daily Practice Streaks
         </CardTitle>
-        <CardDescription>Keep your streak alive — practice every day.</CardDescription>
+        <CardDescription>Practice daily. Streak Shields apply automatically after a missed day.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        {rows.map((r) => (
-          <div key={r.class_id} className="flex items-center justify-between rounded-lg border p-3">
+        {rows.map((r) => {
+          const milestone = [3, 7, 30].includes(r.current_streak);
+          return (
+          <div key={r.class_id} className="flex items-center justify-between rounded-xl border border-primary/10 bg-background/40 p-3 transition-spring hover:-translate-y-0.5 hover:border-primary/30">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Flame className={`h-5 w-5 shrink-0 ${r.current_streak > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
+              <span className={cn("inline-flex shrink-0 items-center justify-center", milestone && "streak-milestone-glow p-0.5")}>
+                <Flame className={cn("h-5 w-5", r.current_streak > 0 ? "text-gold animate-flame-pulse" : "text-muted-foreground")} />
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium line-clamp-2">{r.class_name}</p>
                 <p className="text-xs text-muted-foreground">
                   {r.current_streak} day{r.current_streak === 1 ? "" : "s"}
-                  {r.practiced_today ? " · ✅ done today" : " · practice today!"}
+                  {r.practiced_today ? " · done today" : " · practice today!"}
                 </p>
               </div>
             </div>
@@ -130,7 +135,12 @@ export function StreakWidget() {
               </Link>
             </Button>
           </div>
-        ))}
+          );
+        })}
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          One shield protects one missed daily-practice day when available.
+        </p>
       </CardContent>
     </Card>
     </>

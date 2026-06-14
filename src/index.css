@@ -2,139 +2,179 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
+
+Grapheion overhaul palette (hex -> hsl):
+  background  #0F1117 -> 225 21% 7%
+  bg edge     #0A0D14 -> 222 33% 6%
+  surface     #161B27 -> 222 28% 12%
+  border      #1E2740 -> 224 36% 18%
+  primary     #4A7FD4 -> 217 62% 56%   (slate blue)
+  primary-2   #3D6AB8 -> 218 50% 48%   (gradient stop)
+  plum        #6C63FF -> 243 100% 69%  (soft purple highlight)
+  gold        #F5C842 -> 45 90% 61%    (coins / streaks)
+  success     #34D399 -> 158 64% 52%
+  warning     #FBBF24 -> 43 96% 56%
+  error       #F87171 -> 0 91% 71%
+  text        #E8EDF5 -> 217 39% 94%
+  text-2nd    #8A95A8 -> 218 15% 60%
+  text-muted  #4A5568 -> 218 17% 35%
 */
 
 @layer base {
   :root {
-    /* Grapheion: off-white canvas, deep charcoal text, slate-blue accent */
-    --background: 60 20% 95%;
-    --foreground: 240 4% 11%;
+    /* Grapheion editorial: warm cream canvas, royal-blue accent, white cards */
+    --font-display: "Fraunces", ui-serif, Georgia, Cambria, "Times New Roman", serif;
+    --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    --background: 42 30% 94%;
+    --background-edge: 40 26% 90%;
+    --foreground: 222 20% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 4% 11%;
+    --card-foreground: 222 20% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 4% 11%;
+    --popover-foreground: 222 20% 14%;
 
-    /* Primary: slate blue #4A5568 */
-    --primary: 218 17% 35%;
-    --primary-foreground: 60 20% 97%;
-    --primary-soft: 218 20% 92%;
+    /* Primary: royal blue #2563EB */
+    --primary: 221 83% 53%;
+    --primary-deep: 224 76% 48%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 222 90% 95%;
 
-    --secondary: 60 14% 92%;
-    --secondary-foreground: 240 4% 11%;
+    --secondary: 40 24% 91%;
+    --secondary-foreground: 222 20% 18%;
 
-    --muted: 60 12% 90%;
-    --muted-foreground: 240 4% 38%;
+    --muted: 40 22% 91%;
+    --muted-foreground: 218 12% 42%;
 
-    /* Accent: subtle slate blue tint */
-    --accent: 218 22% 92%;
-    --accent-foreground: 218 17% 30%;
+    --accent: 222 70% 95%;
+    --accent-foreground: 221 70% 42%;
 
-    /* Secondary accent: deeper slate */
-    --teal: 218 17% 35%;
-    --teal-foreground: 60 20% 97%;
-    --teal-soft: 218 20% 92%;
+    /* Secondary accent: purple #8257F0 (kept on the legacy --teal slot so
+       existing text-teal / bg-teal-soft usages pick up the highlight color) */
+    --teal: 255 80% 66%;
+    --teal-foreground: 0 0% 100%;
+    --teal-soft: 255 75% 95%;
+    --plum: 255 80% 66%;
+    --plum-soft: 255 75% 95%;
+
+    /* Gold: coins, streaks */
+    --gold: 38 74% 52%;
+    --gold-soft: 42 85% 92%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 30 80% 15%;
-    --warning-soft: 48 100% 96%;
+    --warning-foreground: 30 80% 14%;
+    --warning-soft: 43 90% 92%;
 
-    --success: 160 84% 39%;
+    --success: 145 63% 39%;
     --success-foreground: 0 0% 100%;
-    --success-soft: 152 81% 96%;
+    --success-soft: 145 55% 92%;
 
-    --danger-soft: 0 86% 97%;
+    --danger-soft: 0 80% 96%;
 
-    --destructive: 0 75% 55%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 60 8% 86%;
-    --input: 60 8% 86%;
-    --ring: 218 17% 35%;
+    --border: 42 22% 87%;
+    --input: 42 20% 85%;
+    --ring: 221 83% 53%;
 
     --radius: 0.75rem;
 
-    /* Reusable design tokens */
-    --gradient-hero: linear-gradient(135deg, hsl(240 4% 11% / 0.97), hsl(218 17% 25% / 0.92));
-    --gradient-soft: linear-gradient(135deg, hsl(60 20% 96%), hsl(218 18% 90%));
-    --gradient-coastal: linear-gradient(180deg, hsl(60 20% 96%), hsl(60 14% 90%));
-    --shadow-card: 0 1px 2px 0 hsl(240 4% 8% / 0.05), 0 1px 3px 0 hsl(240 4% 8% / 0.05);
-    --shadow-elevated: 0 10px 30px -12px hsl(240 4% 8% / 0.22), 0 2px 6px -2px hsl(240 4% 8% / 0.08);
-    --shadow-glow: 0 0 0 4px hsl(218 17% 35% / 0.15);
+    /* Text hierarchy helpers */
+    --text-secondary: 218 12% 42%;
+    --text-muted: 218 12% 58%;
 
-    --sidebar-background: 60 20% 96%;
-    --sidebar-foreground: 240 4% 22%;
-    --sidebar-primary: 218 17% 35%;
-    --sidebar-primary-foreground: 60 20% 97%;
-    --sidebar-accent: 60 14% 91%;
-    --sidebar-accent-foreground: 218 17% 30%;
-    --sidebar-border: 60 8% 86%;
-    --sidebar-ring: 218 17% 35%;
+    /* Reusable design tokens */
+    --gradient-hero: linear-gradient(135deg, hsl(222 90% 96%), hsl(255 80% 96%));
+    --gradient-primary: linear-gradient(135deg, hsl(221 83% 56%), hsl(224 76% 48%));
+    --gradient-text: linear-gradient(100deg, hsl(221 83% 53%), hsl(255 80% 62%));
+    --gradient-soft: linear-gradient(135deg, hsl(42 40% 96%), hsl(222 60% 96%));
+    --gradient-coastal: linear-gradient(180deg, hsl(42 34% 96%), hsl(42 28% 92%));
+    --shadow-card: 0 1px 2px hsl(222 24% 20% / 0.04), 0 4px 16px hsl(222 24% 20% / 0.06);
+    --shadow-elevated: 0 10px 34px -10px hsl(222 30% 25% / 0.18), 0 2px 8px -2px hsl(222 24% 20% / 0.08);
+    --shadow-glow: 0 0 0 1px hsl(221 83% 53% / 0.25), 0 8px 24px hsl(221 83% 53% / 0.18);
+    --glow-primary: 0 8px 24px hsl(221 83% 53% / 0.25);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 14% 30%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 70% 95%;
+    --sidebar-accent-foreground: 221 70% 42%;
+    --sidebar-border: 42 22% 88%;
+    --sidebar-ring: 221 83% 53%;
   }
 
+  /* Dark mode — a calm deep-navy variant of the editorial theme */
   .dark {
-    /* Grapheion dark: deep charcoal canvas */
-    --background: 240 6% 6%;
-    --foreground: 60 20% 95%;
+    --background: 224 30% 9%;
+    --background-edge: 226 33% 7%;
+    --foreground: 220 30% 92%;
 
-    --card: 240 5% 11%;
-    --card-foreground: 60 20% 95%;
+    --card: 223 26% 13%;
+    --card-foreground: 220 30% 92%;
 
-    --popover: 240 4% 11%;
-    --popover-foreground: 60 20% 95%;
+    --popover: 223 28% 12%;
+    --popover-foreground: 220 30% 92%;
 
-    --primary: 218 22% 68%;
-    --primary-foreground: 240 4% 8%;
-    --primary-soft: 218 17% 22%;
+    --primary: 217 88% 64%;
+    --primary-deep: 221 83% 56%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 218 50% 20%;
 
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 60 20% 95%;
+    --secondary: 223 20% 20%;
+    --secondary-foreground: 220 30% 92%;
 
-    --muted: 240 4% 14%;
-    --muted-foreground: 60 8% 65%;
+    --muted: 223 18% 17%;
+    --muted-foreground: 220 14% 62%;
 
-    --accent: 218 17% 22%;
-    --accent-foreground: 218 22% 78%;
+    --accent: 218 42% 22%;
+    --accent-foreground: 217 70% 80%;
 
-    --teal: 218 22% 68%;
-    --teal-foreground: 240 4% 8%;
-    --teal-soft: 218 17% 18%;
+    --teal: 255 86% 74%;
+    --teal-foreground: 255 40% 10%;
+    --teal-soft: 255 40% 24%;
+    --plum: 255 86% 74%;
+    --plum-soft: 255 40% 24%;
+
+    --gold: 42 88% 62%;
+    --gold-soft: 42 50% 18%;
 
     --warning: 38 92% 60%;
     --warning-foreground: 30 80% 10%;
-    --warning-soft: 38 60% 16%;
+    --warning-soft: 38 50% 16%;
 
-    --success: 160 70% 50%;
-    --success-foreground: 222 47% 8%;
-    --success-soft: 160 50% 14%;
+    --success: 145 56% 52%;
+    --success-foreground: 145 60% 8%;
+    --success-soft: 145 40% 16%;
 
-    --danger-soft: 0 50% 18%;
+    --danger-soft: 0 40% 18%;
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 75% 62%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 4% 18%;
-    --input: 240 4% 18%;
-    --ring: 218 22% 68%;
+    --border: 223 20% 22%;
+    --input: 223 20% 22%;
+    --ring: 217 88% 64%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(240 6% 6%), hsl(218 17% 18%));
-    --gradient-soft: linear-gradient(135deg, hsl(240 5% 13%), hsl(218 17% 17%));
-    --gradient-coastal: linear-gradient(180deg, hsl(240 6% 6%), hsl(240 5% 11%));
-    --shadow-card: 0 1px 2px 0 hsl(0 0% 0% / 0.4), 0 1px 3px 0 hsl(0 0% 0% / 0.3), 0 0 0 1px hsl(218 22% 68% / 0.04);
-    --shadow-elevated: 0 14px 40px -14px hsl(0 0% 0% / 0.7), 0 2px 8px -2px hsl(0 0% 0% / 0.4), 0 0 0 1px hsl(218 22% 68% / 0.06);
-    --shadow-glow: 0 0 0 4px hsl(218 22% 68% / 0.18);
+    --gradient-hero: linear-gradient(135deg, hsl(223 30% 16%), hsl(255 38% 22%));
+    --gradient-soft: linear-gradient(135deg, hsl(223 26% 15%), hsl(220 30% 18%));
+    --gradient-coastal: linear-gradient(180deg, hsl(224 30% 9%), hsl(223 26% 12%));
+    --shadow-card: 0 4px 24px hsl(0 0% 0% / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.04);
+    --shadow-elevated: 0 14px 40px -10px hsl(0 0% 0% / 0.6), 0 4px 12px -4px hsl(0 0% 0% / 0.4);
 
-    --sidebar-background: 240 4% 8%;
-    --sidebar-foreground: 60 14% 88%;
-    --sidebar-primary: 218 22% 68%;
-    --sidebar-primary-foreground: 240 4% 8%;
-    --sidebar-accent: 240 4% 16%;
-    --sidebar-accent-foreground: 60 20% 95%;
-    --sidebar-border: 240 4% 18%;
-    --sidebar-ring: 218 22% 68%;
+    --sidebar-background: 224 28% 10%;
+    --sidebar-foreground: 220 18% 78%;
+    --sidebar-primary: 217 88% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 26% 17%;
+    --sidebar-accent-foreground: 217 70% 80%;
+    --sidebar-border: 223 20% 20%;
+    --sidebar-ring: 217 88% 64%;
   }
 }
 
@@ -143,46 +183,219 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "cv11", "ss01";
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
 
-  h1, h2, h3, h4 { letter-spacing: -0.02em; }
+  body {
+    @apply text-foreground;
+    font-family: var(--font-sans);
+    background-color: hsl(var(--background));
+    /* Light: clean warm cream with a faint top highlight */
+    background-image:
+      radial-gradient(ellipse 120% 80% at 50% -10%, hsl(222 80% 97% / 0.6) 0%, transparent 60%);
+    background-attachment: fixed;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Dark: deep navy with a subtle dot-grid texture */
+  .dark body {
+    background-color: hsl(var(--background-edge));
+    background-image:
+      radial-gradient(hsl(220 30% 92% / 0.04) 1px, transparent 1.5px),
+      radial-gradient(ellipse 120% 90% at 50% 0%, hsl(var(--background)) 0%, hsl(var(--background-edge)) 100%);
+    background-size: 28px 28px, 100% 100%;
+    background-attachment: fixed, fixed;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  input { caret-color: hsl(var(--primary)); }
+  ::placeholder { color: hsl(var(--text-muted)); opacity: 1; }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
+  }
 }
 
+/* Font family helpers */
+@layer utilities {
+  .font-display { font-family: var(--font-display); }
+  .font-body { font-family: var(--font-sans); }
+}
+
+/* === Core surface & typography utilities === */
 @layer utilities {
   .shadow-card { box-shadow: var(--shadow-card); }
   .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
   .bg-gradient-hero { background-image: var(--gradient-hero); }
+  .bg-gradient-primary { background-image: var(--gradient-primary); }
   .bg-gradient-soft { background-image: var(--gradient-soft); }
   .bg-gradient-coastal { background-image: var(--gradient-coastal); }
   .transition-base { transition: all 0.2s ease; }
-  .hover-lift { @apply transition-base hover:-translate-y-0.5 hover:shadow-elevated; }
+  .transition-spring { transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+  /* Button micro-interaction spring (avoids ambiguous arbitrary Tailwind utilities) */
+  .btn-spring {
+    transition-property: transform, box-shadow, filter, background-color, border-color, color;
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  /* Spring easing helper (avoids ambiguous ease-[cubic-bezier(...)] arbitrary value) */
+  .ease-spring { transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+  /* Clean elevated card surface (theme-aware; opaque white in light, dark in dark) */
+  .glass-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
+    border-radius: 1rem;
+  }
+  .glass-glow {
+    border-color: hsl(var(--primary) / 0.4);
+    box-shadow: var(--shadow-card), 0 0 0 1px hsl(var(--primary) / 0.15), 0 0 22px hsl(var(--primary) / 0.12);
+  }
+
+  /* Lift on hover with spring + soft blue glow */
+  .hover-lift {
+    transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 250ms ease, border-color 250ms ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-elevated), 0 0 0 1px hsl(var(--primary) / 0.2);
+    border-color: hsl(var(--primary) / 0.35);
+  }
+
+  /* Gradient headline text (slate blue -> purple) */
+  .text-gradient-primary {
+    background-image: var(--gradient-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Tabular numerals for grades / scores / coins (no layout shift while ticking) */
+  .font-tabular {
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  /* Nav link underline slides in from the left */
+  .nav-underline { position: relative; }
+  .nav-underline::after {
+    content: "";
+    position: absolute;
+    left: 0; right: auto; bottom: -2px;
+    height: 2px; width: 100%;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--teal)));
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nav-underline:hover::after { transform: scaleX(1); }
+
+  /* Active nav item: glowing left border indicator */
+  .nav-active-indicator { position: relative; }
+  .nav-active-indicator::before {
+    content: "";
+    position: absolute;
+    left: -0.25rem; top: 50%;
+    height: 60%; width: 3px;
+    transform: translateY(-50%);
+    border-radius: 3px;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.8), 0 0 22px hsl(var(--primary) / 0.4);
+  }
 }
 
-/* === Motion: page, stagger, ripple, bounce, pulse-ring === */
+/* === Motion: page, stagger, reveal, ripple, bounce, pulse-ring === */
 @layer utilities {
-  /* Subtle page transition (slide up + fade) */
+  /* Route enter: fade + slide in from the right */
   @keyframes page-enter {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .animate-page-enter { animation: page-enter 250ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .animate-page-enter { animation: page-enter 280ms ease-out both; }
+  .animate-fade-up { animation: fade-up 300ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-  /* Stagger children: each direct child fades + slides up in sequence */
+  @keyframes grapheion-mark-zoom {
+    0% {
+      opacity: 0.34;
+      transform: scale(0.9) translateY(2.5vh);
+      filter: blur(0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(4.6) translateY(-1.5vh);
+      filter: blur(3px);
+    }
+  }
+  .animate-grapheion-mark-zoom {
+    animation: grapheion-mark-zoom 1200ms cubic-bezier(0.22, 0.8, 0.28, 1) both;
+    transform-origin: center center;
+    will-change: transform, opacity, filter;
+  }
+
+  @keyframes grapheion-zoom-wash {
+    0% {
+      opacity: 0;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+  }
+  .animate-grapheion-zoom-wash {
+    animation: grapheion-zoom-wash 1200ms ease-in-out both;
+    will-change: transform, opacity;
+  }
+
+  /* Stagger children: each direct child fades + slides up in sequence (60ms steps) */
   .stagger-children > * {
     opacity: 0;
-    animation: page-enter 300ms ease-out forwards;
+    animation: fade-up 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
-  .stagger-children > *:nth-child(1)  { animation-delay:  20ms; }
+  .stagger-children > *:nth-child(1)  { animation-delay:   0ms; }
   .stagger-children > *:nth-child(2)  { animation-delay:  60ms; }
-  .stagger-children > *:nth-child(3)  { animation-delay: 100ms; }
-  .stagger-children > *:nth-child(4)  { animation-delay: 140ms; }
-  .stagger-children > *:nth-child(5)  { animation-delay: 180ms; }
-  .stagger-children > *:nth-child(6)  { animation-delay: 220ms; }
-  .stagger-children > *:nth-child(7)  { animation-delay: 260ms; }
-  .stagger-children > *:nth-child(n+8){ animation-delay: 300ms; }
+  .stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
+  .stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
+  .stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
+  .stagger-children > *:nth-child(n+8){ animation-delay: 420ms; }
+
+  /* IntersectionObserver-driven reveal (used by <Reveal/>): items animate
+     in as they scroll into view. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .reveal-flip {
+    transform: perspective(800px) rotateX(8deg) translateY(16px);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0) perspective(800px) rotateX(0deg);
+  }
 
   /* Material-style ripple on buttons */
   @keyframes ripple {
@@ -214,15 +427,449 @@ All colors MUST be HSL.
     100% { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0); }
   }
   .animate-pulse-ring { animation: pulse-ring 1.6s ease-out infinite; }
+}
 
-  /* Honor reduced motion preference globally */
-  @media (prefers-reduced-motion: reduce) {
-    .animate-page-enter,
-    .animate-fade-in,
-    .animate-bounce-pop,
-    .animate-pulse-ring,
-    .stagger-children > * { animation: none !important; opacity: 1 !important; transform: none !important; }
-    .ripple-effect { display: none !important; }
+/* === Overhaul micro-interactions & ambient animations === */
+@layer utilities {
+  /* --- Skeleton shimmer (left-to-right gradient sweep) --- */
+  @keyframes skeleton-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--secondary)) 50%, hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s linear infinite;
+  }
+
+  /* --- One-shot shimmer sweeps for coin counters --- */
+  @keyframes shimmer-sweep {
+    0%   { transform: translateX(-120%) skewX(-15deg); }
+    100% { transform: translateX(240%) skewX(-15deg); }
+  }
+  .shimmer-gold, .shimmer-purple { position: relative; overflow: hidden; }
+  .shimmer-gold::after, .shimmer-purple::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 55%;
+    animation: shimmer-sweep 1100ms cubic-bezier(0.22, 1, 0.36, 1) 350ms 1 both;
+    pointer-events: none;
+  }
+  .shimmer-gold::after {
+    background: linear-gradient(100deg, transparent, hsl(45 90% 70% / 0.35), transparent);
+  }
+  .shimmer-purple::after {
+    background: linear-gradient(100deg, transparent, hsl(243 100% 75% / 0.35), transparent);
+  }
+
+  /* --- CTA shimmer: sweeps every 3 seconds --- */
+  @keyframes cta-shimmer {
+    0%, 70%  { transform: translateX(-130%) skewX(-18deg); }
+    100%     { transform: translateX(260%) skewX(-18deg); }
+  }
+  .cta-shimmer { position: relative; overflow: hidden; }
+  .cta-shimmer::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 45%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+    animation: cta-shimmer 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* --- Streak flame pulse + milestone glow --- */
+  @keyframes flame-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.15); }
+  }
+  .animate-flame-pulse { animation: flame-pulse 2s ease-in-out infinite; }
+  .streak-milestone-glow {
+    border-radius: 9999px;
+    box-shadow: 0 0 0 2px hsl(45 90% 61% / 0.55), 0 0 18px hsl(45 90% 61% / 0.55), 0 0 36px hsl(45 90% 61% / 0.3);
+  }
+
+  /* --- Idle breathing (Study Buddy, logo) --- */
+  @keyframes breathing {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.03); }
+  }
+  .animate-breathing { animation: breathing 3s ease-in-out infinite; }
+
+  /* --- Typing / thinking dots wave --- */
+  @keyframes dot-wave {
+    0%, 60%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+    30%           { transform: translateY(-5px) scale(1.25); opacity: 1; }
+  }
+  .typing-dots { display: inline-flex; align-items: center; gap: 4px; }
+  .typing-dots > span {
+    width: 6px; height: 6px;
+    border-radius: 9999px;
+    background: hsl(var(--primary));
+    animation: dot-wave 1.2s ease-in-out infinite;
+  }
+  .typing-dots > span:nth-child(2) { animation-delay: 0.4s; }
+  .typing-dots > span:nth-child(3) { animation-delay: 0.8s; }
+
+  /* --- Chat message entries --- */
+  @keyframes msg-in-left {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes msg-in-right {
+    from { opacity: 0; transform: translateX(12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes msg-in-up {
+    0%   { opacity: 0; transform: translateY(14px) scale(0.97); }
+    70%  { opacity: 1; transform: translateY(-2px) scale(1.005); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .animate-msg-in-left  { animation: msg-in-left 200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-msg-in-right { animation: msg-in-right 200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-msg-in-up    { animation: msg-in-up 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  /* --- Bell ring + badge pop / pulse --- */
+  @keyframes bell-ring {
+    0%, 100% { transform: rotate(0deg); }
+    12% { transform: rotate(-15deg); }
+    28% { transform: rotate(15deg); }
+    44% { transform: rotate(-12deg); }
+    60% { transform: rotate(12deg); }
+    76% { transform: rotate(-6deg); }
+    90% { transform: rotate(6deg); }
+  }
+  .animate-bell-ring {
+    animation: bell-ring 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    transform-origin: top center;
+  }
+  @keyframes badge-pop {
+    0%   { transform: scale(0); }
+    70%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  .animate-badge-pop { animation: badge-pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  @keyframes badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.1); }
+  }
+  .animate-badge-pulse { animation: badge-pulse 2s ease-in-out infinite; }
+
+  /* --- Warning shake (cheating flag, errors) --- */
+  @keyframes shake-once {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px) rotate(-3deg); }
+    40% { transform: translateX(5px) rotate(3deg); }
+    60% { transform: translateX(-3px) rotate(-2deg); }
+    80% { transform: translateX(2px) rotate(1deg); }
+  }
+  .animate-shake-once { animation: shake-once 450ms ease-in-out both; }
+
+  /* --- Red attention pulse (at-risk students, cheating flags) --- */
+  @keyframes attention-pulse {
+    0%, 100% { box-shadow: -4px 0 16px -4px rgba(248, 113, 113, 0.0), inset 3px 0 0 hsl(var(--destructive)); }
+    50%      { box-shadow: -4px 0 16px -4px rgba(248, 113, 113, 0.3), inset 3px 0 0 hsl(var(--destructive)); }
+  }
+  .attention-pulse { animation: attention-pulse 3s ease-in-out infinite; }
+  @keyframes border-pulse-red {
+    0%, 100% { border-color: hsl(var(--destructive) / 0.35); box-shadow: 0 0 0 0 hsl(var(--destructive) / 0); }
+    50%      { border-color: hsl(var(--destructive) / 0.9);  box-shadow: 0 0 14px hsl(var(--destructive) / 0.3); }
+  }
+  .animate-border-pulse-red { animation: border-pulse-red 2s ease-in-out infinite; }
+
+  /* --- Orange approval pulse (shop pending items) --- */
+  @keyframes border-pulse-orange {
+    0%, 100% { border-color: hsl(36 95% 55% / 0.35); box-shadow: 0 0 0 0 hsl(36 95% 55% / 0); }
+    50%      { border-color: hsl(36 95% 55% / 0.9);  box-shadow: 0 0 14px hsl(36 95% 55% / 0.3); }
+  }
+  .animate-border-pulse-orange { animation: border-pulse-orange 2.2s ease-in-out infinite; }
+
+  /* --- Yellow "needs grading" shimmer on the right edge --- */
+  @keyframes grading-glint {
+    0%, 100% { opacity: 0.25; }
+    50%      { opacity: 0.9; }
+  }
+  .grading-shimmer { position: relative; overflow: hidden; }
+  .grading-shimmer::after {
+    content: "";
+    position: absolute;
+    top: 8%; bottom: 8%; right: 0;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, transparent, hsl(var(--warning)), transparent);
+    animation: grading-glint 1.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* --- Collapse-out (grading queue item resolved) --- */
+  @keyframes collapse-fade {
+    0%   { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.96) translateY(-6px); }
+  }
+  .animate-collapse-fade { animation: collapse-fade 280ms ease-in both; }
+
+  /* --- Strike-through draw (completed agenda items) --- */
+  @keyframes strike-draw {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+  .strike-draw { position: relative; }
+  .strike-draw::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 2px;
+    background: hsl(var(--muted-foreground));
+    border-radius: 2px;
+    transform: scaleX(1);
+    transform-origin: left center;
+    animation: strike-draw 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* --- Bar chart grow (Class Pulse) --- */
+  @keyframes bar-grow {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+  .animate-bar-grow {
+    animation: bar-grow 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: bottom center;
+  }
+
+  /* --- Progress ring glow trail --- */
+  .progress-ring-glow {
+    filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.7));
+  }
+
+  /* --- Leaderboard rows --- */
+  @keyframes row-flash-green {
+    0%   { background-color: hsl(var(--success) / 0.22); }
+    100% { background-color: transparent; }
+  }
+  @keyframes row-flash-red {
+    0%   { background-color: hsl(var(--destructive) / 0.18); }
+    100% { background-color: transparent; }
+  }
+  .animate-row-flash-green { animation: row-flash-green 1.2s ease-out both; }
+  .animate-row-flash-red   { animation: row-flash-red 1.2s ease-out both; }
+
+  @keyframes medal-shimmer {
+    0%, 60%, 100% { filter: brightness(1); }
+    75%           { filter: brightness(1.5); }
+  }
+  .rank-gold, .rank-silver, .rank-bronze { position: relative; }
+  .rank-gold   { box-shadow: inset 3px 0 0 hsl(45 90% 61%); }
+  .rank-silver { box-shadow: inset 3px 0 0 hsl(220 15% 75%); }
+  .rank-bronze { box-shadow: inset 3px 0 0 hsl(28 60% 50%); }
+  .rank-gold, .rank-silver, .rank-bronze { animation: medal-shimmer 4s ease-in-out infinite; }
+  .rank-silver { animation-delay: 0.6s; }
+  .rank-bronze { animation-delay: 1.2s; }
+  .rank-me {
+    box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.6), 0 0 16px hsl(var(--primary) / 0.2);
+    border-radius: 0.75rem;
+  }
+
+  /* --- Holographic shimmer (shop cards). Tracks pointer via --mx / --my. --- */
+  .holo-card { position: relative; overflow: hidden; }
+  .holo-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      420px circle at var(--mx, 50%) var(--my, 50%),
+      hsl(217 80% 65% / 0.16) 0%,
+      hsl(280 90% 70% / 0.12) 25%,
+      hsl(160 80% 60% / 0.08) 50%,
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 300ms ease;
+    pointer-events: none;
+  }
+  .holo-card:hover::before { opacity: 1; }
+
+  /* --- Purchased check pop --- */
+  @keyframes check-pop {
+    0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+    65%  { transform: scale(1.25) rotate(5deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .animate-check-pop { animation: check-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  /* --- Achievement badges --- */
+  @keyframes badge-unlock {
+    0%   { transform: scale(0); opacity: 0; }
+    60%  { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-badge-unlock { animation: badge-unlock 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  @keyframes glow-ring-expand {
+    0%   { box-shadow: 0 0 0 0 hsl(45 90% 61% / 0.7); opacity: 1; }
+    100% { box-shadow: 0 0 0 28px hsl(45 90% 61% / 0); opacity: 0; }
+  }
+  .animate-glow-ring { animation: glow-ring-expand 900ms ease-out both; border-radius: 9999px; }
+  @keyframes badge-glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 3px hsl(45 90% 61% / 0.35)); }
+    50%      { filter: drop-shadow(0 0 10px hsl(45 90% 61% / 0.65)); }
+  }
+  .animate-badge-glow { animation: badge-glow-pulse 4s ease-in-out infinite; }
+  .badge-locked { filter: grayscale(1); opacity: 0.55; position: relative; overflow: hidden; }
+  .badge-locked::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 50%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+    animation: cta-shimmer 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* --- Today's date pulsing ring (calendar) --- */
+  @keyframes today-ring {
+    0%, 100% { box-shadow: 0 0 0 1.5px hsl(var(--primary) / 0.8), 0 0 0 0 hsl(var(--primary) / 0.35); }
+    50%      { box-shadow: 0 0 0 1.5px hsl(var(--primary) / 0.8), 0 0 0 6px hsl(var(--primary) / 0); }
+  }
+  .today-pulse-ring { animation: today-ring 2.4s ease-in-out infinite; border-radius: 0.75rem; }
+
+  /* --- Calendar month slide --- */
+  @keyframes slide-from-right {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slide-from-left {
+    from { opacity: 0; transform: translateX(-24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .animate-slide-from-right { animation: slide-from-right 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-slide-from-left  { animation: slide-from-left 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  /* --- Unread accent: blue left border that fades out after 3s --- */
+  @keyframes unread-fade {
+    0%, 60% { box-shadow: inset 3px 0 0 hsl(var(--primary)); }
+    100%    { box-shadow: inset 3px 0 0 hsl(var(--primary) / 0); }
+  }
+  .unread-accent { animation: unread-fade 5s ease-out both; }
+
+  /* --- Floating particles (landing hero) --- */
+  @keyframes float-up {
+    0%   { transform: translateY(0); opacity: 0; }
+    10%  { opacity: var(--p-opacity, 0.5); }
+    90%  { opacity: var(--p-opacity, 0.5); }
+    100% { transform: translateY(-110vh); opacity: 0; }
+  }
+  .float-particle {
+    position: absolute;
+    bottom: -2vh;
+    border-radius: 9999px;
+    background: hsl(var(--primary) / 0.7);
+    animation: float-up var(--p-duration, 14s) linear infinite;
+    animation-delay: var(--p-delay, 0s);
+    will-change: transform, opacity;
+    pointer-events: none;
+  }
+
+  /* --- 3D tilt (set --rx / --ry from JS) --- */
+  .tilt-3d {
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transition: transform 180ms ease-out;
+    will-change: transform;
+  }
+
+  /* --- Typewriter caret --- */
+  @keyframes caret-blink {
+    0%, 45% { opacity: 1; }
+    50%, 95% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  .typewriter-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: -0.1em;
+    background: hsl(var(--primary));
+    animation: caret-blink 900ms step-end infinite;
+  }
+
+  /* --- Toast progress bar (depletes left to right over 4s) --- */
+  @keyframes toast-progress {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+  }
+  .toast-progress {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 3px;
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+    background: hsl(var(--primary) / 0.7);
+    transform-origin: left center;
+    animation: toast-progress 4s linear both;
+  }
+
+  /* --- Toast slide in from the right with spring --- */
+  @keyframes toast-in {
+    from { transform: translateX(120%); opacity: 0.5; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes toast-out {
+    from { transform: translateX(0); opacity: 1; }
+    to   { transform: translateX(120%); opacity: 0; }
+  }
+  .animate-toast-in  { animation: toast-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .animate-toast-out { animation: toast-out 200ms ease-in both; }
+
+  /* --- Coin award particle burst (CSS-var driven; see <CoinBurst/>) --- */
+  @keyframes coin-particle {
+    0%   { transform: translate(0, 0) scale(0.4); opacity: 1; }
+    70%  { opacity: 1; }
+    100% { transform: translate(var(--cp-x, 60px), var(--cp-y, -60px)) scale(1); opacity: 0; }
+  }
+  .coin-particle {
+    position: absolute;
+    left: 50%; top: 50%;
+    margin: -5px 0 0 -5px;
+    width: 10px; height: 10px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 32% 30%, #fffbe6 0%, #ffe066 30%, #f5c842 60%, #b8860b 100%);
+    box-shadow: 0 0 8px hsl(45 90% 61% / 0.8);
+    animation: coin-particle 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    pointer-events: none;
+  }
+
+  /* --- Sketch / drawing fade-in (Study Buddy) --- */
+  @keyframes sketch-in {
+    from { opacity: 0; clip-path: inset(0 100% 0 0); }
+    to   { opacity: 1; clip-path: inset(0 0 0 0); }
+  }
+  .animate-sketch-in { animation: sketch-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  /* --- Notification sweep (mark all read) --- */
+  @keyframes sweep-flash {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(110%); }
+  }
+  .sweep-flash { position: relative; overflow: hidden; }
+  .sweep-flash::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent, hsl(var(--primary) / 0.18), transparent);
+    animation: sweep-flash 650ms ease-out both;
+    pointer-events: none;
+  }
+
+  /* --- Dropdown / popover scale-in --- */
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .animate-pop-in { animation: pop-in 150ms ease-out both; }
+
+  /* --- Checkbox draw-stroke (referenced inline by <Checkbox/>) --- */
+  @keyframes checkbox-draw {
+    to { stroke-dashoffset: 0; }
   }
 }
 
@@ -238,10 +885,6 @@ All colors MUST be HSL.
   }
   .animate-blob-slow   { animation: blob-drift-a 18s ease-in-out infinite; }
   .animate-blob-slower { animation: blob-drift-b 26s ease-in-out infinite; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .animate-blob-slow, .animate-blob-slower { animation: none !important; }
-  }
 }
 
 /* === Reward overlay animations === */
@@ -262,7 +905,7 @@ All colors MUST be HSL.
   }
   .reward-icon { animation: reward-icon-spin 600ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both; }
 
-  .reward-stagger { opacity: 0; animation: page-enter 360ms ease-out forwards; }
+  .reward-stagger { opacity: 0; animation: fade-up 360ms ease-out forwards; }
   .reward-pop .reward-stagger:nth-child(1) { animation-delay: 200ms; }
   .reward-pop .reward-stagger:nth-child(2) { animation-delay: 280ms; }
   .reward-pop .reward-stagger:nth-child(3) { animation-delay: 360ms; }
@@ -280,15 +923,6 @@ All colors MUST be HSL.
   }
   .reward-blob-a { animation: reward-blob-a 6s ease-in-out infinite; }
   .reward-blob-b { animation: reward-blob-b 7s ease-in-out infinite; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .reward-pop, .reward-icon, .reward-stagger,
-    .reward-blob-a, .reward-blob-b {
-      animation: none !important;
-      opacity: 1 !important;
-      transform: none !important;
-    }
-  }
 }
 
 /* === Gold coin burst (replaces confetti) === */
@@ -646,4 +1280,20 @@ All colors MUST be HSL.
       opacity: 0 !important;
     }
   }
+}
+
+/* === Global reduced-motion: collapse all animation to short opacity fades === */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal, .stagger-children > *, .animate-page-enter, .reward-stagger {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .ripple-effect { display: none !important; }
 }

@@ -2,42 +2,43 @@ import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, Trash2, Bot, Brain } from "lucide-react";
+import { Sparkles, Send, Trash2, Bot, Brain, Paintbrush, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SketchCard } from "@/components/study-buddy/SketchCard";
+import type { SketchPayload, StudyBuddyMessage } from "@/components/study-buddy/types";
+import { ThinkingDots } from "@/components/ThinkingDots";
 
-type Msg = { role: "user" | "assistant"; content: string };
+const MAX_MESSAGES_TO_SEND = 12;
 
 export function StudyBuddy() {
   const { user, role } = useAuth();
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState<string>("");
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<StudyBuddyMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isTeacher = role === "teacher";
+  const latestSketchablePrompt = getLatestSketchablePrompt(messages);
+  const canSketch = Boolean(input.trim() || latestSketchablePrompt);
 
-  // Fetch name once for the greeting
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
       .then(({ data }) => setFirstName((data?.full_name?.split(" ")[0]) || (isTeacher ? "Teacher" : "friend")));
-  }, [user]);
+  }, [isTeacher, user]);
 
-  // Greet on first open
   useEffect(() => {
     if (open && messages.length === 0) {
       const greeting = isTeacher
-        ? `Hi ${firstName || "Teacher"}! 👋 I'm **Study Buddy**, your AI co-teacher. I can help you:\n- Write **assignment descriptions**\n- Generate **quiz questions** for a unit\n- Draft **announcements** or parent emails\n- Brainstorm **lesson ideas**\n\nWhat are we working on?`
-        : `Hi ${firstName || "there"}! 👋 I'm **Study Buddy**. Ask me to explain a concept, give you practice questions for a unit, or help plan your week. What's up?`;
+        ? `Hi ${firstName || "Teacher"}! I'm **Study Buddy**, your AI co-teacher. I can help you:\n- Write **assignment descriptions**\n- Generate **quiz questions** for a unit\n- Draft **announcements** or parent emails\n- Brainstorm **lesson ideas**\n\nWhat are we working on?`
+        : `Hi ${firstName || "there"}! I'm **Study Buddy**. Ask me to explain a concept, give you practice questions for a unit, or help plan your week. What's up?`;
       setMessages([{ role: "assistant", content: greeting }]);
     }
-  }, [open, firstName, isTeacher]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [firstName, isTeacher, messages.length, open]);
 
-  // Smooth scroll to latest
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
@@ -50,50 +51,80 @@ export function StudyBuddy() {
     }]);
   };
 
-  const send = async () => {
+  const send = async (mode: "chat" | "sketch" = "chat") => {
     const text = input.trim();
-    if (!text || sending) return;
+    const promptText = mode === "sketch" ? text || latestSketchablePrompt : text;
+    if (!promptText || sending) return;
+
     setInput("");
-    const next = [...messages, { role: "user" as const, content: text }];
-    setMessages(next);
+    const userText = mode === "sketch" ? `Sketch It: ${promptText}` : promptText;
+    const nextMessages: StudyBuddyMessage[] = [...messages, { role: "user", content: userText }];
+    setMessages(nextMessages);
     setSending(true);
 
     try {
+      const outbound = nextMessages
+        .filter((message) => message.kind !== "error")
+        .slice(-MAX_MESSAGES_TO_SEND)
+        .map((message) => ({ role: message.role, content: message.content }));
+
       const { data, error } = await supabase.functions.invoke("study-buddy", {
-        body: { messages: next.map((m) => ({ role: m.role, content: m.content })) },
+        body: { mode, messages: outbound },
       });
+
       if (error) throw error;
-      const reply = (data as any)?.reply ?? "Hmm, no response.";
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Study Buddy is unavailable right now.");
-      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I had trouble answering that. Try again in a moment." }]);
+
+      if (mode === "sketch") {
+        const sketch = (data as any)?.sketch as SketchPayload | undefined;
+        if (!sketch) throw new Error("Study Buddy did not return a sketch.");
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: (data as any)?.reply || sketch.explanation,
+          kind: "sketch",
+          sketch,
+        }]);
+      } else {
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: (data as any)?.reply || "Hmm, no response.",
+        }]);
+      }
+    } catch (error) {
+      console.warn("Study Buddy request failed.", error);
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        kind: "error",
+        content: mode === "sketch"
+          ? "Sketch It could not generate a visual right now. Try a shorter concept, or ask for a text explanation first."
+          : "Study Buddy is unavailable right now. Try again in a moment.",
+      }]);
     } finally {
       setSending(false);
     }
   };
 
-  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  const onKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      send();
+    }
   };
 
   return (
     <>
-      {/* Floating bubble */}
       <button
         onClick={() => setOpen(true)}
         aria-label={isTeacher ? "Open Study Buddy (teacher)" : "Open Study Buddy"}
-        title="Study Buddy — AI helper"
+        title="Study Buddy - AI helper"
         className={cn(
           "fixed right-5 z-[100] group inline-flex h-16 w-16 items-center justify-center rounded-full",
-          // Sit above the mobile bottom navbar (~72px + iOS safe area), normal offset on desktop.
           "bottom-[calc(90px+env(safe-area-inset-bottom))] lg:bottom-6",
           "bg-gradient-to-br from-primary to-teal text-primary-foreground shadow-elevated ring-4 ring-background",
           "transition-all hover:scale-110 hover:shadow-glow active:scale-95 animate-in fade-in zoom-in",
-          open && "opacity-0 pointer-events-none"
+          open && "opacity-0 pointer-events-none",
         )}
       >
-        <Brain className="h-7 w-7" />
+        <Brain className="h-7 w-7 animate-breathing" />
         <span className="absolute -top-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold shadow ring-2 ring-background">
           <Sparkles className="h-3 w-3" />
         </span>
@@ -113,7 +144,9 @@ export function StudyBuddy() {
                     Study Buddy
                     <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                   </SheetTitle>
-                  <p className="text-[11px] text-muted-foreground">AI · powered by Gemini</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {sending ? "Thinking..." : "Ready when you are"}
+                  </p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" onClick={clearChat} className="text-muted-foreground gap-1.5">
@@ -122,39 +155,47 @@ export function StudyBuddy() {
             </div>
           </SheetHeader>
 
-          {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-muted/20">
-            {messages.map((m, i) => (
-              <MessageBubble key={i} role={m.role} content={m.content} />
+            {messages.map((message, index) => (
+              <MessageBubble key={index} {...message} />
             ))}
             {sending && (
-              <div className="flex items-end gap-2">
+              <div className="flex items-end gap-2 animate-msg-in-left">
                 <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary to-teal text-primary-foreground inline-flex items-center justify-center shrink-0">
                   <Bot className="h-4 w-4" />
                 </div>
                 <div className="rounded-2xl rounded-bl-sm bg-card border px-3 py-2 shadow-sm">
-                  <div className="flex gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
+                  <ThinkingDots />
                 </div>
               </div>
             )}
           </div>
 
-          {/* Composer */}
           <div className="border-t bg-background p-3">
             <div className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={onKey}
-                placeholder={isTeacher ? "Ask for a quiz, lesson idea, or draft..." : "Ask anything about your assignments..."}
-                disabled={sending}
-                maxLength={2000}
-              />
-              <Button onClick={send} disabled={sending || !input.trim()} size="icon" aria-label="Send">
+              <div className="flex-1 space-y-2">
+                <Input
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={onKey}
+                  placeholder={isTeacher ? "Ask for a quiz, lesson idea, or draft..." : "Ask anything about your assignments..."}
+                  disabled={sending}
+                  maxLength={2000}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => send("sketch")}
+                  disabled={sending || !canSketch}
+                  title={input.trim() ? "Sketch this prompt" : "Sketch the last question"}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  <Paintbrush className="h-3.5 w-3.5" />
+                  Sketch It
+                </Button>
+              </div>
+              <Button onClick={() => send()} disabled={sending || !input.trim()} size="icon" aria-label="Send">
                 <Send className="h-4 w-4" />
               </Button>
             </div>
@@ -165,44 +206,61 @@ export function StudyBuddy() {
   );
 }
 
-function MessageBubble({ role, content }: { role: "user" | "assistant"; content: string }) {
+function getLatestSketchablePrompt(messages: StudyBuddyMessage[]) {
+  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
+  return latestUserMessage?.content.replace(/^Sketch It:\s*/i, "").trim() ?? "";
+}
+
+function MessageBubble({ role, content, kind, sketch }: StudyBuddyMessage) {
   const isUser = role === "user";
+  const isSketch = kind === "sketch" && sketch;
+  const isError = kind === "error";
+
   return (
-    <div className={cn("flex items-end gap-2", isUser && "flex-row-reverse")}>
-      <div className={cn(
-        "h-7 w-7 rounded-full inline-flex items-center justify-center shrink-0 text-xs font-semibold",
-        isUser ? "bg-secondary text-secondary-foreground" : "bg-gradient-to-br from-primary to-teal text-primary-foreground",
-      )}>
-        {isUser ? "You" : <Bot className="h-4 w-4" />}
+    <div className={cn(
+      "flex items-end gap-2",
+      isUser ? "flex-row-reverse animate-msg-in-right" : "animate-msg-in-left",
+    )}>
+      <div
+        className={cn(
+          "h-7 w-7 rounded-full inline-flex items-center justify-center shrink-0 text-xs font-semibold",
+          isUser ? "bg-secondary text-secondary-foreground" : "bg-gradient-to-br from-primary to-teal text-primary-foreground",
+          isError && "bg-destructive text-destructive-foreground",
+        )}
+      >
+        {isUser ? "You" : isError ? <AlertCircle className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
       </div>
-      <div className={cn(
-        "max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm whitespace-pre-wrap break-words",
-        isUser
-          ? "bg-primary text-primary-foreground rounded-br-sm"
-          : "bg-card border rounded-bl-sm",
-      )}>
-        {renderMarkdownLite(content)}
+      <div
+        className={cn(
+          "rounded-2xl px-3 py-2 text-sm shadow-sm whitespace-pre-wrap break-words",
+          isSketch ? "max-w-[92%] w-full" : "max-w-[80%]",
+          isUser
+            ? "bg-primary text-primary-foreground rounded-br-sm"
+            : "bg-card border rounded-bl-sm",
+          isError && "border-destructive/40 bg-destructive/10 text-destructive",
+        )}
+      >
+        {isSketch ? <SketchCard sketch={sketch} /> : renderMarkdownLite(content)}
       </div>
     </div>
   );
 }
 
-/** Lightweight markdown: **bold**, line breaks, and bullets. Avoids extra deps. */
 function renderMarkdownLite(text: string) {
   const lines = text.split("\n");
   return (
     <div className="space-y-1">
-      {lines.map((line, i) => {
+      {lines.map((line, index) => {
         const bullet = /^\s*[-*]\s+/.test(line);
         const clean = bullet ? line.replace(/^\s*[-*]\s+/, "") : line;
-        const parts = clean.split(/(\*\*[^*]+\*\*)/g).map((p, j) =>
-          /^\*\*[^*]+\*\*$/.test(p)
-            ? <strong key={j}>{p.slice(2, -2)}</strong>
-            : <span key={j}>{p}</span>
+        const parts = clean.split(/(\*\*[^*]+\*\*)/g).map((part, partIndex) =>
+          /^\*\*[^*]+\*\*$/.test(part)
+            ? <strong key={partIndex}>{part.slice(2, -2)}</strong>
+            : <span key={partIndex}>{part}</span>,
         );
         return bullet
-          ? <div key={i} className="flex gap-2"><span className="text-muted-foreground">•</span><div>{parts}</div></div>
-          : <div key={i}>{parts.length === 1 && parts[0].props.children === "" ? <br /> : parts}</div>;
+          ? <div key={index} className="flex gap-2"><span className="text-muted-foreground">-</span><div>{parts}</div></div>
+          : <div key={index}>{parts.length === 1 && parts[0].props.children === "" ? <br /> : parts}</div>;
       })}
     </div>
   );

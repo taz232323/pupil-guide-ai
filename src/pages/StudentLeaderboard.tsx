@@ -5,8 +5,10 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StudentAvatar } from "@/components/StudentAvatar";
-import { Trophy, Star, Crown, Medal } from "lucide-react";
+import { Trophy, Star, Crown, Medal, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StreakFlame } from "@/components/StreakFlame";
+import { useStreakFlames } from "@/hooks/useStreakFlames";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -15,10 +17,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { STUDENT_COINS_CHANGED_EVENT } from "@/lib/studentRefreshEvents";
 
 type ClassRow = { id: string; name: string; subject: string; leaderboard_anonymous: boolean };
 type ProfileRow = { id: string; full_name: string | null; leaderboard_username: string | null; avatar_items: string[] };
-type Entry = { studentId: string; display: string; items: string[]; coins: number };
+type Entry = { studentId: string; display: string; items: string[]; coins: number; streak: number };
 
 function displayFor(p: ProfileRow | undefined, anonymous: boolean, isMe: boolean) {
   if (!p) return "Student";
@@ -37,6 +40,14 @@ export default function StudentLeaderboard() {
   const [promptOpen, setPromptOpen] = useState(false);
   const [usernameDraft, setUsernameDraft] = useState("");
   const [savingUsername, setSavingUsername] = useState(false);
+  const [sortBy, setSortBy] = useState<"coins" | "streak">("coins");
+
+  const allMemberIds = useMemo(() => {
+    const s = new Set<string>();
+    membersByClass.forEach(arr => arr.forEach(id => s.add(id)));
+    return Array.from(s);
+  }, [membersByClass]);
+  const streaks = useStreakFlames(allMemberIds);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -92,10 +103,15 @@ export default function StudentLeaderboard() {
 
   // Realtime: refresh on any student_coins change
   useEffect(() => {
+    const onCoinsChanged = () => load();
+    window.addEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
     const ch = supabase.channel("leaderboard-coins")
       .on("postgres_changes", { event: "*", schema: "public", table: "student_coins" }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      window.removeEventListener(STUDENT_COINS_CHANGED_EVENT, onCoinsChanged);
+      supabase.removeChannel(ch);
+    };
   }, [load]);
 
   const buildEntries = (studentIds: string[], anonymous: boolean): Entry[] => {
@@ -110,9 +126,13 @@ export default function StudentLeaderboard() {
         display: displayFor(p, anonymous, sid === user?.id),
         items: p?.avatar_items ?? [],
         coins: coinsByStudent.get(sid) ?? 0,
+        streak: streaks.get(sid) ?? 0,
       });
     }
-    return list.sort((a, b) => b.coins - a.coins || a.display.localeCompare(b.display));
+    return list.sort((a, b) => {
+      if (sortBy === "streak") return b.streak - a.streak || b.coins - a.coins || a.display.localeCompare(b.display);
+      return b.coins - a.coins || b.streak - a.streak || a.display.localeCompare(b.display);
+    });
   };
 
   const allClassesEntries = useMemo(() => {
@@ -122,12 +142,13 @@ export default function StudentLeaderboard() {
     // anyClassAnonymous: if ANY enrolled class is anonymous, anonymize across the All tab
     const anyAnonymous = classes.some(c => c.leaderboard_anonymous);
     return buildEntries(Array.from(allIds), anyAnonymous);
-  }, [classes, membersByClass, profiles, coinsByStudent, user]);
+  }, [classes, membersByClass, profiles, coinsByStudent, user, streaks, sortBy]);
 
-  const renderRow = (e: Entry, idx: number) => {
+  const renderRow = (e: Entry, idx: number, champions?: Set<string>) => {
     const isMe = e.studentId === user?.id;
     const rank = idx + 1;
     const RankIcon = rank === 1 ? Crown : rank === 2 ? Medal : rank === 3 ? Trophy : null;
+    const isChampion = e.streak > 0 && (champions?.has(e.studentId) ?? false);
     return (
       <li
         key={e.studentId}
@@ -138,7 +159,7 @@ export default function StudentLeaderboard() {
       >
         <div className={cn(
           "w-8 text-center font-bold tabular-nums",
-          rank === 1 ? "text-amber-500" : rank === 2 ? "text-slate-400" : rank === 3 ? "text-orange-500" : "text-muted-foreground"
+          rank === 1 ? "text-gold" : rank === 2 ? "text-muted-foreground" : rank === 3 ? "text-warning" : "text-muted-foreground"
         )}>
           {RankIcon ? <RankIcon className="h-5 w-5 mx-auto" /> : `#${rank}`}
         </div>
@@ -148,8 +169,9 @@ export default function StudentLeaderboard() {
             {e.display}{isMe && <span className="ml-2 text-xs text-primary">(You)</span>}
           </p>
         </div>
+        {e.streak > 0 && <StreakFlame streak={e.streak} size="sm" isChampion={isChampion} />}
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
-          <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
+          <Star className="h-4 w-4 fill-gold text-gold" />
           {e.coins}
         </div>
       </li>
@@ -172,6 +194,15 @@ export default function StudentLeaderboard() {
 
   return (
     <DashboardShell title="Leaderboard" subtitle="See who's earning the most Star Coins.">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-sm text-muted-foreground mr-1">Sort by:</span>
+        <Button size="sm" variant={sortBy === "coins" ? "default" : "outline"} onClick={() => setSortBy("coins")}>
+          <Star className="h-3.5 w-3.5 mr-1.5 fill-current" /> Coins
+        </Button>
+        <Button size="sm" variant={sortBy === "streak" ? "default" : "outline"} onClick={() => setSortBy("streak")}>
+          <Flame className="h-3.5 w-3.5 mr-1.5" /> Top Streaks
+        </Button>
+      </div>
       {loading ? (
         <Card><CardContent className="p-8 text-center text-muted-foreground">Loading...</CardContent></Card>
       ) : classes.length === 0 ? (
@@ -195,7 +226,11 @@ export default function StudentLeaderboard() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {allClassesEntries.map(renderRow)}
+                  {(() => {
+                    const top = allClassesEntries.reduce((m, e) => Math.max(m, e.streak), 0);
+                    const champs = new Set(allClassesEntries.filter(e => e.streak > 0 && e.streak === top).map(e => e.studentId));
+                    return allClassesEntries.map((e, i) => renderRow(e, i, champs));
+                  })()}
                 </ul>
               </CardContent>
             </Card>
@@ -221,7 +256,13 @@ export default function StudentLeaderboard() {
                     {entries.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No students yet.</p>
                     ) : (
-                      <ul className="space-y-2">{entries.map(renderRow)}</ul>
+                      <ul className="space-y-2">
+                        {(() => {
+                          const top = entries.reduce((m, e) => Math.max(m, e.streak), 0);
+                          const champs = new Set(entries.filter(e => e.streak > 0 && e.streak === top).map(e => e.studentId));
+                          return entries.map((e, i) => renderRow(e, i, champs));
+                        })()}
+                      </ul>
                     )}
                   </CardContent>
                 </Card>

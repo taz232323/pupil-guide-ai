@@ -35,6 +35,12 @@ import { Lock, Sparkles, Check, Star, ShoppingBag, Gem, User } from "lucide-reac
 import { Moon, Sun, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/useTheme";
+import { StreakFlame } from "@/components/StreakFlame";
+import { useStreakFlames } from "@/hooks/useStreakFlames";
+import { notifyStudentCoinsChanged } from "@/lib/studentRefreshEvents";
+import { CountUp } from "@/components/CountUp";
+import { celebrate } from "@/lib/confetti";
+import { MountainSketch } from "@/components/MountainSketch";
 
 /* ------------------------------------------------------------------ *
  *  AVATAR BUILDER CATALOG
@@ -143,6 +149,13 @@ const RARITY_STYLE: Record<Rarity, { ring: string; chip: string; label: string }
   legendary: { ring: "ring-amber-400/80",         chip: "bg-amber-500/20 text-amber-700 dark:text-amber-300",            label: "Legendary" },
 };
 
+function ProfileStreakFlame({ userId }: { userId: string }) {
+  const map = useStreakFlames([userId]);
+  const streak = map.get(userId) ?? 0;
+  if (streak <= 0) return null;
+  return <StreakFlame streak={streak} size="md" />;
+}
+
 export default function Profile() {
   const { user, role } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -225,6 +238,7 @@ export default function Profile() {
     setCoins((c) => c - opt.cost!);
     setPreviewAvatar((prev) => updateAvatarState(prev, opt.key));
     setJustUnlocked(opt.key);
+    notifyStudentCoinsChanged({ userId: user.id, reason: "profile_cosmetic_purchase" });
     setTimeout(() => setJustUnlocked((v) => (v === opt.key ? null : v)), 1800);
     toast.success(`Unlocked ${opt.name}!`);
   };
@@ -243,6 +257,7 @@ export default function Profile() {
     setConfirmOpen(false);
     if (error) { toast.error(error.message); return; }
     setSavedAvatar(previewAvatar);
+    celebrate("big");
     window.dispatchEvent(new CustomEvent("profile:updated", { detail: { userId: user.id } }));
     toast.success("Avatar saved");
   };
@@ -265,10 +280,19 @@ export default function Profile() {
   };
 
   return (
-    <DashboardShell title="My profile">
+    <DashboardShell
+      title="Profile"
+      subtitle="Manage your account, preferences, and how you appear on Grapheion."
+    >
+      <div className="relative mb-6 hidden h-0 overflow-visible sm:block">
+        <MountainSketch
+          variant="range"
+          className="pointer-events-none absolute -top-20 right-0 w-64 text-muted-foreground/30"
+        />
+      </div>
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         {/* Live preview */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden hover-lift animate-fade-up">
           <div className="relative bg-gradient-to-br from-primary/20 via-primary/5 to-secondary/30 px-6 pt-10 pb-8 flex flex-col items-center">
             <div className="absolute inset-0 opacity-50 pointer-events-none"
               style={{ backgroundImage: "radial-gradient(circle at 20% 20%, hsl(var(--primary)/0.25), transparent 55%), radial-gradient(circle at 80% 80%, hsl(var(--secondary)/0.3), transparent 55%)" }}
@@ -292,7 +316,10 @@ export default function Profile() {
                 className="mx-auto mt-2 h-2 w-32 rounded-full bg-foreground/20 blur-md"
               />
             </div>
-            <p className="relative mt-3 text-lg font-semibold tracking-tight">{name || "Unnamed student"}</p>
+            <p className="relative mt-3 text-lg font-semibold tracking-tight inline-flex items-center gap-2 justify-center">
+              {name || "Unnamed student"}
+              {user && <ProfileStreakFlame userId={user.id} />}
+            </p>
             <p className="relative text-xs text-muted-foreground mt-0.5 uppercase tracking-[0.18em]">Character preview</p>
           </div>
           <CardContent className="space-y-4 pt-5">
@@ -309,11 +336,11 @@ export default function Profile() {
                 </Button>
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg border border-primary/15 bg-muted/40 px-3 py-2">
               <span className="text-sm text-muted-foreground">Your balance</span>
               <span className="inline-flex items-center gap-1.5 text-sm font-semibold">
-                <Star className="h-4 w-4 text-amber-500 fill-amber-400" />
-                {coins} <span className="font-normal text-muted-foreground">stars</span>
+                <Star className="h-4 w-4 fill-gold text-gold animate-flame-pulse" />
+                <CountUp value={coins} duration={800} mono className="text-gold" /> <span className="font-normal text-muted-foreground">stars</span>
               </span>
             </div>
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -344,7 +371,7 @@ export default function Profile() {
         </Card>
 
         {/* Builder */}
-        <Card>
+        <Card className="animate-fade-up" style={{ animationDelay: "80ms" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" /> Avatar builder
@@ -415,7 +442,7 @@ export default function Profile() {
                             "snap-start shrink-0 sm:shrink min-w-[7.5rem] sm:min-w-0 group relative flex flex-col items-center rounded-xl border bg-card p-3 transition-all text-center",
                             isOn && "border-primary ring-2 ring-primary/20 bg-primary/5",
                             !isOn && requiresOwnership && isCosmeticTab && cn("ring-1", rs.ring),
-                            unlocking && "animate-pulse ring-2 ring-amber-400"
+                            unlocking && "animate-pulse ring-2 ring-gold"
                           )}
                         >
                           {/* Rarity chip for premium tiles */}
@@ -477,12 +504,12 @@ export default function Profile() {
                                 onClick={() => purchase(opt)}
                                 className="h-7 px-2 text-[11px] gap-1"
                               >
-                                <Star className="h-3 w-3 fill-amber-300 text-amber-300" />
+                                <Star className="h-3 w-3 fill-gold text-gold" />
                                 {purchasing === opt.key ? "..." : canAfford ? `Buy · ${opt.cost}` : `Need ${opt.cost}`}
                               </Button>
                             ) : requiresOwnership ? (
                               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
-                                <Check className="h-3 w-3 text-emerald-500" /> Owned
+                                <Check className="h-3 w-3 text-success" /> Owned
                               </span>
                             ) : null}
                           </div>
@@ -517,7 +544,7 @@ export default function Profile() {
                     </TabsTrigger>
                     <TabsTrigger value="cosmetics" className="gap-1.5">
                       <Gem className="h-3.5 w-3.5" /> Cosmetics
-                      <Badge variant="outline" className="ml-1 text-[9px] px-1.5 border-amber-400/60 text-amber-600 dark:text-amber-300">Premium</Badge>
+                      <Badge variant="outline" className="ml-1 text-[9px] px-1.5 border-gold/60 text-gold">Premium</Badge>
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="appearance">
@@ -538,42 +565,59 @@ export default function Profile() {
       </div>
 
       {/* Settings */}
-      <Card className="mt-6">
+      <Card className="mt-6 hover-lift">
         <CardHeader>
           <CardTitle className="text-base">Appearance</CardTitle>
-          <CardDescription>Choose how the app looks. Your preference is saved to your account.</CardDescription>
+          <CardDescription>Choose how Grapheion looks and feels on this device.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-background border">
-                {theme === "dark" ? (
-                  <Moon className="h-4 w-4 text-primary" />
-                ) : (
-                  <Sun className="h-4 w-4 text-amber-500" />
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-medium">Dark mode</p>
-                <p className="text-xs text-muted-foreground">
-                  {theme === "dark" ? "Dark theme is on" : "Light theme is on"}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={theme === "dark"}
-              onCheckedChange={(checked) => {
-                void setTheme(checked ? "dark" : "light");
-                toast.success(checked ? "Dark mode enabled" : "Light mode enabled");
+          <p className="mb-2 text-sm font-medium">Theme</p>
+          <div className="inline-flex w-full max-w-md items-center gap-1 rounded-xl border bg-muted/40 p-1 sm:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                if (theme === "light") return;
+                void setTheme("light");
+                toast.success("Light mode enabled");
               }}
-              aria-label="Toggle dark mode"
-            />
+              aria-pressed={theme === "light"}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all sm:flex-none",
+                theme === "light"
+                  ? "bg-background text-foreground shadow-card"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Sun className={cn("h-4 w-4", theme === "light" ? "text-gold" : "")} />
+              Light
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (theme === "dark") return;
+                void setTheme("dark");
+                toast.success("Dark mode enabled");
+              }}
+              aria-pressed={theme === "dark"}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all sm:flex-none",
+                theme === "dark"
+                  ? "bg-background text-foreground shadow-card"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Moon className={cn("h-4 w-4", theme === "dark" ? "text-primary" : "")} />
+              Dark
+            </button>
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Your preference is saved to your account.
+          </p>
         </CardContent>
       </Card>
 
       {role === "student" && (
-        <Card className="mt-6">
+        <Card className="mt-6 hover-lift">
           <CardHeader>
             <CardTitle className="text-base">Leaderboard username</CardTitle>
             <CardDescription>Shown on class leaderboards when your teacher turns on anonymous mode.</CardDescription>
@@ -611,7 +655,7 @@ export default function Profile() {
       )}
 
       {role === "student" && (
-        <Card className="mt-6">
+        <Card className="mt-6 hover-lift">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2"><Bell className="h-4 w-4 text-primary" /> Notification preferences</CardTitle>
             <CardDescription>Choose how you'd like to hear about upcoming assignment due dates.</CardDescription>

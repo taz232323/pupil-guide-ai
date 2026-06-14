@@ -7,6 +7,7 @@ import { Crown, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { RelativeTime } from "@/components/RelativeTime";
 import { RowListSkeleton } from "@/components/Skeletons";
+import { Reveal } from "@/components/Reveal";
 
 type Row = {
   id: string;
@@ -71,14 +72,19 @@ export function TeacherPrivilegeRequests() {
         ) : rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">No pending requests.</p>
         ) : (
-          <ul className="divide-y divide-border">
-            {rows.map((r) => (
-              <li key={r.id} className="py-3 flex items-center justify-between gap-3">
+          <ul className="space-y-2.5">
+            {rows.map((r, i) => (
+              <Reveal
+                as="li"
+                key={r.id}
+                delay={i * 50}
+                className="animate-border-pulse-orange rounded-xl border border-warning/30 bg-card px-3 py-3 flex items-center justify-between gap-3"
+              >
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{r.student_name} — {r.item_name}</div>
                   <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                    <Crown className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                    {r.cost} · <RelativeTime date={r.created_at} />
+                    <Crown className="h-3 w-3 text-gold fill-gold" />
+                    <span className="font-tabular text-gold">{r.cost}</span> · <RelativeTime date={r.created_at} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -89,7 +95,7 @@ export function TeacherPrivilegeRequests() {
                     <Check className="h-4 w-4" /> Approve
                   </Button>
                 </div>
-              </li>
+              </Reveal>
             ))}
           </ul>
         )}

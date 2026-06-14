@@ -20,6 +20,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { classColor, estimateMinutes, isOverdue, daysUntil, type AssignmentLite } from "@/lib/calendar";
+import { celebrate } from "@/lib/confetti";
+import { MountainSketch } from "@/components/MountainSketch";
 
 type Reminder = {
   id: string;
@@ -157,6 +159,22 @@ export default function StudentCalendar() {
     [assignments, completedIds]
   );
 
+  // Today's scheduled items (assignments due today + reminders today) for the sidebar
+  const todayItems = useMemo(
+    () => dayItems.get(format(new Date(), "yyyy-MM-dd")) ?? [],
+    [dayItems]
+  );
+
+  // Upcoming assignments (not overdue, not completed, due within the next week)
+  const dueSoonItems = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const horizon = addDays(today, 7);
+    return assignments
+      .filter(a => a.due_date && !completedIds.has(a.id) && !isOverdue(a.due_date, false))
+      .filter(a => { const d = parseISO(a.due_date!); return d >= today && d <= horizon; })
+      .sort((a, b) => +new Date(a.due_date!) - +new Date(b.due_date!));
+  }, [assignments, completedIds]);
+
   const markDone = async (assignmentId: string) => {
     if (!user) return;
     const { error } = await supabase.from("assignment_status_records").upsert({
@@ -164,6 +182,7 @@ export default function StudentCalendar() {
     }, { onConflict: "assignment_id,student_id" });
     if (error) { toast.error(error.message); return; }
     setCompletedIds(prev => new Set(prev).add(assignmentId));
+    celebrate("small");
     toast.success("Marked done");
   };
 
@@ -197,7 +216,12 @@ export default function StudentCalendar() {
   const goToday = () => setCursor(new Date());
 
   return (
-    <DashboardShell title="Calendar" subtitle="Stay on top of every due date.">
+    <DashboardShell title="Calendar" subtitle="Plan your week, never miss a due date.">
+      {/* Header accent */}
+      <div className="relative overflow-hidden -mt-2 mb-2">
+        <MountainSketch variant="range" className="pointer-events-none absolute -top-6 right-0 hidden sm:block w-56 text-muted-foreground/30" />
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week")}>
@@ -207,28 +231,28 @@ export default function StudentCalendar() {
           </TabsList>
         </Tabs>
         <Button size="sm" variant="outline" onClick={prev} aria-label="Previous"><ChevronLeft className="h-4 w-4" /></Button>
-        <Button size="sm" variant="outline" onClick={goToday}>Today</Button>
         <Button size="sm" variant="outline" onClick={next} aria-label="Next"><ChevronRight className="h-4 w-4" /></Button>
-        <span className="text-sm font-medium ml-1">
+        <span className="text-base font-semibold ml-1">
           {view === "month" ? format(cursor, "MMMM yyyy") : `Week of ${format(startOfWeek(cursor), "MMM d, yyyy")}`}
         </span>
         <div className="ml-auto flex gap-2">
+          <Button size="sm" variant="outline" onClick={goToday}>Today</Button>
           <Button size="sm" variant="outline" onClick={() => setPlanOpen(true)}>
             <ListTodo className="h-4 w-4 mr-1" /> Plan My Week
           </Button>
           <Button size="sm" onClick={() => setEditingReminder({ start_at: new Date().toISOString(), kind: "reminder", duration_minutes: 30 })}>
-            <Plus className="h-4 w-4 mr-1" /> Add Reminder
+            <Plus className="h-4 w-4 mr-1" /> Add reminder
           </Button>
         </div>
       </div>
 
       {/* Legend */}
       {classes.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4 stagger-children">
           {classes.map(c => {
             const col = classColor(c.id);
             return (
-              <span key={c.id} className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border"
+              <span key={c.id} className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-transform hover:scale-105"
                 style={{ borderColor: col.border, color: col.fg, background: col.bg }}>
                 <span className="h-2 w-2 rounded-full" style={{ background: col.border }} />
                 {c.name}
@@ -238,62 +262,138 @@ export default function StudentCalendar() {
         </div>
       )}
 
-      {/* Overdue band */}
-      {overdueItems.length > 0 && (
-        <Card className="p-3 mb-4 border-destructive/40 bg-destructive/5">
-          <p className="text-sm font-semibold text-destructive mb-2">
-            Overdue ({overdueItems.length})
-          </p>
-          <ul className="space-y-1.5">
-            {overdueItems.map(a => {
-              const col = classColor(a.class_id);
-              return (
-                <li key={a.id} className="flex items-center gap-2 text-sm">
-                  <span className="h-2 w-2 rounded-full" style={{ background: col.border }} />
-                  <Link to={`/student/assignments/${a.id}`} className="font-medium hover:underline text-destructive">
-                    {a.title}
-                  </Link>
-                  <span className="text-xs text-muted-foreground">· {a.class_name}</span>
-                  <span className="text-xs text-destructive ml-auto">
-                    Due {format(parseISO(a.due_date!), "MMM d")}
-                  </span>
-                  <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => markDone(a.id)}>
-                    <Check className="h-3.5 w-3.5" />
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      )}
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        {/* Main column: calendar */}
+        <div className="space-y-4">
+          {view === "month"
+            ? <MonthView cursor={cursor} dayItems={dayItems} onDayClick={setOpenDay} />
+            : <WeekView cursor={cursor} dayItems={dayItems} onMarkDone={markDone}
+                onDeleteReminder={deleteReminder} onEditReminder={(r) => setEditingReminder(r)} />}
+        </div>
 
-      {/* Calendar */}
-      {view === "month"
-        ? <MonthView cursor={cursor} dayItems={dayItems} onDayClick={setOpenDay} />
-        : <WeekView cursor={cursor} dayItems={dayItems} onMarkDone={markDone}
-            onDeleteReminder={deleteReminder} onEditReminder={(r) => setEditingReminder(r)} />}
+        {/* Right sidebar */}
+        <aside className="space-y-4">
+          {/* Today */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base">Today</h3>
+              <span className="text-xs text-muted-foreground">{format(new Date(), "EEE, MMM d")}</span>
+            </div>
+            {todayItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing scheduled today.</p>
+            ) : (
+              <ul className="space-y-2">
+                {todayItems.map(it => it.kind === "assignment" ? (
+                  <li key={it.id} className="flex items-center gap-2 text-sm">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ background: classColor(it.assignment.class_id).border }} />
+                    <Link to={`/student/assignments/${it.assignment.id}`} className={cn("font-medium truncate hover:underline", it.completed && "line-through opacity-60", it.overdue && "text-destructive")}>
+                      {it.assignment.title}
+                    </Link>
+                    <span className="ml-auto text-xs text-muted-foreground shrink-0">{it.assignment.class_name}</span>
+                  </li>
+                ) : (
+                  <li key={it.id} className="flex items-center gap-2 text-sm">
+                    <Bell className="h-3.5 w-3.5 text-warning shrink-0" />
+                    <span className="font-medium truncate">{it.reminder.title}</span>
+                    <span className="ml-auto text-xs text-muted-foreground shrink-0">{format(it.date, "p")}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button variant="ghost" size="sm" className="mt-2 w-full justify-center text-primary" onClick={goToday}>
+              View today's schedule
+            </Button>
+          </Card>
 
-      {/* Suggested study schedule */}
-      {!suggestionsDismissed && (
-        <StudySuggestions
-          assignments={assignments} completedIds={completedIds}
-          onAccept={async (blocks) => {
-            if (!user) return;
-            const rows = blocks.map(b => ({
-              student_id: user.id, title: b.title, note: b.note,
-              start_at: b.start_at, duration_minutes: b.duration_minutes, kind: "study_block",
-            }));
-            const { error } = await supabase.from("personal_reminders").insert(rows);
-            if (error) toast.error(error.message);
-            else { toast.success(`Added ${rows.length} study blocks`); }
-          }}
-          onDismiss={() => {
-            const k = `study-suggestions-dismissed-${new Date().toDateString()}`;
-            localStorage.setItem(k, "1");
-            setSuggestionsDismissed(true);
-          }}
-        />
-      )}
+          {/* Due soon */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base">Due soon</h3>
+              <span className="text-xs text-muted-foreground font-tabular">{dueSoonItems.length}</span>
+            </div>
+            {dueSoonItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing due in the next 7 days.</p>
+            ) : (
+              <ul className="space-y-2.5">
+                {dueSoonItems.slice(0, 5).map(a => {
+                  const col = classColor(a.class_id);
+                  const d = daysUntil(a.due_date!);
+                  return (
+                    <li key={a.id} className="flex items-center gap-2">
+                      <span className="flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg text-[10px] font-semibold leading-none"
+                        style={{ background: col.bg, color: col.fg }}>
+                        <span className="font-tabular text-sm">{format(parseISO(a.due_date!), "d")}</span>
+                        <span className="uppercase">{format(parseISO(a.due_date!), "MMM")}</span>
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <Link to={`/student/assignments/${a.id}`} className="block text-sm font-medium truncate hover:underline">{a.title}</Link>
+                        <p className="text-xs text-muted-foreground truncate">{a.class_name}</p>
+                      </div>
+                      <Badge variant="secondary" className="shrink-0 font-tabular">
+                        {d === 0 ? "Today" : `${d}d`}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <Button variant="ghost" size="sm" className="mt-2 w-full justify-center text-primary" onClick={() => setPlanOpen(true)}>
+              View all
+            </Button>
+          </Card>
+
+          {/* Overdue */}
+          {overdueItems.length > 0 && (
+            <Card className="p-4 border-destructive/40 bg-destructive/5 attention-pulse">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base text-destructive">Overdue</h3>
+                <span className="text-xs text-destructive font-tabular">{overdueItems.length}</span>
+              </div>
+              <ul className="space-y-2">
+                {overdueItems.slice(0, 5).map(a => {
+                  const col = classColor(a.class_id);
+                  return (
+                    <li key={a.id} className="flex items-center gap-2 text-sm">
+                      <span className="h-2 w-2 rounded-full shrink-0" style={{ background: col.border }} />
+                      <Link to={`/student/assignments/${a.id}`} className="font-medium hover:underline text-destructive truncate">
+                        {a.title}
+                      </Link>
+                      <span className="ml-auto text-xs text-destructive shrink-0">
+                        {format(parseISO(a.due_date!), "MMM d")}
+                      </span>
+                      <Button size="sm" variant="ghost" className="h-7 px-1.5 shrink-0" onClick={() => markDone(a.id)}>
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          )}
+
+          {/* Stay on track / suggested study schedule */}
+          {!suggestionsDismissed && (
+            <StudySuggestions
+              assignments={assignments} completedIds={completedIds}
+              onAccept={async (blocks) => {
+                if (!user) return;
+                const rows = blocks.map(b => ({
+                  student_id: user.id, title: b.title, note: b.note,
+                  start_at: b.start_at, duration_minutes: b.duration_minutes, kind: "study_block",
+                }));
+                const { error } = await supabase.from("personal_reminders").insert(rows);
+                if (error) toast.error(error.message);
+                else { toast.success(`Added ${rows.length} study blocks`); }
+              }}
+              onDismiss={() => {
+                const k = `study-suggestions-dismissed-${new Date().toDateString()}`;
+                localStorage.setItem(k, "1");
+                setSuggestionsDismissed(true);
+              }}
+            />
+          )}
+        </aside>
+      </div>
 
       {/* Day panel */}
       <Sheet open={!!openDay} onOpenChange={(o) => !o && setOpenDay(null)}>
@@ -370,7 +470,7 @@ function MonthView({ cursor, dayItems, onDayClick }: {
       <div className="grid grid-cols-7 text-center text-xs font-medium text-muted-foreground mb-1">
         {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => <div key={d} className="py-1">{d}</div>)}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div key={format(cursor, "yyyy-MM")} className="grid grid-cols-7 gap-1 animate-fade-up">
         {days.map((d) => {
           const inMonth = isSameMonth(d, cursor);
           const isToday = isSameDay(d, today);
@@ -378,9 +478,9 @@ function MonthView({ cursor, dayItems, onDayClick }: {
           return (
             <button key={d.toISOString()} onClick={() => onDayClick(d)}
               className={cn(
-                "min-h-[80px] sm:min-h-[96px] rounded-md border p-1.5 text-left transition-colors hover:bg-accent",
+                "min-h-[80px] sm:min-h-[96px] rounded-md border p-1.5 text-left transition-spring hover:bg-accent hover:-translate-y-0.5",
                 !inMonth && "opacity-40",
-                isToday && "border-primary bg-primary/5"
+                isToday && "border-primary bg-primary/5 today-pulse-ring"
               )}>
               <div className={cn("text-xs font-semibold mb-1", isToday && "text-primary")}>
                 {format(d, "d")}
@@ -392,7 +492,7 @@ function MonthView({ cursor, dayItems, onDayClick }: {
                     return (
                       <div key={it.id}
                         className={cn(
-                          "text-[10px] truncate rounded px-1 py-0.5 border",
+                          "text-[10px] truncate rounded px-1 py-0.5 border origin-left transition-transform hover:scale-105",
                           it.completed && "line-through opacity-60",
                         )}
                         style={it.overdue
@@ -403,7 +503,7 @@ function MonthView({ cursor, dayItems, onDayClick }: {
                     );
                   }
                   return (
-                    <div key={it.id} className="text-[10px] truncate rounded px-1 py-0.5 border border-dashed text-muted-foreground">
+                    <div key={it.id} className="text-[10px] truncate rounded px-1 py-0.5 border border-dashed text-muted-foreground origin-left transition-transform hover:scale-105">
                       🔔 {it.reminder.title}
                     </div>
                   );
@@ -432,12 +532,12 @@ function WeekView({ cursor, dayItems, onMarkDone, onDeleteReminder, onEditRemind
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   const today = new Date();
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
+    <div key={format(cursor, "yyyy-MM-dd")} className="grid grid-cols-1 sm:grid-cols-7 gap-2 animate-fade-up">
       {days.map(d => {
         const items = dayItems.get(format(d, "yyyy-MM-dd")) ?? [];
         const isToday = isSameDay(d, today);
         return (
-          <Card key={d.toISOString()} className={cn("p-2 min-h-[180px]", isToday && "border-primary")}>
+          <Card key={d.toISOString()} className={cn("p-2 min-h-[180px] transition-spring", isToday && "border-primary today-pulse-ring")}>
             <div className={cn("text-xs font-semibold mb-2", isToday && "text-primary")}>
               {format(d, "EEE d")}
             </div>
@@ -661,23 +761,23 @@ function PlanWeek({ assignments, reminders, completedIds, onMarkDone, onAddRemin
         sort: d.getTime(),
         type: "reminder",
         node: (
-          <div className="rounded-md border p-2 bg-amber-50 border-amber-300 dark:bg-amber-950/30 dark:border-amber-700">
+          <div className="rounded-md border border-warning/40 bg-warning-soft p-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex items-start gap-2">
-                <Bell className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <Bell className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium truncate text-amber-900 dark:text-amber-100">{r.title}</p>
-                  <p className="text-[11px] truncate text-amber-700 dark:text-amber-300">
+                  <p className="text-sm font-medium truncate text-warning">{r.title}</p>
+                  <p className="text-[11px] truncate text-warning/80">
                     {format(d, "p")}{r.note ? ` · ${r.note}` : ""}
                   </p>
                 </div>
               </div>
-              <Badge className="shrink-0 bg-amber-200 text-amber-800 border-amber-400 dark:bg-amber-800 dark:text-amber-100 dark:border-amber-600">
+              <Badge className="shrink-0 border-warning/40 bg-warning-soft text-warning">
                 Reminder
               </Badge>
             </div>
             <div className="flex gap-1 mt-1 ml-6">
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-amber-700 hover:text-amber-900 dark:text-amber-300" onClick={() => onDeleteReminder(r.id)}>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-warning hover:text-warning" onClick={() => onDeleteReminder(r.id)}>
                 <Trash2 className="h-3 w-3 mr-1" /> Remove
               </Button>
             </div>
@@ -699,7 +799,7 @@ function PlanWeek({ assignments, reminders, completedIds, onMarkDone, onAddRemin
   return (
     <div className="mt-4 space-y-4">
       {/* Add Reminder button */}
-      <Button variant="outline" className="w-full border-dashed border-amber-400 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-950/30" onClick={() => onAddReminder()}>
+      <Button variant="outline" className="w-full border-dashed border-warning/50 text-warning hover:bg-warning-soft hover:text-warning" onClick={() => onAddReminder()}>
         <Bell className="h-4 w-4 mr-2" /> Add Reminder
       </Button>
 
@@ -768,24 +868,26 @@ function StudySuggestions({ assignments, completedIds, onAccept, onDismiss }: {
   if (blocks.length === 0) return null;
 
   return (
-    <Card className="p-4 mt-4 border-primary/30 bg-primary/5">
+    <Card className="p-4 border-primary/30 bg-primary-soft/40 animate-fade-up">
       <div className="flex items-start gap-3">
-        <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          <Sparkles className="h-4 w-4 animate-breathing" />
+        </div>
         <div className="flex-1">
-          <p className="font-semibold text-sm">Suggested study schedule</p>
+          <h3 className="text-base">Stay on track</h3>
           <p className="text-xs text-muted-foreground">
             Based on what's due this week, here's a plan you can add to your calendar.
           </p>
           <ul className="mt-2 space-y-1 text-sm">
-            {blocks.slice(0, 5).map((b, i) => (
+            {blocks.slice(0, 4).map((b, i) => (
               <li key={i} className="flex items-center gap-2">
-                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-medium">{format(parseISO(b.start_at), "EEE p")}</span>
+                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="font-medium shrink-0">{format(parseISO(b.start_at), "EEE p")}</span>
                 <span className="text-muted-foreground truncate">— {b.title}</span>
               </li>
             ))}
-            {blocks.length > 5 && (
-              <li className="text-xs text-muted-foreground">+{blocks.length - 5} more</li>
+            {blocks.length > 4 && (
+              <li className="text-xs text-muted-foreground">+{blocks.length - 4} more</li>
             )}
           </ul>
           <div className="flex gap-2 mt-3">

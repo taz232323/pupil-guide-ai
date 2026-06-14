@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, MessageSquare, Megaphone, UsersRound, Search, X } from "lucide-react";
+import { Send, MessageSquare, Megaphone, UsersRound, Search, X, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,7 @@ type Message = {
   group_id: string | null;
   is_broadcast: boolean;
   broadcast_id: string | null;
+  sender_role: string | null;
 };
 
 type Conversation = {
@@ -53,6 +54,7 @@ type Conversation = {
   lastPreview?: string;
   /** "teacher" or "student" — the other party for DMs (used for student tabs) */
   otherRole?: "teacher" | "student";
+  isParentThread?: boolean;
 };
 
 export const Messages = () => {
@@ -188,11 +190,11 @@ export const Messages = () => {
       // Last messages — only those visible to me (sender or recipient or group member)
       if (classIds.length || groupIds.length) {
         let q = supabase.from("messages")
-          .select("class_id, sender_id, recipient_id, body, created_at, group_id, is_broadcast, broadcast_id")
+          .select("class_id, sender_id, recipient_id, body, created_at, group_id, is_broadcast, broadcast_id, sender_role")
           .order("created_at", { ascending: false }).limit(800);
         if (classIds.length) q = q.in("class_id", classIds);
         const { data: recent } = await q;
-        const lastByKey = new Map<string, { at: string; preview: string }>();
+        const lastByKey = new Map<string, { at: string; preview: string; isParent: boolean }>();
         (recent ?? []).forEach((m: any) => {
           const ks: string[] = [];
           if (m.group_id) {
@@ -202,11 +204,23 @@ export const Messages = () => {
             if (m.sender_id === user.id && m.recipient_id) ks.push(`dm:${m.class_id}:${m.recipient_id}`);
             if (m.recipient_id === user.id) ks.push(`dm:${m.class_id}:${m.sender_id}`);
           }
-          ks.forEach((k) => { if (!lastByKey.has(k)) lastByKey.set(k, { at: m.created_at, preview: m.body }); });
+          ks.forEach((k) => {
+            if (!lastByKey.has(k)) {
+              lastByKey.set(k, {
+                at: m.created_at,
+                preview: m.body,
+                isParent: m.sender_role === "parent",
+              });
+            }
+          });
         });
         convs.forEach((c) => {
           const l = lastByKey.get(c.key);
-          if (l) { c.lastAt = l.at; c.lastPreview = l.preview; }
+          if (l) {
+            c.lastAt = l.at;
+            c.lastPreview = l.preview;
+            c.isParentThread = l.isParent;
+          }
         });
       }
 
@@ -248,7 +262,7 @@ export const Messages = () => {
       const { data, error } = await q;
       if (error) { toast.error(error.message); return; }
       if (cancel) return;
-      setThread((data ?? []) as Message[]);
+      setThread((data ?? []) as unknown as Message[]);
 
       // Mark received messages as read (best-effort; bumps unread badge down)
       const unreadIds = (data ?? [])
@@ -287,6 +301,7 @@ export const Messages = () => {
       class_id: active.classId,
       sender_id: user.id,
       body: text,
+      sender_role: role === "teacher" ? "teacher" : "student",
     };
     if (active.kind === "group") {
       payload.group_id = active.groupId;
@@ -333,7 +348,11 @@ export const Messages = () => {
   const broadcastView = role === "teacher" && active?.kind === "dm" &&
     thread.some((m) => m.is_broadcast && m.sender_id === user?.id);
 
-  const renderConvItem = (c: Conversation) => (
+  const renderConvItem = (c: Conversation) => {
+    const parentThread = role === "teacher" && c.isParentThread && c.kind === "dm";
+    const displayLabel = parentThread ? `Parent of ${c.label}` : c.label;
+
+    return (
     <button
       key={c.key}
       onClick={() => setActive(c)}
@@ -349,12 +368,17 @@ export const Messages = () => {
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium truncate">{c.label}</span>
+            <span className="text-sm font-medium truncate">{displayLabel}</span>
             {c.kind === "group" && (
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Group</Badge>
             )}
             {c.otherRole === "teacher" && (
               <Badge variant="outline" className="text-[9px] px-1.5 py-0">Teacher</Badge>
+            )}
+            {parentThread && (
+              <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5">
+                <UserRound className="h-2.5 w-2.5" /> Parent
+              </Badge>
             )}
           </div>
           <p className="text-[10px] text-muted-foreground truncate">{c.className}</p>
@@ -364,7 +388,8 @@ export const Messages = () => {
         </div>
       </div>
     </button>
-  );
+    );
+  };
 
   // Left pane content varies by role
   const renderLeftPane = () => {
@@ -488,6 +513,14 @@ export const Messages = () => {
                     : "Select a conversation to start messaging."}
                 </div>
               ) : (
+                (() => {
+                  const parentThread = role === "teacher" && active.kind === "dm" &&
+                    (active.isParentThread || thread.some((m) => m.sender_role === "parent"));
+                  const activeTitle = parentThread
+                    ? `Parent of ${nameOf(active.participantIds[0])}`
+                    : active.label;
+
+                  return (
                 <>
                   <div className="px-4 py-2 border-b border-border flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
@@ -500,7 +533,12 @@ export const Messages = () => {
                       )}
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate flex items-center gap-2">
-                          {active.label}
+                          {activeTitle}
+                          {parentThread && (
+                            <Badge variant="outline" className="gap-1">
+                              <UserRound className="h-3 w-3" /> Parent
+                            </Badge>
+                          )}
                           {broadcastView && (
                             <Badge variant="secondary" className="gap-1">
                               <Megaphone className="h-3 w-3" /> Broadcast
@@ -521,6 +559,7 @@ export const Messages = () => {
                       thread.map((m) => {
                         const mine = m.sender_id === user?.id;
                         const showBroadcastBadge = role === "teacher" && m.is_broadcast && m.sender_id === user?.id;
+                        const showParentBadge = role === "teacher" && m.sender_role === "parent";
                         return (
                           <div key={m.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
                             {!mine && (
@@ -529,6 +568,11 @@ export const Messages = () => {
                             <div className={`max-w-[75%] rounded-lg px-3 py-2 ${mine ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
                               {active.kind === "group" && !mine && (
                                 <p className="text-[10px] opacity-70 mb-0.5">{nameOf(m.sender_id)}</p>
+                              )}
+                              {showParentBadge && (
+                                <p className="mb-1 inline-flex items-center gap-1 rounded-full border border-current/20 px-1.5 py-0.5 text-[10px] opacity-80">
+                                  <UserRound className="h-2.5 w-2.5" /> Parent of {nameOf(m.sender_id)}
+                                </p>
                               )}
                               <p className="text-sm whitespace-pre-wrap break-words">{m.body}</p>
                               <div className="flex items-center gap-2 mt-1">
@@ -567,6 +611,8 @@ export const Messages = () => {
                     </p>
                   </form>
                 </>
+                  );
+                })()
               )}
             </div>
           </div>
@@ -764,8 +810,9 @@ const BroadcastDialog = ({
       body: msg.trim(),
       is_broadcast: true,
       broadcast_id: broadcastId,
+      sender_role: "teacher",
     }));
-    const { error } = await supabase.from("messages").insert(rows);
+    const { error } = await (supabase as any).from("messages").insert(rows);
     setSending(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`Broadcast sent to ${deliveries.length} student${deliveries.length === 1 ? "" : "s"}`);

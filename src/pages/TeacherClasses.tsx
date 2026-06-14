@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Plus, Copy, Users, Trash2, BookOpen } from "lucide-react";
+import { Plus, Copy, Users, Trash2, BookOpen, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,17 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconButton } from "@/components/IconButton";
 import { RowListSkeleton } from "@/components/Skeletons";
 import { RelativeTime } from "@/components/RelativeTime";
+import { Reveal } from "@/components/Reveal";
+import { CountUp } from "@/components/CountUp";
+import { MountainSketch } from "@/components/MountainSketch";
+import { cn } from "@/lib/utils";
+
+const TILE = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+] as const;
 
 type ClassRow = {
   id: string;
@@ -136,7 +147,11 @@ export const TeacherClasses = () => {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="relative overflow-hidden flex flex-row items-center justify-between">
+        <MountainSketch
+          variant="range"
+          className="pointer-events-none absolute -top-4 right-0 hidden sm:block w-64 text-muted-foreground/30"
+        />
         <CardTitle className="text-base">My classes</CardTitle>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -177,39 +192,52 @@ export const TeacherClasses = () => {
             description="Create your first class to invite students and post assignments."
           />
         ) : (
-          <div className="divide-y divide-border">
-            {classes.map((c) => (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {classes.map((c, i) => (
+              <Reveal key={c.id} delay={i * 60} flip>
               <div
-                key={c.id}
                 role="button"
                 tabIndex={0}
                 onClick={() => navigate(`/teacher/classes/${c.id}`)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(`/teacher/classes/${c.id}`); }}
-                className="py-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-md transition-colors"
+                className="group relative flex h-full flex-col gap-4 cursor-pointer overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-card hover-lift transition-spring"
               >
-                <div className="min-w-0 pointer-events-none">
-                  <p className="font-medium truncate">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.subject} · created <RelativeTime date={c.created_at} />
-                  </p>
+                <div className="pointer-events-none flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className={cn("inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl", TILE[i % 4])}>
+                      <BookOpen className="h-6 w-6" />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-base font-semibold leading-tight">{c.name}</h3>
+                      <p className="mt-0.5 text-xs text-muted-foreground truncate">
+                        {c.subject} · created <RelativeTime date={c.created_at} />
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </div>
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" />{c.member_count}
+
+                <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/60 pt-3" onClick={(e) => e.stopPropagation()}>
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-tabular">
+                    <Users className="h-3.5 w-3.5" /><CountUp value={c.member_count ?? 0} /> students
                   </span>
-                  <button
-                    onClick={() => copyCode(c.join_code)}
-                    className="font-mono text-xs px-2 py-1 rounded bg-secondary hover:bg-accent inline-flex items-center gap-1.5"
-                    aria-label={`Copy join code ${c.join_code}`}
-                  >
-                    {c.join_code}
-                    <Copy className="h-3 w-3" />
-                  </button>
-                  <IconButton label="Delete class" onClick={() => setToDelete(c)}>
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </IconButton>
+                  <div className="flex items-center gap-1.5">
+                    <span className="hidden text-[10px] uppercase tracking-wide text-muted-foreground sm:inline">Join code</span>
+                    <button
+                      onClick={() => copyCode(c.join_code)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-2 py-1 font-mono text-xs transition-spring hover:bg-accent"
+                      aria-label={`Copy join code ${c.join_code}`}
+                    >
+                      {c.join_code}
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    <IconButton label="Delete class" onClick={() => setToDelete(c)}>
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </IconButton>
+                  </div>
                 </div>
               </div>
+              </Reveal>
             ))}
           </div>
         )}

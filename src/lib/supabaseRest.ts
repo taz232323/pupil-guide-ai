@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/config";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+const supabaseUrl = SUPABASE_URL;
+const supabasePublishableKey = SUPABASE_PUBLISHABLE_KEY;
 
 type CreateClassPayload = {
   teacherId: string;

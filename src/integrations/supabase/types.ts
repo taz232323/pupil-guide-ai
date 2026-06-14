@@ -1321,6 +1321,13 @@ export type Database = {
           title: string
         }[]
       }
+      get_student_streaks: {
+        Args: { _student_ids: string[] }
+        Returns: {
+          current_streak: number
+          student_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

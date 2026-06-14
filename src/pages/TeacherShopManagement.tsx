@@ -9,13 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Star, Crown, Sparkles, ShieldCheck, Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Star, Crown, Sparkles, ShieldCheck, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { TeacherPrivilegeRequests } from "./TeacherPrivilegeRequests";
 import { SpinnerButton } from "@/components/SpinnerButton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { IconButton } from "@/components/IconButton";
 import { ShopGridSkeleton } from "@/components/Skeletons";
+import { MountainSketch } from "@/components/MountainSketch";
 
 type Kind = "cosmetic" | "privilege";
 type Currency = "star" | "crown";
@@ -44,6 +46,14 @@ const empty = (): ShopItem => ({
 
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60);
+
+// Soft pastel subject-tile backgrounds, cycling by index.
+const TILE_STYLES = [
+  "bg-primary-soft text-primary",
+  "bg-success-soft text-success",
+  "bg-plum-soft text-plum",
+  "bg-warning-soft text-warning",
+];
 
 function ItemForm({
   initial,
@@ -214,6 +224,13 @@ export function TeacherShopManagement() {
     load();
   };
 
+  // Pointer-follow holographic sheen for shop tiles.
+  const onTileMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
+  };
+
   const renderList = (kind: Kind) => {
     const list = items.filter((i) => i.kind === kind);
     if (loading) return <ShopGridSkeleton count={4} />;
@@ -221,20 +238,38 @@ export function TeacherShopManagement() {
       return <p className="text-sm text-muted-foreground">No {kind} items yet. Add one to get started.</p>;
     return (
       <div className="grid gap-3 sm:grid-cols-2">
-        {list.map((it) => (
-          <div key={it.item_key} className="rounded-lg border border-border p-4 flex flex-col gap-3">
+        {list.map((it, idx) => (
+          <div
+            key={it.item_key}
+            onMouseMove={onTileMove}
+            className="holo-card hover-lift rounded-2xl border border-border bg-card p-4 flex flex-col gap-3 shadow-card"
+          >
             <div className="flex items-start gap-3">
-              <div className="h-12 w-12 rounded-md bg-muted inline-flex items-center justify-center text-2xl shrink-0">{it.emoji}</div>
+              <div className={cn(
+                "h-12 w-12 rounded-xl inline-flex items-center justify-center text-2xl shrink-0",
+                TILE_STYLES[idx % TILE_STYLES.length]
+              )}>{it.emoji}</div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{it.item_name}</div>
-                <div className="text-xs text-muted-foreground line-clamp-2">{it.description || "No description"}</div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium truncate">{it.item_name}</span>
+                  <span className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    it.kind === "cosmetic" ? "bg-primary-soft text-primary" : "bg-plum-soft text-plum"
+                  )}>
+                    {it.kind === "cosmetic" ? "Cosmetic" : "Privilege"}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{it.description || "No description"}</div>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1 text-sm font-medium">
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-semibold font-tabular",
+                it.currency === "star" ? "bg-gold-soft text-gold" : "bg-plum-soft text-plum"
+              )}>
                 {it.currency === "star"
-                  ? <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                  : <Crown className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                  ? <Star className="h-4 w-4 text-gold fill-gold" />
+                  : <Crown className="h-4 w-4 text-plum fill-plum" />}
                 {it.cost}
               </span>
               <div className="flex gap-2">
@@ -254,11 +289,12 @@ export function TeacherShopManagement() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="relative overflow-hidden">
+        <MountainSketch variant="range" className="pointer-events-none absolute -top-4 right-0 hidden sm:block w-64 text-muted-foreground/30" />
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <CardTitle className="text-base">Shop management</CardTitle>
+              <CardTitle>Shop management</CardTitle>
               <CardDescription>Edit, add, or remove items students can buy with their coins.</CardDescription>
             </div>
           </div>

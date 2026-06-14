@@ -23,6 +23,7 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
           soft: "hsl(var(--primary-soft))",
+          deep: "hsl(var(--primary-deep))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -32,6 +33,14 @@ export default {
           DEFAULT: "hsl(var(--teal))",
           foreground: "hsl(var(--teal-foreground))",
           soft: "hsl(var(--teal-soft))",
+        },
+        plum: {
+          DEFAULT: "hsl(var(--plum))",
+          soft: "hsl(var(--plum-soft))",
+        },
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          soft: "hsl(var(--gold-soft))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
@@ -108,6 +117,26 @@ export default {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "modal-in": {
+          "0%": { opacity: "0", transform: "scale(0.92)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "modal-out": {
+          "0%": { opacity: "1", transform: "scale(1)" },
+          "100%": { opacity: "0", transform: "scale(0.96)" },
+        },
+        "drawer-in": {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "drawer-out": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+        "backdrop-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -115,6 +144,11 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
         shimmer: "shimmer 1.6s linear infinite",
+        "modal-in": "modal-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "modal-out": "modal-out 0.176s ease-in",
+        "drawer-in": "drawer-in 0.28s ease-out",
+        "drawer-out": "drawer-out 0.224s ease-in",
+        "backdrop-in": "backdrop-in 0.2s ease-out",
       },
     },
   },

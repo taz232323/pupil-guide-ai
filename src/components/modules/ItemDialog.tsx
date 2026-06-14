@@ -144,21 +144,21 @@ export function ItemDialog({
           </div>
 
           {(type === "lesson" || type === "announcement") && (
-            <div className="space-y-2">
+            <div key={type} className="space-y-2 animate-fade-up">
               <Label>Content</Label>
               <RichEditor value={content} onChange={setContent} placeholder={type === "lesson" ? "Write the lesson..." : "Write the announcement..."} />
             </div>
           )}
 
           {type === "link" && (
-            <div className="space-y-2">
+            <div className="space-y-2 animate-fade-up">
               <Label htmlFor="it-url">URL</Label>
               <Input id="it-url" type="url" placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} required />
             </div>
           )}
 
           {type === "file" && (
-            <div className="space-y-2">
+            <div className="space-y-2 animate-fade-up">
               <Label htmlFor="it-file">File</Label>
               <Input id="it-file" type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               {existingFile && !file && (
@@ -168,7 +168,7 @@ export function ItemDialog({
           )}
 
           {type === "assignment" && (
-            <div className="space-y-2">
+            <div className="space-y-2 animate-fade-up">
               <Label>Assignment</Label>
               <Select value={assignmentId} onValueChange={setAssignmentId}>
                 <SelectTrigger><SelectValue placeholder="Pick an assignment" /></SelectTrigger>

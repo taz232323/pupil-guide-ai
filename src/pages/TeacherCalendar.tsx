@@ -23,6 +23,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { classColor, isOverdue } from "@/lib/calendar";
+import { MountainSketch } from "@/components/MountainSketch";
+import { ProgressRing } from "@/components/ProgressRing";
+import { CountUp } from "@/components/CountUp";
 
 type TAssignment = {
   id: string; title: string; class_id: string; class_name: string;
@@ -159,6 +162,18 @@ export default function TeacherCalendar() {
     [assignments]
   );
 
+  // Workload donut: assignments due within the visible month vs total scheduled.
+  const workload = useMemo(() => {
+    const monthStart = startOfMonth(cursor);
+    const monthEnd = endOfMonth(cursor);
+    const scheduled = assignments.filter(a => a.due_date);
+    const inMonth = scheduled.filter(a => {
+      const d = parseISO(a.due_date!);
+      return d >= monthStart && d <= monthEnd;
+    }).length;
+    return { inMonth, total: scheduled.length };
+  }, [assignments, cursor]);
+
   const saveReminder = async (r: Partial<Reminder>) => {
     if (!user || !r.title || !r.start_at) return;
     if (r.id) {
@@ -200,6 +215,11 @@ export default function TeacherCalendar() {
 
   return (
     <DashboardShell title="Calendar" subtitle="Plan ahead and stay on top of grading.">
+      {/* Header accent */}
+      <div className="relative overflow-hidden -mt-2 mb-2">
+        <MountainSketch variant="range" className="pointer-events-none absolute -top-6 right-0 hidden sm:block w-56 text-muted-foreground/30" />
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <Tabs value={view} onValueChange={(v) => setView(v as any)}>
@@ -230,11 +250,11 @@ export default function TeacherCalendar() {
 
       {/* Legend */}
       {classes.length > 0 && view !== "heatmap" && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4 stagger-children">
           {classes.map(c => {
             const col = classColor(c.id);
             return (
-              <span key={c.id} className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border"
+              <span key={c.id} className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-transform hover:scale-105"
                 style={{ borderColor: col.border, color: col.fg, background: col.bg }}>
                 <span className="h-2 w-2 rounded-full" style={{ background: col.border }} />
                 {c.name}
@@ -244,34 +264,9 @@ export default function TeacherCalendar() {
         </div>
       )}
 
-      {/* Upcoming deadlines */}
-      {upcoming.length > 0 && (
-        <Card className="p-3 mb-4">
-          <p className="text-sm font-semibold mb-2">Upcoming deadlines</p>
-          <ul className="space-y-1.5">
-            {upcoming.map(a => {
-              const col = classColor(a.class_id);
-              return (
-                <li key={a.id} className="flex items-center gap-2 text-sm">
-                  <span className="h-2 w-2 rounded-full" style={{ background: col.border }} />
-                  <Link to={`/teacher/assignments/${a.id}`} className="font-medium hover:underline truncate">{a.title}</Link>
-                  <span className="text-xs text-muted-foreground truncate">· {a.class_name}</span>
-                  <Badge variant="secondary" className="ml-auto shrink-0">
-                    {a.submitted_count}/{a.total_students} submitted
-                  </Badge>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {format(parseISO(a.due_date!), "MMM d")}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      )}
-
       {/* Overdue */}
       {overdue.length > 0 && (
-        <Card className="p-3 mb-4 border-destructive/40 bg-destructive/5">
+        <Card className="p-3 mb-4 border-destructive/40 bg-destructive/5 attention-pulse">
           <p className="text-sm font-semibold text-destructive mb-2">Overdue with missing submissions ({overdue.length})</p>
           <ul className="space-y-1.5">
             {overdue.map(a => (
@@ -287,8 +282,8 @@ export default function TeacherCalendar() {
         </Card>
       )}
 
-      {/* Two-column layout: calendar + grading queue */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+      {/* Two-column layout: calendar + right rail */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
         <div>
           {view === "month" && <MonthGrid cursor={cursor} dayItems={dayItems} onDayClick={setOpenDay}
             onScheduleDay={(d) => setScheduleAsg({ date: d })} />}
@@ -298,7 +293,75 @@ export default function TeacherCalendar() {
             draggingId={draggingId} setDraggingId={setDraggingId}
             onReschedule={rescheduleAssignment} />}
         </div>
-        <GradingQueue items={gradingQueue} />
+
+        {/* Right rail */}
+        <div className="space-y-4">
+          {/* Workload donut */}
+          <Card className="p-4 hover-lift">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base">Workload</h2>
+              <span className="text-xs text-muted-foreground">{format(cursor, "MMMM")}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <ProgressRing
+                value={workload.total > 0 ? Math.round((workload.inMonth / workload.total) * 100) : 0}
+                size={92}
+                strokeWidth={9}
+              >
+                <span className="font-tabular text-2xl font-bold leading-none">
+                  <CountUp value={workload.inMonth} />
+                </span>
+              </ProgressRing>
+              <div className="text-sm">
+                <p className="font-medium">Due this month</p>
+                <p className="text-xs text-muted-foreground">
+                  {workload.total} scheduled in total
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Upcoming schedule */}
+          {upcoming.length > 0 && (
+            <Card className="p-4 hover-lift">
+              <h2 className="text-base mb-2">Upcoming schedule</h2>
+              <ul className="space-y-2">
+                {upcoming.map(a => {
+                  const col = classColor(a.class_id);
+                  return (
+                    <li key={a.id} className="flex items-center gap-2 text-sm">
+                      <span className="h-2 w-2 rounded-full shrink-0" style={{ background: col.border }} />
+                      <Link to={`/teacher/assignments/${a.id}`} className="font-medium hover:underline truncate flex-1">{a.title}</Link>
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        {format(parseISO(a.due_date!), "MMM d")}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          )}
+
+          <GradingQueue items={gradingQueue} />
+
+          {/* Schedule an assignment CTA */}
+          <Card className="p-4 bg-primary-soft border-primary/20">
+            <div className="flex items-start gap-3">
+              <span className="h-9 w-9 rounded-xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+                <CalendarPlus className="h-4 w-4" />
+              </span>
+              <div className="flex-1">
+                <h3 className="text-base">Schedule an assignment</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Plan ahead and keep your classes on a steady rhythm.
+                </p>
+                <Button size="sm" onClick={() => setScheduleAsg({ date: new Date() })}>
+                  <Plus className="h-4 w-4 mr-1" /> New assignment
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Day panel */}
@@ -404,7 +467,7 @@ function MonthGrid({ cursor, dayItems, onDayClick, onScheduleDay }: {
       <div className="grid grid-cols-7 text-center text-xs font-medium text-muted-foreground mb-1">
         {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => <div key={d} className="py-1">{d}</div>)}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div key={format(cursor, "yyyy-MM")} className="grid grid-cols-7 gap-1 animate-fade-up">
         {days.map(d => {
           const inMonth = isSameMonth(d, cursor);
           const isToday = isSameDay(d, today);
@@ -413,8 +476,8 @@ function MonthGrid({ cursor, dayItems, onDayClick, onScheduleDay }: {
           const future = d >= new Date(today.toDateString());
           return (
             <div key={d.toISOString()}
-              className={cn("min-h-[90px] rounded-md border p-1.5 relative group transition-colors hover:bg-accent",
-                !inMonth && "opacity-40", isToday && "border-primary bg-primary/5")}>
+              className={cn("min-h-[90px] rounded-md border p-1.5 relative group transition-spring hover:bg-accent hover:-translate-y-0.5",
+                !inMonth && "opacity-40", isToday && "border-primary bg-primary/5 today-pulse-ring")}>
               <button onClick={() => onDayClick(d)} className="block w-full text-left">
                 <div className={cn("text-xs font-semibold mb-1", isToday && "text-primary")}>{format(d, "d")}</div>
                 <div className="space-y-0.5">
@@ -425,7 +488,7 @@ function MonthGrid({ cursor, dayItems, onDayClick, onScheduleDay }: {
                     const overdueStyle = past && missing;
                     return (
                       <div key={a.id}
-                        className="text-[10px] truncate rounded px-1 py-0.5 border"
+                        className="text-[10px] truncate rounded px-1 py-0.5 border origin-left transition-transform hover:scale-105"
                         style={overdueStyle
                           ? { background: "hsl(var(--destructive) / 0.1)", color: "hsl(var(--destructive))", borderColor: "hsl(var(--destructive) / 0.4)" }
                           : { background: col.bg, color: col.fg, borderColor: col.border }}>
@@ -434,7 +497,7 @@ function MonthGrid({ cursor, dayItems, onDayClick, onScheduleDay }: {
                     );
                   })}
                   {data.reminders.slice(0, 2).map(r => (
-                    <div key={r.id} className="text-[10px] truncate rounded px-1 py-0.5 border border-dashed text-muted-foreground">
+                    <div key={r.id} className="text-[10px] truncate rounded px-1 py-0.5 border border-dashed text-muted-foreground origin-left transition-transform hover:scale-105">
                       📌 {r.title}
                     </div>
                   ))}
@@ -467,12 +530,12 @@ function WeekGrid({ cursor, dayItems }: {
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   const today = new Date();
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
+    <div key={format(cursor, "yyyy-MM-dd")} className="grid grid-cols-1 sm:grid-cols-7 gap-2 animate-fade-up">
       {days.map(d => {
         const data = dayItems.get(format(d, "yyyy-MM-dd")) ?? { assignments: [], reminders: [] };
         const isToday = isSameDay(d, today);
         return (
-          <Card key={d.toISOString()} className={cn("p-2 min-h-[200px]", isToday && "border-primary")}>
+          <Card key={d.toISOString()} className={cn("p-2 min-h-[200px] transition-spring", isToday && "border-primary today-pulse-ring")}>
             <div className={cn("text-xs font-semibold mb-2", isToday && "text-primary")}>{format(d, "EEE d")}</div>
             <div className="space-y-1.5">
               {data.assignments.length === 0 && data.reminders.length === 0 && (
@@ -482,7 +545,7 @@ function WeekGrid({ cursor, dayItems }: {
                 const col = classColor(a.class_id);
                 return (
                   <Link key={a.id} to={`/teacher/assignments/${a.id}`}
-                    className="block rounded-md border p-2"
+                    className="block rounded-md border p-2 transition-transform hover:scale-[1.02]"
                     style={{ background: col.bg, borderColor: col.border }}>
                     <p className="text-xs font-medium truncate" style={{ color: col.fg }}>{a.title}</p>
                     <p className="text-[10px] truncate" style={{ color: col.fg, opacity: 0.85 }}>
@@ -522,14 +585,14 @@ function Heatmap({ cursor, assignments }: { cursor: Date; assignments: TAssignme
   return (
     <Card className="p-3">
       <div className="flex items-center gap-2 mb-2">
-        <Flame className="h-4 w-4 text-primary" />
+        <Flame className="h-4 w-4 text-primary animate-flame-pulse" />
         <p className="text-sm font-semibold">Class load heatmap</p>
         <p className="text-xs text-muted-foreground">Darker days = more assignments due across all classes.</p>
       </div>
       <div className="grid grid-cols-7 text-center text-xs font-medium text-muted-foreground mb-1">
         {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => <div key={d} className="py-1">{d}</div>)}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div key={format(cursor, "yyyy-MM")} className="grid grid-cols-7 gap-1 animate-fade-up">
         {days.map(d => {
           const k = format(d, "yyyy-MM-dd");
           const n = counts.get(k) ?? 0;
@@ -538,10 +601,10 @@ function Heatmap({ cursor, assignments }: { cursor: Date; assignments: TAssignme
           const isToday = isSameDay(d, today);
           return (
             <div key={d.toISOString()}
-              className={cn("min-h-[60px] rounded-md border p-1.5 text-xs", !inMonth && "opacity-40", isToday && "ring-2 ring-primary")}
+              className={cn("min-h-[60px] rounded-md border p-1.5 text-xs transition-transform hover:scale-105", !inMonth && "opacity-40", isToday && "today-pulse-ring")}
               style={{ background: `hsl(var(--primary) / ${intensity})` }}>
               <div className="font-semibold">{format(d, "d")}</div>
-              {n > 0 && <div className={cn("mt-1 font-bold", intensity > 0.4 ? "text-primary-foreground" : "text-primary")}>{n}</div>}
+              {n > 0 && <div className={cn("mt-1 font-bold font-tabular", intensity > 0.4 ? "text-primary-foreground" : "text-primary")}>{n}</div>}
             </div>
           );
         })}
@@ -586,7 +649,7 @@ function PlanningGrid({ cursor, assignments, draggingId, setDraggingId, onResche
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => { if (draggingId) { onReschedule(draggingId, d); setDraggingId(null); } }}
               className={cn("min-h-[200px] rounded-md border p-2 transition-colors",
-                isToday && "border-primary",
+                isToday && "border-primary today-pulse-ring",
                 draggingId && "border-dashed bg-accent/50")}>
               <p className={cn("text-xs font-semibold mb-2", isToday && "text-primary")}>{format(d, "EEE d")}</p>
               <div className="space-y-1.5">
@@ -616,22 +679,22 @@ function PlanningGrid({ cursor, assignments, draggingId, setDraggingId, onResche
 /* ============ Grading Queue ============ */
 function GradingQueue({ items }: { items: { id: string; assignment_id: string; assignment_title: string; class_name: string; class_id: string; student_name: string; submitted_at: string }[] }) {
   return (
-    <Card className="p-3 h-fit lg:sticky lg:top-20">
+    <Card className={cn("p-4 h-fit", items.length > 0 && "grading-shimmer")}>
       <div className="flex items-center gap-2 mb-2">
         <ListChecks className="h-4 w-4 text-primary" />
         <p className="text-sm font-semibold">Grading queue</p>
-        <Badge variant="secondary" className="ml-auto">{items.length}</Badge>
+        <Badge variant="secondary" className="ml-auto font-tabular">{items.length}</Badge>
       </div>
       {items.length === 0 ? (
         <p className="text-xs text-muted-foreground">All caught up. ✨</p>
       ) : (
-        <ul className="space-y-1.5 max-h-[500px] overflow-y-auto">
+        <ul className="space-y-1.5 max-h-[500px] overflow-y-auto stagger-children">
           {items.slice(0, 30).map(it => {
             const col = classColor(it.class_id);
             return (
               <li key={it.id}>
                 <Link to={`/teacher/assignments/${it.assignment_id}`}
-                  className="block rounded-md border p-2 hover:bg-accent transition-colors">
+                  className="block rounded-md border p-2 hover:bg-accent hover:translate-x-0.5 transition-spring">
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ background: col.border }} />
                     <p className="text-xs font-medium truncate flex-1">{it.assignment_title}</p>
