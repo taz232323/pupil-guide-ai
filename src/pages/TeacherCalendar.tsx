@@ -6,7 +6,7 @@ import {
 } from "date-fns";
 import {
   ChevronLeft, ChevronRight, Plus, ListChecks, Sparkles, Trash2, ExternalLink,
-  Flame, CalendarPlus,
+  Flame, CalendarPlus, LinkIcon,
 } from "lucide-react";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -26,6 +30,17 @@ import { classColor, isOverdue } from "@/lib/calendar";
 import { MountainSketch } from "@/components/MountainSketch";
 import { ProgressRing } from "@/components/ProgressRing";
 import { CountUp } from "@/components/CountUp";
+import {
+  ASSIGNMENT_TYPES,
+  DEFAULT_ASSIGNMENT_TYPE,
+  DEFAULT_RESOURCE_KIND,
+  RESOURCE_KINDS,
+  type AssignmentType,
+  type ResourceKind,
+  type ResourceLink,
+  getResourceKindMeta,
+  normalizeResourceLinks,
+} from "@/lib/assignmentMetadata";
 
 type TAssignment = {
   id: string; title: string; class_id: string; class_name: string;
@@ -36,10 +51,22 @@ type Reminder = {
   start_at: string; duration_minutes: number; kind: string;
 };
 type Submission = { id: string; assignment_id: string; student_id: string; submitted_at: string; graded: boolean };
+type CalendarView = "month" | "week" | "heatmap" | "planning";
+type ClassRow = { id: string; name: string };
+type ClassMemberRow = { class_id: string };
+type AssignmentCalendarRow = {
+  id: string;
+  title: string;
+  class_id: string;
+  due_date: string | null;
+  classes?: { name: string | null } | null;
+};
+type GradeKeyRow = { assignment_id: string; student_id: string };
+type ProfileRow = { id: string; full_name: string | null };
 
 export default function TeacherCalendar() {
   const { user } = useAuth();
-  const [view, setView] = useState<"month" | "week" | "heatmap" | "planning">("month");
+  const [view, setView] = useState<CalendarView>("month");
   const [cursor, setCursor] = useState(new Date());
   const [classes, setClasses] = useState<{ id: string; name: string; member_count: number }[]>([]);
   const [assignments, setAssignments] = useState<TAssignment[]>([]);
@@ -59,7 +86,7 @@ export default function TeacherCalendar() {
     const memberCounts = new Map<string, number>();
     if (classList.length > 0) {
       const { data: members } = await supabase.from("class_members").select("class_id").in("class_id", classList.map(c => c.id));
-      (members ?? []).forEach((m: any) => memberCounts.set(m.class_id, (memberCounts.get(m.class_id) ?? 0) + 1));
+      ((members ?? []) as ClassMemberRow[]).forEach((m) => memberCounts.set(m.class_id, (memberCounts.get(m.class_id) ?? 0) + 1));
     }
     setClasses(classList.map(c => ({ ...c, member_count: memberCounts.get(c.id) ?? 0 })));
 
@@ -67,17 +94,17 @@ export default function TeacherCalendar() {
     const { data: asgs } = await supabase
       .from("assignments").select("id, title, class_id, due_date, classes(name)")
       .eq("teacher_id", user.id);
-    const baseAsgs = (asgs ?? []) as any[];
+    const baseAsgs = (asgs ?? []) as AssignmentCalendarRow[];
 
     // Submissions for these assignments
     const asgIds = baseAsgs.map(a => a.id);
-    let subs: any[] = [];
+    let subs: Submission[] = [];
     if (asgIds.length > 0) {
       const { data } = await supabase.from("submissions")
         .select("id, assignment_id, student_id, submitted_at").in("assignment_id", asgIds);
-      subs = data ?? [];
+      subs = (data ?? []) as Submission[];
     }
-    const submissionsByAsg = new Map<string, any[]>();
+    const submissionsByAsg = new Map<string, Submission[]>();
     subs.forEach(s => {
       if (!submissionsByAsg.has(s.assignment_id)) submissionsByAsg.set(s.assignment_id, []);
       submissionsByAsg.get(s.assignment_id)!.push(s);
@@ -94,10 +121,10 @@ export default function TeacherCalendar() {
     if (subs.length > 0) {
       const { data: grades } = await supabase.from("assignment_grades")
         .select("assignment_id, student_id").in("assignment_id", asgIds);
-      const gradedKeys = new Set((grades ?? []).map((g: any) => `${g.assignment_id}:${g.student_id}`));
+      const gradedKeys = new Set(((grades ?? []) as GradeKeyRow[]).map((g) => `${g.assignment_id}:${g.student_id}`));
       const studentIds = Array.from(new Set(subs.map(s => s.student_id)));
       const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", studentIds);
-      const nameById = new Map((profs ?? []).map((p: any) => [p.id, p.full_name || "Student"]));
+      const nameById = new Map(((profs ?? []) as ProfileRow[]).map((p) => [p.id, p.full_name || "Student"]));
       const asgById = new Map(baseAsgs.map(a => [a.id, a]));
       const queue = subs
         .filter(s => !gradedKeys.has(`${s.assignment_id}:${s.student_id}`))
@@ -222,7 +249,7 @@ export default function TeacherCalendar() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Tabs value={view} onValueChange={(v) => setView(v as any)}>
+        <Tabs value={view} onValueChange={(v) => setView(v as CalendarView)}>
           <TabsList>
             <TabsTrigger value="month">Month</TabsTrigger>
             <TabsTrigger value="week">Week</TabsTrigger>
@@ -786,14 +813,27 @@ function ScheduleAssignmentDialog({ value, classes, onClose, onCreated }: {
   onCreated: () => void;
 }) {
   const [title, setTitle] = useState("");
+  const [assignmentType, setAssignmentType] = useState<AssignmentType>(DEFAULT_ASSIGNMENT_TYPE);
   const [classId, setClassId] = useState("");
+  const [description, setDescription] = useState("");
+  const [unitTag, setUnitTag] = useState("");
+  const [materialNotes, setMaterialNotes] = useState("");
+  const [resourceLinks, setResourceLinks] = useState<ResourceLink[]>([]);
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("23:59");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!value) return;
-    setTitle(""); setClassId(classes[0]?.id ?? "");
+    setTitle("");
+    setAssignmentType(DEFAULT_ASSIGNMENT_TYPE);
+    setClassId(classes[0]?.id ?? "");
+    setDescription("");
+    setUnitTag("");
+    setMaterialNotes("");
+    setResourceLinks([]);
+    setRemindersEnabled(true);
     setDate(format(value.date, "yyyy-MM-dd"));
     setTime("23:59");
   }, [value, classes]);
@@ -803,12 +843,29 @@ function ScheduleAssignmentDialog({ value, classes, onClose, onCreated }: {
   const submit = async () => {
     if (!title.trim()) return toast.error("Title required");
     if (!classId) return toast.error("Select a class");
+    const resources = normalizeResourceLinks(resourceLinks);
+    for (const resource of resources) {
+      try {
+        const url = new URL(resource.url);
+        if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error();
+      } catch {
+        return toast.error(`Check the URL for "${resource.title}"`);
+      }
+    }
     setSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSubmitting(false); return toast.error("Not signed in"); }
     const due = new Date(`${date}T${time}:00`);
     const { error } = await supabase.from("assignments").insert({
-      class_id: classId, teacher_id: user.id, title: title.trim(),
+      class_id: classId,
+      teacher_id: user.id,
+      assignment_type: assignmentType,
+      title: title.trim(),
+      description: description.trim() || null,
+      unit_tag: unitTag.trim() || null,
+      material_notes: materialNotes.trim() || null,
+      resource_links: resources,
+      reminders_enabled: remindersEnabled,
       due_date: due.toISOString(),
     });
     setSubmitting(false);
@@ -819,7 +876,7 @@ function ScheduleAssignmentDialog({ value, classes, onClose, onCreated }: {
 
   return (
     <Dialog open={!!value} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Schedule new assignment</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>
@@ -833,6 +890,66 @@ function ScheduleAssignmentDialog({ value, classes, onClose, onCreated }: {
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
+          <div className="space-y-2">
+            <Label>Assignment type</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ASSIGNMENT_TYPES.map((type) => {
+                const selected = assignmentType === type.value;
+                return (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setAssignmentType(type.value)}
+                    className={cn(
+                      "flex min-h-[78px] items-start gap-3 rounded-md border bg-card p-3 text-left transition-base hover:border-primary/40 hover:bg-primary-soft/30",
+                      selected && "border-primary bg-primary-soft text-primary"
+                    )}
+                    aria-pressed={selected}
+                  >
+                    <type.icon className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium">{type.label}</span>
+                      <span className={cn("block text-xs leading-relaxed text-muted-foreground", selected && "text-primary/80")}>
+                        {type.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          </div>
+          <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+            <div>
+              <Label>Notes, slides, and class materials</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Add the directions or resources students need before they start.
+              </p>
+            </div>
+            <Textarea
+              rows={3}
+              placeholder="Key notes, slide context, reading directions, or links students should review first."
+              value={materialNotes}
+              onChange={(e) => setMaterialNotes(e.target.value)}
+            />
+            <CalendarResourceLinks resources={resourceLinks} onChange={setResourceLinks} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>Unit tag</Label>
+              <Input value={unitTag} onChange={(e) => setUnitTag(e.target.value)} placeholder="Algebra - Unit 3" />
+            </div>
+            <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
+              <div>
+                <Label className="cursor-pointer">Due-date reminders</Label>
+                <p className="text-xs text-muted-foreground">Notify students before due.</p>
+              </div>
+              <Switch checked={remindersEnabled} onCheckedChange={setRemindersEnabled} />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label>Due date</Label>
@@ -845,7 +962,7 @@ function ScheduleAssignmentDialog({ value, classes, onClose, onCreated }: {
           </div>
           <p className="text-xs text-muted-foreground">
             <Sparkles className="inline h-3 w-3 mr-1" />
-            Add questions and details from the assignment page after creating.
+            Add in-app questions from the assignment page after creating.
           </p>
         </div>
         <DialogFooter>
@@ -854,5 +971,86 @@ function ScheduleAssignmentDialog({ value, classes, onClose, onCreated }: {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CalendarResourceLinks({
+  resources,
+  onChange,
+}: {
+  resources: ResourceLink[];
+  onChange: (resources: ResourceLink[]) => void;
+}) {
+  const addResource = () => onChange([...resources, { title: "", url: "", kind: DEFAULT_RESOURCE_KIND }]);
+
+  const updateResource = (index: number, patch: Partial<ResourceLink>) => {
+    const next = [...resources];
+    next[index] = { ...next[index], ...patch };
+    onChange(next);
+  };
+
+  const removeResource = (index: number) => onChange(resources.filter((_, i) => i !== index));
+
+  return (
+    <div className="space-y-2 pt-1">
+      {resources.map((resource, index) => {
+        const KindIcon = getResourceKindMeta(resource.kind).icon;
+        return (
+          <div key={index} className="grid gap-2 rounded-md border bg-background p-2 sm:grid-cols-[132px_1fr]">
+            <Select
+              value={resource.kind}
+              onValueChange={(value) => updateResource(index, { kind: value as ResourceKind })}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RESOURCE_KINDS.map((kind) => (
+                  <SelectItem key={kind.value} value={kind.value}>
+                    {kind.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="grid gap-2 sm:grid-cols-[1fr_1.25fr_auto]">
+              <div className="relative">
+                <KindIcon className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  aria-label={`Resource ${index + 1} title`}
+                  className="h-9 pl-8"
+                  placeholder="Title"
+                  value={resource.title}
+                  onChange={(e) => updateResource(index, { title: e.target.value })}
+                />
+              </div>
+              <div className="relative">
+                <LinkIcon className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  aria-label={`Resource ${index + 1} URL`}
+                  className="h-9 pl-8"
+                  type="url"
+                  placeholder="https://..."
+                  value={resource.url}
+                  onChange={(e) => updateResource(index, { url: e.target.value })}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 justify-self-end text-destructive hover:text-destructive"
+                aria-label="Remove resource"
+                onClick={() => removeResource(index)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+      <Button type="button" variant="outline" size="sm" onClick={addResource}>
+        <Plus className="h-3.5 w-3.5 mr-1" />Add material link
+      </Button>
+    </div>
   );
 }

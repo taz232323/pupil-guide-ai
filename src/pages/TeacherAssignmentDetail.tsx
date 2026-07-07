@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Tag, CheckCircle2, XCircle, Save, Pencil, BellRing, AlertTriangle, ChevronRight } from "lucide-react";
+import { ArrowLeft, CalendarDays, Tag, CheckCircle2, XCircle, Save, Pencil, BellRing, AlertTriangle, ChevronRight, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { QuestionBuilder, DraftQuestion, validateQuestions } from "@/components/assignments/QuestionBuilder";
 import { Reveal } from "@/components/Reveal";
 import { MountainSketch } from "@/components/MountainSketch";
+import { getAssignmentTypeMeta, getResourceKindMeta, parseResourceLinks } from "@/lib/assignmentMetadata";
 
 type QType = "multiple_choice" | "short_answer" | "long_answer";
 type Question = {
@@ -40,12 +42,27 @@ type Answer = {
   feedback: string | null;
 };
 type Profile = { id: string; full_name: string | null };
+type Assignment = {
+  id: string;
+  class_id: string;
+  assignment_type: string | null;
+  title: string;
+  description: string | null;
+  unit_tag: string | null;
+  due_date: string | null;
+  material_notes: string | null;
+  resource_links: Json | null;
+  reminders_enabled: boolean;
+};
+type SubmissionRow = { student_id: string };
+type ClassMemberRow = { student_id: string };
+type GradeRow = { student_id: string; overall_score: number | null; overall_feedback: string | null };
 
 export default function TeacherAssignmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [assignment, setAssignment] = useState<any>(null);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [className, setClassName] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -66,7 +83,7 @@ export default function TeacherAssignmentDetail() {
     const { data: a, error } = await supabase
       .from("assignments").select("*").eq("id", id).maybeSingle();
     if (error || !a) { toast.error("Not found"); navigate("/teacher/assignments"); return; }
-    setAssignment(a);
+    setAssignment(a as Assignment);
 
     const [{ data: cls }, { data: qs }, { data: ans }, { data: subs }, { data: gr }] = await Promise.all([
       supabase.from("classes").select("name").eq("id", a.class_id).maybeSingle(),
@@ -80,16 +97,16 @@ export default function TeacherAssignmentDetail() {
     setAnswers((ans ?? []) as Answer[]);
 
     const submitted = new Set<string>();
-    (ans ?? []).forEach((r: any) => submitted.add(r.student_id));
-    (subs ?? []).forEach((r: any) => submitted.add(r.student_id));
+    ((ans ?? []) as Answer[]).forEach((r) => submitted.add(r.student_id));
+    ((subs ?? []) as SubmissionRow[]).forEach((r) => submitted.add(r.student_id));
     setSubmittedIds(submitted);
 
     // Build student list from class members + anyone with answer/submission
     const sIds = new Set<string>();
-    (ans ?? []).forEach((r: any) => sIds.add(r.student_id));
-    (subs ?? []).forEach((r: any) => sIds.add(r.student_id));
+    ((ans ?? []) as Answer[]).forEach((r) => sIds.add(r.student_id));
+    ((subs ?? []) as SubmissionRow[]).forEach((r) => sIds.add(r.student_id));
     const { data: members } = await supabase.from("class_members").select("student_id").eq("class_id", a.class_id);
-    (members ?? []).forEach((m: any) => sIds.add(m.student_id));
+    ((members ?? []) as ClassMemberRow[]).forEach((m) => sIds.add(m.student_id));
     const ids = Array.from(sIds);
     if (ids.length) {
       const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
@@ -97,7 +114,7 @@ export default function TeacherAssignmentDetail() {
       if (!activeStudent && profs && profs.length) setActiveStudent(profs[0].id);
     }
     const gmap: typeof grades = {};
-    (gr ?? []).forEach((g: any) => { gmap[g.student_id] = { overall_score: g.overall_score, overall_feedback: g.overall_feedback }; });
+    ((gr ?? []) as GradeRow[]).forEach((g) => { gmap[g.student_id] = { overall_score: g.overall_score, overall_feedback: g.overall_feedback }; });
     setGrades(gmap);
     setLoading(false);
   };
@@ -219,6 +236,9 @@ export default function TeacherAssignmentDetail() {
   const studentAnswers = answers.filter((a) => a.student_id === activeStudent);
   const totalEarned = studentAnswers.reduce((sum, a) => sum + (a.score ?? 0), 0);
   const totalPossible = questions.reduce((sum, q) => sum + q.max_score, 0);
+  const assignmentType = getAssignmentTypeMeta(assignment.assignment_type);
+  const AssignmentTypeIcon = assignmentType.icon;
+  const resources = parseResourceLinks(assignment.resource_links);
 
   return (
     <DashboardShell title="Assignment Review">
@@ -249,6 +269,9 @@ export default function TeacherAssignmentDetail() {
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-3 py-1 text-xs font-medium text-success">
+                <AssignmentTypeIcon className="h-3 w-3" />{assignmentType.label}
+              </span>
               <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">{className}</span>
               {assignment.unit_tag && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-plum-soft px-3 py-1 text-xs font-medium text-plum">
@@ -263,6 +286,40 @@ export default function TeacherAssignmentDetail() {
             </div>
             {assignment.description && (
               <p className="text-sm text-muted-foreground whitespace-pre-wrap pt-2 border-t">{assignment.description}</p>
+            )}
+            {(assignment.material_notes || resources.length > 0) && (
+              <div className="space-y-3 rounded-md border bg-muted/40 p-3">
+                <div>
+                  <p className="text-sm font-medium">Class materials</p>
+                  <p className="text-xs text-muted-foreground">Notes, slides, and resources attached to this assignment.</p>
+                </div>
+                {assignment.material_notes && (
+                  <p className="whitespace-pre-wrap text-sm text-muted-foreground">{assignment.material_notes}</p>
+                )}
+                {resources.length > 0 && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {resources.map((resource) => {
+                      const KindIcon = getResourceKindMeta(resource.kind).icon;
+                      return (
+                        <a
+                          key={`${resource.kind}-${resource.url}`}
+                          href={resource.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="group flex min-w-0 items-center gap-3 rounded-md border bg-background px-3 py-2 text-sm transition-base hover:border-primary/40 hover:bg-primary-soft/30"
+                        >
+                          <KindIcon className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">{resource.title}</span>
+                            <span className="block text-xs text-muted-foreground">{getResourceKindMeta(resource.kind).label}</span>
+                          </span>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
             <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 mt-2">
               <div>

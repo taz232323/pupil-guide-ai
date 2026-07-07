@@ -1,15 +1,22 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 
+const authState = vi.hoisted(() => ({ role: "teacher" as "student" | "teacher" }));
+
 // The page is wrapped in DashboardShell (heavy auth/supabase/router deps). Stub it.
 vi.mock("@/components/DashboardShell", () => ({
   DashboardShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({ role: authState.role }),
 }));
 
 import LessonLibrary from "./LessonLibrary";
 import { MATH_IM, SCIENCE_PHET, READING_CLASSICS } from "@/data/oerLibrary";
 
 afterEach(() => {
+  authState.role = "teacher";
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -29,6 +36,14 @@ describe("LessonLibrary", () => {
     expect(screen.getByRole("tab", { name: /Math/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Science/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Reading/i })).toBeInTheDocument();
+  });
+
+  it("uses practice language for students instead of lesson library language", () => {
+    authState.role = "student";
+    render(<LessonLibrary />);
+    expect(screen.getByRole("heading", { name: /Practice Library/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Lesson Library/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/practice and review resources/i)).toBeInTheDocument();
   });
 
   it("shows Illustrative Mathematics curricula linking to im.kendallhunt.com with attribution", () => {

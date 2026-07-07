@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Tag, AlertTriangle, Upload, LinkIcon, CheckCircle2, Award } from "lucide-react";
+import { ArrowLeft, CalendarDays, Tag, AlertTriangle, Upload, LinkIcon, CheckCircle2, Award, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { RewardOverlay, type RewardData } from "@/components/RewardOverlay";
 import { notifyStudentCoinsChanged } from "@/lib/studentRefreshEvents";
+import { getAssignmentTypeMeta, getResourceKindMeta, parseResourceLinks } from "@/lib/assignmentMetadata";
 
 type Status = "not_started" | "in_progress" | "submitted";
 type QType = "multiple_choice" | "short_answer" | "long_answer";
@@ -26,6 +28,18 @@ type Question = {
   max_score: number;
 };
 type AnswerState = { selected_index?: number | null; text_response?: string };
+type Assignment = {
+  id: string;
+  class_id: string;
+  assignment_type: string | null;
+  title: string;
+  description: string | null;
+  unit_tag: string | null;
+  due_date: string | null;
+  material_notes: string | null;
+  resource_links: Json | null;
+};
+type AnswerRow = { question_id: string; selected_index: number | null; text_response: string | null };
 
 function urgency(due: string | null): { label: string; cls: string } {
   if (!due) return { label: "No due date", cls: "bg-muted text-muted-foreground" };
@@ -48,7 +62,7 @@ export default function StudentAssignmentDetail() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [assignment, setAssignment] = useState<any>(null);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [className, setClassName] = useState<string>("");
   const [status, setStatus] = useState<Status>("not_started");
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -73,10 +87,10 @@ export default function StudentAssignmentDetail() {
 
     const { data: a, error } = await supabase
       .from("assignments")
-      .select("id, class_id, title, description, unit_tag, due_date")
+      .select("id, class_id, assignment_type, title, description, unit_tag, due_date, material_notes, resource_links")
       .eq("id", id).maybeSingle();
     if (error || !a) { toast.error("Assignment not found"); navigate("/student/assignments"); return; }
-    setAssignment(a);
+    setAssignment(a as Assignment);
 
     const [{ data: cls }, { data: stat }, { data: qs }, { data: sub }, { data: ans }, { data: gr }] = await Promise.all([
       supabase.from("classes").select("name").eq("id", a.class_id).maybeSingle(),
@@ -97,7 +111,7 @@ export default function StudentAssignmentDetail() {
     setSubmission(sub ?? null);
     setGrade(gr ?? null);
     const map: Record<string, AnswerState> = {};
-    (ans ?? []).forEach((r: any) => {
+    ((ans ?? []) as AnswerRow[]).forEach((r) => {
       map[r.question_id] = { selected_index: r.selected_index, text_response: r.text_response };
     });
     setAnswers(map);
@@ -155,10 +169,10 @@ export default function StudentAssignmentDetail() {
       }
 
       // 2. Optional file/link
-      let payload: { file_path?: string; link_url?: string } = {};
+      const payload: { file_path?: string; link_url?: string } = {};
       if (file) {
         if (file.size > 20 * 1024 * 1024) { toast.error("Max 20MB"); return; }
-        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const safe = file.name.replace(/[^\w.-]+/g, "_");
         const path = `${id}/${user.id}/${Date.now()}_${safe}`;
         const { error: upErr } = await supabase.storage.from("submissions").upload(path, file, { upsert: true });
         if (upErr) { toast.error(upErr.message); return; }
@@ -201,6 +215,9 @@ export default function StudentAssignmentDetail() {
   if (!assignment) return null;
   const u = urgency(assignment.due_date);
   const isSubmitted = status === "submitted";
+  const assignmentType = getAssignmentTypeMeta(assignment.assignment_type);
+  const AssignmentTypeIcon = assignmentType.icon;
+  const resources = parseResourceLinks(assignment.resource_links);
 
   return (
     <DashboardShell title="Assignment">
@@ -214,6 +231,9 @@ export default function StudentAssignmentDetail() {
           <CardContent className="p-6 space-y-4">
             <h1 className="text-3xl font-bold tracking-tight">{assignment.title}</h1>
             <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-3 py-1 text-xs font-medium text-success">
+                <AssignmentTypeIcon className="h-3 w-3" />{assignmentType.label}
+              </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-primary">
                 {className}
               </span>
@@ -249,6 +269,43 @@ export default function StudentAssignmentDetail() {
             )}
           </CardContent>
         </Card>
+
+        {(assignment.material_notes || resources.length > 0) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Class materials</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {assignment.material_notes && (
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{assignment.material_notes}</p>
+              )}
+              {resources.length > 0 && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {resources.map((resource) => {
+                    const kind = getResourceKindMeta(resource.kind);
+                    const KindIcon = kind.icon;
+                    return (
+                      <a
+                        key={`${resource.kind}-${resource.url}`}
+                        href={resource.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group flex min-w-0 items-center gap-3 rounded-md border bg-card px-3 py-2 text-sm transition-base hover:border-primary/40 hover:bg-primary-soft/30"
+                      >
+                        <KindIcon className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{resource.title}</span>
+                          <span className="block text-xs text-muted-foreground">{kind.label}</span>
+                        </span>
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {grade?.graded_at && (
           <Card className="border-2 border-primary/30 bg-primary-soft/30">

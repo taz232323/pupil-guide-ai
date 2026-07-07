@@ -16,6 +16,7 @@ import {
 import { Reveal } from "@/components/Reveal";
 import { MountainSketch } from "@/components/MountainSketch";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import {
   MATH_IM, MATH_ATTRIBUTION, SCIENCE_PHET, phetEmbedUrl, SCIENCE_ATTRIBUTION,
   READING_CLASSICS, gutenbergReadUrl, READING_ATTRIBUTION, type PhetSim,
@@ -30,10 +31,21 @@ const TILE = [
 ];
 
 type SearchBook = { id: number; title: string; author: string };
+type GutendexBook = {
+  id: number;
+  title: string;
+  authors?: Array<{ name?: string }>;
+};
 
 export default function LessonLibrary() {
+  const { role } = useAuth();
   const [sim, setSim] = useState<PhetSim | null>(null);
   const [grade, setGrade] = useState("all");
+  const isStudent = role === "student";
+  const pageTitle = isStudent ? "Practice Library" : "Lesson Library";
+  const pageDescription = isStudent
+    ? "Free practice and review resources your teacher can point you toward by subject."
+    : "Free, open lessons curated from trusted sources - explore by subject.";
 
   const mathItems = MATH_IM.filter((m) => inGradeBand(m, grade));
   const scienceItems = SCIENCE_PHET.filter((s) => inGradeBand(s, grade));
@@ -56,7 +68,7 @@ export default function LessonLibrary() {
       );
       if (!res.ok) throw new Error("bad status");
       const data = await res.json();
-      const mapped: SearchBook[] = (data.results ?? []).slice(0, 12).map((r: any) => ({
+      const mapped: SearchBook[] = ((data.results ?? []) as GutendexBook[]).slice(0, 12).map((r) => ({
         id: r.id,
         title: r.title,
         author: (r.authors?.[0]?.name as string) || "Unknown",
@@ -81,9 +93,9 @@ export default function LessonLibrary() {
               <Library className="h-6 w-6" />
             </span>
             <div>
-              <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Lesson Library</h1>
+              <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">{pageTitle}</h1>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground sm:text-base">
-                Free, open lessons curated from trusted sources — explore by subject.
+                {pageDescription}
               </p>
             </div>
           </div>
@@ -114,7 +126,7 @@ export default function LessonLibrary() {
                         <h3 className="mt-4 font-display text-lg font-semibold tracking-tight">{m.title}</h3>
                         <p className="text-xs text-muted-foreground">{m.grades}</p>
                         <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary">
-                          Open curriculum <ExternalLink className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                          {isStudent ? "Open practice" : "Open curriculum"} <ExternalLink className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                         </span>
                       </CardContent>
                     </Card>
@@ -279,7 +291,7 @@ function EmptyGrade() {
   return (
     <Card>
       <CardContent className="py-10 text-center text-sm text-muted-foreground">
-        No lessons for this grade band yet — try another grade.
+        No resources for this grade band yet - try another grade.
       </CardContent>
     </Card>
   );

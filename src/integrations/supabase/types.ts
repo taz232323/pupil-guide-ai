@@ -247,36 +247,45 @@ export type Database = {
       }
       assignments: {
         Row: {
+          assignment_type: string
           class_id: string
           created_at: string
           description: string | null
           due_date: string | null
           id: string
+          material_notes: string | null
           reminders_enabled: boolean
+          resource_links: Json
           teacher_id: string
           title: string
           unit_tag: string | null
           updated_at: string
         }
         Insert: {
+          assignment_type?: string
           class_id: string
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          material_notes?: string | null
           reminders_enabled?: boolean
+          resource_links?: Json
           teacher_id: string
           title: string
           unit_tag?: string | null
           updated_at?: string
         }
         Update: {
+          assignment_type?: string
           class_id?: string
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          material_notes?: string | null
           reminders_enabled?: boolean
+          resource_links?: Json
           teacher_id?: string
           title?: string
           unit_tag?: string | null

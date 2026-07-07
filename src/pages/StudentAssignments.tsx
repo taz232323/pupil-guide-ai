@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Upload, LinkIcon, ClipboardList, Award, ClipboardCheck, ChevronRight } from "lucide-react";
+import { CalendarDays, Upload, LinkIcon, ClipboardList, Award, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,6 +22,7 @@ import { RelativeTime } from "@/components/RelativeTime";
 import { Reveal } from "@/components/Reveal";
 import { ProgressRing } from "@/components/ProgressRing";
 import { cn } from "@/lib/utils";
+import { getAssignmentTypeMeta } from "@/lib/assignmentMetadata";
 
 const TILE = [
   "bg-primary-soft text-primary",
@@ -34,9 +35,15 @@ type Status = "not_started" | "in_progress" | "submitted";
 
 type Filter = "all" | "due_soon" | "in_progress" | "submitted" | "graded";
 
+type StatusRow = { assignment_id: string; status: Status };
+type ClassOptionRow = { id: string; name: string };
+type SubmissionRow = { assignment_id: string; file_path: string | null; link_url: string | null };
+type GradeRow = { assignment_id: string; overall_score: number | null; graded_at: string | null };
+
 type Row = {
   id: string;
   class_id: string;
+  assignment_type?: string | null;
   title: string;
   description: string | null;
   unit_tag: string | null;
@@ -78,7 +85,7 @@ export const StudentAssignments = () => {
 
     const { data: asgn, error } = await supabase
       .from("assignments")
-      .select("id, class_id, title, description, unit_tag, due_date")
+      .select("id, class_id, assignment_type, title, description, unit_tag, due_date")
       .order("due_date", { ascending: true, nullsFirst: false });
     if (error) { toast.error(error.message); setLoading(false); return; }
 
@@ -110,13 +117,13 @@ export const StudentAssignments = () => {
     ]);
 
     const statusMap = new Map<string, Status>();
-    (statuses ?? []).forEach((s: any) => statusMap.set(s.assignment_id, s.status));
+    ((statuses ?? []) as StatusRow[]).forEach((s) => statusMap.set(s.assignment_id, s.status));
     const classMap: Record<string, string> = {};
-    (cls ?? []).forEach((c: any) => { classMap[c.id] = c.name; });
+    ((cls ?? []) as ClassOptionRow[]).forEach((c) => { classMap[c.id] = c.name; });
     const subMap = new Map<string, { file_path: string | null; link_url: string | null }>();
-    (subs ?? []).forEach((s: any) => subMap.set(s.assignment_id, { file_path: s.file_path, link_url: s.link_url }));
+    ((subs ?? []) as SubmissionRow[]).forEach((s) => subMap.set(s.assignment_id, { file_path: s.file_path, link_url: s.link_url }));
     const gradeMap = new Map<string, { score: number | null }>();
-    (grades ?? []).forEach((g: any) => { if (g.graded_at) gradeMap.set(g.assignment_id, { score: g.overall_score }); });
+    ((grades ?? []) as GradeRow[]).forEach((g) => { if (g.graded_at) gradeMap.set(g.assignment_id, { score: g.overall_score }); });
 
     setClasses(classMap);
     setRows((asgn ?? []).map((a) => ({
@@ -210,11 +217,11 @@ export const StudentAssignments = () => {
     if (!user) return;
     setBusy(true);
     try {
-      let payload: { file_path?: string; link_url?: string } = {};
+      const payload: { file_path?: string; link_url?: string } = {};
       if (mode === "file") {
         if (!file) { toast.error("Choose a file"); return; }
         if (file.size > 20 * 1024 * 1024) { toast.error("Max 20MB"); return; }
-        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const safe = file.name.replace(/[^\w.-]+/g, "_");
         const path = `${submitFor.id}/${user.id}/${Date.now()}_${safe}`;
         const { error: upErr } = await supabase.storage
           .from("submissions")
@@ -308,7 +315,10 @@ export const StudentAssignments = () => {
                       <div onClick={() => navigate(`/student/assignments/${r.id}`)} className="flex flex-col gap-3">
                         <div className="flex items-start gap-3">
                           <span className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-spring group-hover:scale-110", TILE[i % 4])}>
-                            <ClipboardList className="h-5 w-5" />
+                            {(() => {
+                              const TypeIcon = getAssignmentTypeMeta(r.assignment_type).icon;
+                              return <TypeIcon className="h-5 w-5" />;
+                            })()}
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="font-medium leading-tight truncate">{r.title}</p>
@@ -322,6 +332,9 @@ export const StudentAssignments = () => {
                           <p className="text-sm text-muted-foreground line-clamp-2">{r.description}</p>
                         )}
                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground">
+                            {getAssignmentTypeMeta(r.assignment_type).label}
+                          </span>
                           {r.unit_tag && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 font-medium text-secondary-foreground">{r.unit_tag}</span>
                           )}
@@ -368,7 +381,10 @@ export const StudentAssignments = () => {
                     >
                       <div className="flex items-center gap-3 w-full" onClick={() => navigate(`/student/assignments/${r.id}`)}>
                         <span className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", TILE[i % 4])}>
-                          <ClipboardCheck className="h-5 w-5" />
+                          {(() => {
+                            const TypeIcon = getAssignmentTypeMeta(r.assignment_type).icon;
+                            return <TypeIcon className="h-5 w-5" />;
+                          })()}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="font-medium truncate">{r.title}</p>
