@@ -1,0 +1,1 @@
+DELETE FROM public.shop_items WHERE item_key = 'aura_beams';
