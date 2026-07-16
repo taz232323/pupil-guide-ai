@@ -89,8 +89,8 @@ export const StudentAssignments = () => {
       .order("due_date", { ascending: true, nullsFirst: false });
     if (error) { toast.error(error.message); setLoading(false); return; }
 
-    const ids = (asgn ?? []).map((a: any) => a.id);
-    const classIds = Array.from(new Set((asgn ?? []).map((a: any) => a.class_id)));
+    const ids = (asgn ?? []).map((a: any) => a.id as string);
+    const classIds = Array.from(new Set((asgn ?? []).map((a: any) => a.class_id as string))) as string[];
 
     const [{ data: statuses }, { data: cls }, { data: subs }, { data: grades }] = await Promise.all([
       ids.length
@@ -126,7 +126,7 @@ export const StudentAssignments = () => {
     ((grades ?? []) as GradeRow[]).forEach((g) => { if (g.graded_at) gradeMap.set(g.assignment_id, { score: g.overall_score }); });
 
     setClasses(classMap);
-    setRows((asgn ?? []).map((a) => ({
+    setRows((asgn ?? []).map((a: any) => ({
       ...a,
       status: statusMap.get(a.id) ?? "not_started",
       submission: subMap.get(a.id) ?? null,
