@@ -133,7 +133,7 @@ export const TeacherAssignments = () => {
     setSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not signed in"); setSubmitting(false); return; }
-    const { data: created, error } = await supabase.from("assignments").insert({
+    const { data: created, error } = await (supabase as any).from("assignments").insert({
       class_id: parsed.data.class_id,
       teacher_id: user.id,
       assignment_type: parsed.data.assignment_type,

@@ -856,7 +856,7 @@ function ScheduleAssignmentDialog({ value, classes, onClose, onCreated }: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSubmitting(false); return toast.error("Not signed in"); }
     const due = new Date(`${date}T${time}:00`);
-    const { error } = await supabase.from("assignments").insert({
+    const { error } = await (supabase as any).from("assignments").insert({
       class_id: classId,
       teacher_id: user.id,
       assignment_type: assignmentType,

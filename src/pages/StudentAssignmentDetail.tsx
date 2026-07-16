@@ -85,7 +85,7 @@ export default function StudentAssignmentDetail() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const { data: a, error } = await supabase
+    const { data: a, error } = await (supabase as any)
       .from("assignments")
       .select("id, class_id, assignment_type, title, description, unit_tag, due_date, material_notes, resource_links")
       .eq("id", id).maybeSingle();
