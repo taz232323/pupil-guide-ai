@@ -83,14 +83,14 @@ export const StudentAssignments = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const { data: asgn, error } = await supabase
+    const { data: asgn, error } = await (supabase as any)
       .from("assignments")
       .select("id, class_id, assignment_type, title, description, unit_tag, due_date")
       .order("due_date", { ascending: true, nullsFirst: false });
     if (error) { toast.error(error.message); setLoading(false); return; }
 
-    const ids = (asgn ?? []).map((a) => a.id);
-    const classIds = Array.from(new Set((asgn ?? []).map((a) => a.class_id)));
+    const ids = (asgn ?? []).map((a: any) => a.id);
+    const classIds = Array.from(new Set((asgn ?? []).map((a: any) => a.class_id)));
 
     const [{ data: statuses }, { data: cls }, { data: subs }, { data: grades }] = await Promise.all([
       ids.length
