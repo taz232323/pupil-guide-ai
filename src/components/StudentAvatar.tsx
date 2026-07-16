@@ -2,11 +2,9 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import magicAuraImg from "@/assets/avatar/layers/aura-magic.svg";
 import rainbowAuraImg from "@/assets/avatar/layers/aura-rainbow.svg";
-import beamsAuraImg from "@/assets/avatar/layers/aura-beams.jpg";
 import headwearWizardImg from "@/assets/avatar/layers/headwear-wizard.svg";
 import headwearHaloImg from "@/assets/avatar/layers/headwear-halo.svg";
 import headwearCrownSilverImg from "@/assets/avatar/layers/headwear-crown-silver.svg";
-import { AuraRenderer, isReactAura } from "@/components/auras/AuraRenderer";
 
 /* ------------------------------------------------------------------ *
  *  Avatar state model — standing cartoon animals + Grapheion cosmetics
@@ -118,9 +116,6 @@ const HEADWEAR_OVERLAY: Record<
 const AURA_OVERLAY: Record<string, string> = {
   aura_magic: magicAuraImg,
   rainbow_aura: rainbowAuraImg,
-  // React-based auras still register here so the equip system recognizes them.
-  // The value doubles as a static preview thumbnail for shop tiles.
-  aura_beams: beamsAuraImg,
 };
 
 /* Reverse category lookup for legacy items[] arrays. */
@@ -161,7 +156,6 @@ export const COSMETIC_EMOJI: Record<string, string> = {
   crown_silver: "👑",
   halo: "😇",
   rainbow_aura: "🌈",
-  aura_beams: "✨",
 };
 
 /* ---------- State helpers ---------- */
@@ -617,7 +611,6 @@ export const AVATAR_THUMBNAILS: Record<string, string> = {
   crown_silver: headwearCrownSilverImg,
   aura_magic: magicAuraImg,
   rainbow_aura: rainbowAuraImg,
-  aura_beams: beamsAuraImg,
 };
 
 /* ---------- Component ---------- */
@@ -696,11 +689,8 @@ export const StudentAvatar = ({
           frameDecor
         )}
       >
-        {/* Aura background — React-based auras render a live component;
-            static image auras fall back to a keyed <img>. */}
-        {isReactAura(state.aura) ? (
-          <AuraRenderer auraKey={state.aura} />
-        ) : auraSrc ? (
+        {/* Aura background */}
+        {auraSrc ? (
           <img
             key={state.aura}
             src={auraSrc}
