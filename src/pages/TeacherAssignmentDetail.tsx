@@ -80,7 +80,7 @@ export default function TeacherAssignmentDetail() {
   const load = async () => {
     if (!id) return;
     setLoading(true);
-    const { data: a, error } = await supabase
+    const { data: a, error } = await (supabase as any)
       .from("assignments").select("*").eq("id", id).maybeSingle();
     if (error || !a) { toast.error("Not found"); navigate("/teacher/assignments"); return; }
     setAssignment(a as Assignment);
