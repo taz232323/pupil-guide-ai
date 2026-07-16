@@ -2,9 +2,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import magicAuraImg from "@/assets/avatar/layers/aura-magic.svg";
 import rainbowAuraImg from "@/assets/avatar/layers/aura-rainbow.svg";
+import auroraAuraImg from "@/assets/avatar/layers/aura-aurora.png";
 import headwearWizardImg from "@/assets/avatar/layers/headwear-wizard.svg";
 import headwearHaloImg from "@/assets/avatar/layers/headwear-halo.svg";
 import headwearCrownSilverImg from "@/assets/avatar/layers/headwear-crown-silver.svg";
+import { AuraWrapper, isAnimatedAura } from "@/components/auras/AuraWrapper";
 
 /* ------------------------------------------------------------------ *
  *  Avatar state model — standing cartoon animals + Grapheion cosmetics
@@ -116,6 +118,7 @@ const HEADWEAR_OVERLAY: Record<
 const AURA_OVERLAY: Record<string, string> = {
   aura_magic: magicAuraImg,
   rainbow_aura: rainbowAuraImg,
+  aura_aurora: auroraAuraImg,
 };
 
 /* Reverse category lookup for legacy items[] arrays. */
@@ -156,6 +159,7 @@ export const COSMETIC_EMOJI: Record<string, string> = {
   crown_silver: "👑",
   halo: "😇",
   rainbow_aura: "🌈",
+  aura_aurora: "🌌",
 };
 
 /* ---------- State helpers ---------- */
@@ -611,6 +615,7 @@ export const AVATAR_THUMBNAILS: Record<string, string> = {
   crown_silver: headwearCrownSilverImg,
   aura_magic: magicAuraImg,
   rainbow_aura: rainbowAuraImg,
+  aura_aurora: auroraAuraImg,
 };
 
 /* ---------- Component ---------- */
@@ -690,7 +695,9 @@ export const StudentAvatar = ({
         )}
       >
         {/* Aura background */}
-        {auraSrc ? (
+        {isAnimatedAura(state.aura) ? (
+          <AuraWrapper auraKey={state.aura} />
+        ) : auraSrc ? (
           <img
             key={state.aura}
             src={auraSrc}

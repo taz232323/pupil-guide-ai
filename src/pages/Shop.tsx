@@ -15,6 +15,7 @@ import crownSilverImg from "@/assets/cosmetics/crown-silver.png";
 import haloImg from "@/assets/cosmetics/halo.png";
 import robotImg from "@/assets/cosmetics/robot.png";
 import rainbowAuraImg from "@/assets/cosmetics/rainbow-aura.png";
+import auroraAuraImg from "@/assets/avatar/layers/aura-aurora.png";
 
 // Image overrides for cosmetic shop tiles — keeps the shop visual in sync
 // with the avatar renderer (see StudentAvatar COSMETIC_IMAGE).
@@ -25,6 +26,7 @@ const COSMETIC_TILE_IMAGE: Record<string, string> = {
   halo: haloImg,
   robot: robotImg,
   rainbow_aura: rainbowAuraImg,
+  aura_aurora: auroraAuraImg,
 };
 
 type ShopItem = {

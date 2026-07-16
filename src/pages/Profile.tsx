@@ -124,6 +124,7 @@ const BUILDER: BuilderOption[] = [
   // Aura backgrounds
   { key: "aura_magic",   name: "Magic",   category: "aura", thumb: AVATAR_THUMBNAILS.aura_magic },
   { key: "rainbow_aura", name: "Rainbow", category: "aura", cost: 100, thumb: AVATAR_THUMBNAILS.rainbow_aura },
+  { key: "aura_aurora",  name: "Aurora Aura", category: "aura", cost: 500, thumb: AVATAR_THUMBNAILS.aura_aurora },
 ];
 
 const OPTION_BY_KEY: Record<string, BuilderOption> = Object.fromEntries(BUILDER.map((o) => [o.key, o]));
